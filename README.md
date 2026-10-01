@@ -10,7 +10,7 @@
 </p>
 
 <p align="center">
-  <a href="https://YOUR-USERNAME.github.io/project-six/"><strong>View the live site</strong></a>
+  <a href="(https://itzsnow13.github.io/project-six-website/)"><strong>View the live site</strong></a>
 </p>
 
 ---
