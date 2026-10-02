@@ -365,6 +365,10 @@ dialog::backdrop { background: rgba(8,9,10,.72); backdrop-filter: blur(3px); }
 .role-table .rid { font-size: .74rem; color: var(--dim); margin-top: 3px; display: block; font-variant-numeric: tabular-nums; }
 .role-table .sys-col { text-align: center; }
 .role-table tr.add td { background: var(--bg-alt); }
+.role-table select[name=title], .role-table select[name=access] { min-width: 130px; }
+.role-table [name=rid] { min-width: 190px; }
+button.owner { background: transparent; color: var(--text); font: inherit; font-size: .84rem; }
+button.owner:hover { border-color: var(--accent); }
 .subtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
 .grid-split { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 .ev-main small { display: block; }
@@ -1574,21 +1578,39 @@ function staffRoles() {
   const titleOpts = [['', '—'], ['director', 'Director'], ['manager', 'Manager'], ['admin', 'Admin'], ['staff', 'Staff']];
   const accessOpts = [['', 'No access'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']];
   const sel = (name, opts, v, label) => `<select name="${name}" aria-label="${esc(label)}">${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
-  const row = x => `<tr data-role="${esc(x.id)}">
-      <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="Role name" aria-label="Name for role ${esc(x.id)}"><span class="rid">ID ${esc(x.id)}</span></td>
+  const row = (x, i) => `<tr data-row="${i}">
+      <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="e.g. Recruit" aria-label="Portal role name"></td>
+      <td><input name="rid" inputmode="numeric" maxlength="25" value="${esc(x.id)}" placeholder="Discord role ID" aria-label="Discord role ID" class="num"></td>
       <td>${sel('access', accessOpts, x.access, 'Access')}</td>
       <td>${sel('title', titleOpts, x.title, 'Title')}</td>
       <td>${sel('division', [['', '—']].concat(divs.map(d => [d.id, d.name])), x.division, 'Division')}</td>
       ${owner ? `<td class="sys-col"><input type="checkbox" name="sysadmin" style="width:18px;height:18px;accent-color:var(--accent)"${x.sysadmin ? ' checked' : ''} aria-label="Systems Admin"></td>` : ''}
+      <td><button class="x" type="button" data-act="role-remove" data-id="${i}" aria-label="Remove role">&times;</button></td>
     </tr>`;
+  const seen = (r.seen || []).filter(x => !r.roles.some(y => y.id === x.id));
   return `<form data-form="roles" novalidate>
-    <div class="toolbar"><p class="hint" style="max-width:720px"><b>Access</b> lets a role into the portal (Staff gets this Staff area). <b>Title</b> sets the rank icon and tag next to names; the highest one wins. <b>Division</b> decides which division events, work orders and rosters they see.${owner ? ' <b>Systems Admin</b> roles can edit this page; only you can see or change that column.' : ''}</p>
+    <div class="toolbar"><p class="hint" style="max-width:720px">Each row links a portal role to a Discord role by its ID. When a member’s roles change in Discord, the portal picks it up within a few minutes. <b>Access</b> lets them in, <b>Title</b> sets the rank icon and tag (highest wins), <b>Division</b> sets which division content they see.${owner ? ' Only you can see the <b>Systems Admin</b> column.' : ''}</p>
       <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Refresh</button><button class="btn btn-solid" type="submit">Save permissions</button></div></div>
-    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Discord role</th><th>Access</th><th>Title</th><th>Division</th>${owner ? '<th class="sys-col">Systems Admin</th>' : ''}</tr></thead><tbody>
-      ${r.roles.map(row).join('')}
-      <tr class="add"><td><input id="newRoleId" inputmode="numeric" maxlength="25" placeholder="Role ID" aria-label="New role ID"><span class="rid">Discord: Server Settings → Roles → right-click → Copy Role ID</span></td>
-        <td colspan="${owner ? 4 : 3}"><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="newRoleName" maxlength="60" placeholder="Role name" aria-label="New role name" style="flex:1;min-width:160px"><button class="btn btn-ghost btn-sm" type="button" data-act="role-add">Add role</button></div></td></tr>
-    </tbody></table></div></form>`;
+    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Portal role</th><th>Discord role ID</th><th>Access</th><th>Title</th><th>Division</th>${owner ? '<th class="sys-col">Systems Admin</th>' : ''}<th></th></tr></thead><tbody>
+      ${r.roles.length ? r.roles.map(row).join('') : `<tr><td colspan="${owner ? 7 : 6}" class="hint" style="padding:18px 14px">No roles yet. Add one below.</td></tr>`}
+      <tr class="add"><td colspan="${owner ? 7 : 6}"><button class="btn btn-ghost btn-sm" type="button" data-act="role-add">+ Add role</button>
+        <span class="hint" style="margin-left:10px">Role ID: Discord → Server Settings → Roles → right-click a role → Copy Role ID (Developer Mode on).</span></td></tr>
+    </tbody></table></div>
+    ${seen.length ? `<h2 class="sub section">Role IDs on members, not set up yet</h2>
+      <div class="panel panel-pad"><p class="hint" style="margin-bottom:10px">These Discord roles are held by members who have signed in. Add the ones that should mean something in the portal.</p>
+      <div class="owners">${seen.map(x => `<button class="owner" type="button" data-act="role-add" data-rid="${esc(x.id)}" style="cursor:pointer;padding:4px 10px"><span class="num">${esc(x.id)}</span><span style="color:var(--dim)">· ${x.members} member${x.members === 1 ? '' : 's'}</span><b style="color:var(--accent)">+</b></button>`).join('')}</div></div>` : ''}
+  </form>`;
+}
+
+function r_owner() { return !!(S.rolesData && S.rolesData.owner); }
+function captureRoles() {
+  if (!S.rolesData || !S.rolesData.roles) return;
+  document.querySelectorAll('tr[data-row]').forEach(tr => {
+    const x = S.rolesData.roles[Number(tr.dataset.row)]; if (!x) return;
+    x.name = tr.querySelector('[name=rname]').value; x.id = tr.querySelector('[name=rid]').value.trim();
+    x.access = tr.querySelector('[name=access]').value; x.title = tr.querySelector('[name=title]').value; x.division = tr.querySelector('[name=division]').value;
+    const c = tr.querySelector('[name=sysadmin]'); if (c) x.sysadmin = c.checked;
+  });
 }
 
 /* ---------- Dialog ---------- */
@@ -1676,15 +1698,15 @@ document.addEventListener('click', async e => {
     case 'site-remove': if (await act('site.remove', { kind: b.dataset.kind, id }, 'Deleted.')) closeDialog(); break;
     case 'roles-reload': S.rolesData = null; render(); break;
     case 'role-add': {
-      const idv = ($('newRoleId').value || '').trim(), nm = ($('newRoleName').value || '').trim();
-      if (!/^\d{5,25}$/.test(idv)) { toast('Paste the role ID (a long number) from Discord.', 'err'); break; }
-      if (S.rolesData.roles.some(x => x.id === idv)) { toast('That role is already in the list.', 'err'); break; }
-      // keep anything typed into the table before re-rendering
-      document.querySelectorAll('tr[data-role]').forEach(tr => { const x = S.rolesData.roles.find(y => y.id === tr.dataset.role); if (x) { x.name = tr.querySelector('[name=rname]').value; x.access = tr.querySelector('[name=access]').value; x.title = tr.querySelector('[name=title]').value; x.division = tr.querySelector('[name=division]').value; const c = tr.querySelector('[name=sysadmin]'); if (c) x.sysadmin = c.checked; } });
-      S.rolesData.roles.push({ id: idv, name: nm, access: '', title: '', division: '', sysadmin: false });
-      render(); toast('Role added. Set its permissions, then Save.', 'ok');
+      captureRoles();
+      const rid = b.dataset.rid || '';
+      S.rolesData.roles.push({ id: rid, name: '', access: '', title: '', division: '', sysadmin: false });
+      render();
+      const rows = document.querySelectorAll('tr[data-row]');
+      const last = rows[rows.length - 1]; if (last) last.querySelector('[name=rname]').focus();
       break;
     }
+    case 'role-remove': captureRoles(); S.rolesData.roles.splice(Number(id), 1); render(); break;
   }
 });
 
@@ -1746,12 +1768,13 @@ document.addEventListener('submit', async e => {
         ok = await act('site.save', { kind: 'newsletters', item: { id: v('id'), title: v('title'), author: v('author'), status: v('status'), summary: v('summary'), body: v('body') } }, 'Newsletter saved.');
         break;
       case 'roles': {
-        const roles = [...f.querySelectorAll('tr[data-role]')].map(tr => ({
-          id: tr.dataset.role, name: tr.querySelector('[name=rname]').value, access: tr.querySelector('[name=access]').value,
-          title: tr.querySelector('[name=title]').value, division: tr.querySelector('[name=division]').value,
-          sysadmin: tr.querySelector('[name=sysadmin]') ? tr.querySelector('[name=sysadmin]').checked : undefined
-        }));
-        ok = await act('roles.save', { roles }, 'Permissions saved.');
+        captureRoles();
+        const roles = S.rolesData.roles.filter(x => x.id || x.name);
+        const bad = roles.find(x => !/^\d{5,25}$/.test(x.id));
+        if (bad) { toast(`“${bad.name || 'A role'}” needs its Discord role ID (a long number).`, 'err'); break; }
+        const ids = roles.map(x => x.id), dup = ids.find((x, i) => ids.indexOf(x) !== i);
+        if (dup) { toast(`Role ID ${dup} is listed twice.`, 'err'); break; }
+        ok = await act('roles.save', { roles: roles.map(x => ({ id: x.id, name: x.name, access: x.access, title: x.title, division: x.division, sysadmin: r_owner() ? !!x.sysadmin : undefined })) }, 'Permissions saved.');
         if (ok) { S.rolesData = null; render(); }
         break;
       }
