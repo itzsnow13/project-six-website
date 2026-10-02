@@ -1525,13 +1525,16 @@ function staffRoles() {
   }
   const r = S.rolesData;
   if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
-  if (!r.guild || !r.bot) return `<div class="panel panel-pad stack"><p>${!r.guild ? 'Add <b>DISCORD_GUILD_ID</b>' : 'Add <b>DISCORD_BOT_TOKEN</b>'} in Apps Script → Project Settings → Script Properties, then reload this page.</p><p class="hint">The bot only needs to be in the server; it doesn’t need any permissions.</p></div>`;
+  if (!r.guild || (!r.bot && !r.roles.length)) return `<div class="panel panel-pad stack"><p class="msg-err">${esc(r.botError || 'Discord roles aren’t connected yet.')}</p><p class="hint">Fix it in the Discord Developer Portal or in Apps Script → Project Settings → Script Properties, then press Try again. Roles also show up here once members have signed in.</p><div><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Try again</button></div></div>`;
   const divs = D().divisions;
-  return `<form data-form="roles" novalidate>
+  const manual = !r.bot;
+  return `${manual ? `<div class="panel panel-pad stack" style="margin-bottom:14px"><p><b>Working without the bot.</b> ${esc(r.botError || '')}</p>
+      <p class="hint">These are the roles seen on members when they signed in. Discord only sends role IDs this way, so name each one: in Discord turn on Developer Mode, open Server Settings → Roles, right-click a role → Copy Role ID, and match it below. Roles update each time a member signs in.</p></div>` : ''}
+    <form data-form="roles" novalidate>
     <div class="toolbar"><p class="hint" style="max-width:700px">${r.saved ? 'Saved mapping.' : 'Suggested from role names. Nothing is saved until you press Save.'} Members need a role with <b>Member</b> or higher to use the portal. Division roles decide which division events, work orders and rosters they see.</p>
       <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Reload from Discord</button><button class="btn btn-solid" type="submit">Save mapping</button></div></div>
     <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Discord role</th><th>Access</th><th>Division</th></tr></thead><tbody>
-      ${r.roles.map(x => `<tr data-role="${esc(x.id)}" data-name="${esc(x.name)}"><td><span class="role-name" style="--c:${esc(x.color || '')}"><i></i>${esc(x.name)}</span></td>
+      ${r.roles.map(x => `<tr data-role="${esc(x.id)}" data-name="${esc(x.name)}"><td>${manual ? `<div class="field"><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="Role name" aria-label="Name for role ${esc(x.id)}"><span class="hint num">ID ${esc(x.id)}</span></div>` : `<span class="role-name" style="--c:${esc(x.color || '')}"><i></i>${esc(x.name)}</span>`}</td>
         <td><select name="access" aria-label="Access for ${esc(x.name)}">${[['', 'No access'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']].map(o => `<option value="${o[0]}"${o[0] === x.access ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></td>
         <td><select name="division" aria-label="Division for ${esc(x.name)}"><option value="">—</option>${divs.map(dv => `<option value="${dv.id}"${dv.id === x.division ? ' selected' : ''}>${esc(dv.name)}</option>`).join('')}</select></td></tr>`).join('')}
     </tbody></table></div></form>`;
@@ -1682,7 +1685,7 @@ document.addEventListener('submit', async e => {
         ok = await act('site.save', { kind: 'newsletters', item: { id: v('id'), title: v('title'), author: v('author'), status: v('status'), summary: v('summary'), body: v('body') } }, 'Newsletter saved.');
         break;
       case 'roles': {
-        const roles = [...f.querySelectorAll('tr[data-role]')].map(tr => ({ id: tr.dataset.role, name: tr.dataset.name, access: tr.querySelector('[name=access]').value, division: tr.querySelector('[name=division]').value }));
+        const roles = [...f.querySelectorAll('tr[data-role]')].map(tr => ({ id: tr.dataset.role, name: tr.querySelector('[name=rname]') ? tr.querySelector('[name=rname]').value : tr.dataset.name, access: tr.querySelector('[name=access]').value, division: tr.querySelector('[name=division]').value }));
         ok = await act('roles.save', { roles }, 'Role mapping saved.');
         if (ok) { S.rolesData = null; render(); }
         break;
