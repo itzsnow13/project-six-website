@@ -252,7 +252,126 @@ dialog::backdrop { background: rgba(8,9,10,.72); backdrop-filter: blur(3px); }
 
 .patch { flex: none; }
 
+/* Calendar */
+.cal-layout { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 18px; align-items: start; }
+.cal-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.cal-title { font-family: var(--f-display); font-weight: 600; font-size: 1.05rem; letter-spacing: .08em; text-transform: uppercase; }
+.cal-nav { display: flex; gap: 6px; }
+.cal-nav .btn { padding: 6px 10px; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.cal-wd { padding: 8px 10px; font-family: var(--f-label); font-weight: 700; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--line); }
+.cal-cell { min-height: 108px; padding: 6px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 3px; cursor: pointer; min-width: 0; background: none; text-align: left; border-top: 0; border-left: 0; color: inherit; transition: background .15s; }
+.cal-cell:nth-child(7n + 7) { border-right: 0; }
+.cal-cell:hover { background: var(--surface-2); }
+.cal-cell.out { background: var(--bg-alt); }
+.cal-cell.out .cal-num { color: var(--dim); opacity: .6; }
+.cal-cell.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(201,181,142,.45); }
+.cal-num { font-family: var(--f-label); font-weight: 700; font-size: .9rem; color: var(--muted); width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.cal-cell.today .cal-num { background: var(--accent); color: var(--accent-ink); }
+.cal-ev { display: block; width: 100%; font-size: .76rem; line-height: 1.25; padding: 3px 6px; border-radius: 4px; background: color-mix(in srgb, var(--c) 16%, transparent); border-left: 3px solid var(--c); color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; border-top: 0; border-right: 0; border-bottom: 0; text-align: left; font-family: inherit; }
+.cal-ev:hover { background: color-mix(in srgb, var(--c) 30%, transparent); }
+.cal-ev.major { font-weight: 700; }
+.cal-ev .t { color: var(--muted); margin-right: 4px; font-variant-numeric: tabular-nums; }
+.cal-more { font-size: .72rem; color: var(--dim); padding-left: 6px; }
+.cal-dots { display: none; gap: 3px; flex-wrap: wrap; padding-left: 4px; }
+.cal-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--c); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 6px; vertical-align: 1px; }
+.chip.on .sw { box-shadow: 0 0 0 2px var(--accent-ink); }
+
+.agenda { display: grid; gap: 10px; }
+.agenda-day { font-family: var(--f-label); font-weight: 700; font-size: .78rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); margin: 6px 0 -2px; }
+.ev-card { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 12px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: var(--radius); cursor: pointer; text-align: left; width: 100%; color: inherit; font: inherit; transition: border-color .2s, background .2s; }
+.ev-card:hover { background: var(--surface-2); }
+.ev-when { text-align: center; }
+.ev-when b { display: block; font-family: var(--f-display); font-weight: 600; font-size: 1.25rem; line-height: 1.1; }
+.ev-when span { display: block; font-family: var(--f-label); font-weight: 700; font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--c); }
+.ev-main { min-width: 0; display: grid; gap: 2px; }
+.ev-main strong { font-family: var(--f-label); font-size: 1.08rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-main small { color: var(--muted); font-size: .84rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ev-tag { font-family: var(--f-label); font-weight: 700; font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
+.ev-going { color: var(--ok); }
+
+/* Mini calendar */
+.mini { padding: 14px; }
+.mini-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.mini-head b { font-family: var(--f-label); font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: .86rem; }
+.mini-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 2px; text-align: center; }
+.mini-grid .wd { font-family: var(--f-label); font-weight: 700; font-size: .66rem; color: var(--dim); padding: 2px 0 4px; }
+.mini-day { aspect-ratio: 1; border-radius: 6px; display: grid; place-items: center; align-content: center; gap: 2px; font-size: .8rem; color: var(--muted); background: none; border: 0; cursor: pointer; font-variant-numeric: tabular-nums; position: relative; }
+.mini-day:hover { background: var(--surface-2); color: var(--text); }
+.mini-day.out { opacity: .3; }
+.mini-day.today { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.mini-day .md { display: flex; gap: 2px; height: 5px; }
+.mini-day .md i { width: 5px; height: 5px; border-radius: 50%; background: var(--c); }
+
+/* Event dialog */
+.ev-hero { display: flex; gap: 14px; align-items: center; }
+.ev-hero h3 { font-family: var(--f-label); font-weight: 700; font-size: 1.4rem; line-height: 1.2; overflow-wrap: anywhere; }
+.ev-facts { display: grid; gap: 6px; color: var(--muted); font-size: .93rem; }
+.ev-facts b { color: var(--text); font-weight: 600; }
+.ev-desc { white-space: pre-line; color: var(--muted); overflow-wrap: anywhere; }
+.rsvp { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rsvp .btn.on { background: var(--ok); color: #0d1a11; border-color: var(--ok); }
+.major-badge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--f-label); font-weight: 700; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent); padding: 2px 8px; border-radius: 4px; }
+
+/* Major events strip */
+.majors { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.major-card { position: relative; overflow: hidden; padding: 16px 18px; border-radius: var(--radius); border: 1px solid rgba(201,181,142,.35); background: linear-gradient(135deg, rgba(201,181,142,.14), rgba(201,181,142,.02) 60%), var(--surface); cursor: pointer; text-align: left; color: inherit; font: inherit; display: grid; gap: 4px; }
+.major-card:hover { border-color: var(--accent); }
+.major-card .when { font-family: var(--f-label); font-weight: 700; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
+.major-card strong { font-family: var(--f-label); font-size: 1.2rem; line-height: 1.2; }
+.major-card small { color: var(--muted); }
+.news-item { padding: 16px 18px; display: grid; gap: 6px; }
+.news-item h3 { font-family: var(--f-label); font-weight: 700; font-size: 1.15rem; }
+.news-item .meta { font-size: .82rem; color: var(--dim); }
+.news-body { white-space: pre-line; color: var(--muted); }
+
+/* Division hub */
+.div-hero { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 22px 24px; border-left: 3px solid var(--div); background: linear-gradient(90deg, color-mix(in srgb, var(--div) 12%, transparent), transparent 60%), var(--surface); }
+.div-hero h1 { font-family: var(--f-display); font-weight: 600; font-size: clamp(1.2rem, 2.6vw, 1.6rem); letter-spacing: .05em; text-transform: uppercase; }
+.div-hero p { color: var(--muted); }
+.div-stats { display: flex; gap: 22px; }
+.div-stats div { text-align: center; }
+.div-stats b { display: block; font-family: var(--f-display); font-weight: 600; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.div-stats span { font-family: var(--f-label); font-weight: 700; font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--dim); }
+.div-chips .chip { display: inline-flex; align-items: center; gap: 8px; }
+.div-chips .chip .patch { width: 22px; height: auto; }
+
+/* Staff */
+.checklist { display: grid; gap: 0; }
+.check-row { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 12px 18px; border-top: 1px solid var(--line); align-items: start; }
+.check-row:first-child { border-top: 0; }
+.check-row .mark { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: .75rem; font-weight: 700; margin-top: 2px; }
+.check-row .mark.y { background: var(--ok-soft); color: var(--ok); border: 1px solid rgba(95,207,126,.5); }
+.check-row .mark.n { background: rgba(224,180,90,.1); color: var(--warn); border: 1px solid rgba(224,180,90,.5); }
+.check-row b { display: block; }
+.check-row span { color: var(--muted); font-size: .88rem; }
+.role-table { width: 100%; border-collapse: collapse; }
+.role-table td, .role-table th { padding: 10px 14px; border-top: 1px solid var(--line); text-align: left; vertical-align: middle; }
+.role-table th { border-top: 0; font-family: var(--f-label); font-weight: 700; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.role-table select { width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line-2); }
+.role-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.role-name i { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--dim)); flex: none; }
+.subtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.grid-split { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+.ev-main small { display: block; }
+
+@media (max-width: 1080px) {
+  .cal-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .cal-cell { min-height: 58px; padding: 4px; align-items: center; }
+  .cal-cell .cal-ev, .cal-cell .cal-more { display: none; }
+  .cal-cell .cal-dots { display: flex; justify-content: center; padding: 0; }
+  .cal-wd { padding: 6px 2px; text-align: center; font-size: .64rem; letter-spacing: .08em; }
+  .div-hero { grid-template-columns: auto minmax(0, 1fr); }
+  .div-stats { grid-column: 1 / -1; justify-content: space-around; }
+  .role-table th:nth-child(3), .role-table td:nth-child(3) { min-width: 140px; }
+}
+
 @media (max-width: 980px) {
+  .grid-split { grid-template-columns: 1fr; }
   .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .grid-2, .grid-3 { grid-template-columns: 1fr; }
@@ -278,13 +397,13 @@ dialog::backdrop { background: rgba(8,9,10,.72); backdrop-filter: blur(3px); }
   <div class="gate-card">
     <svg width="64" height="64" viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#ECE9E3" points="266.4,58.0 422.3,148.0 368.3,179.2 266.4,120.4"/><polygon fill="#ECE9E3" points="432.7,166.0 432.7,346.0 378.7,314.8 378.7,197.2"/><polygon fill="#ECE9E3" points="422.3,364.0 266.4,454.0 266.4,391.6 368.3,332.8"/><polygon fill="#ECE9E3" points="245.6,454.0 89.7,364.0 143.7,332.8 245.6,391.6"/><polygon fill="#ECE9E3" points="79.3,346.0 79.3,166.0 133.3,197.2 133.3,314.8"/><polygon fill="#C9B58E" points="89.7,148.0 245.6,58.0 245.6,120.4 143.7,179.2"/></svg>
     <h1>Member Portal</h1>
-    <p>Work orders, live logistics, the org hangar and treasury. Sign in with the Discord account you use in the Project Six server.</p>
+    <p>Calendar, divisions, work orders, live logistics, the org hangar and treasury. Sign in with the Discord account you use in the Project Six server.</p>
     <div class="msg-err" id="loginError" hidden></div>
     <button class="btn btn-discord" type="button" id="loginBtn">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
       Sign in with Discord
     </button>
-    <p class="small">We only read your Discord name and avatar. New members are approved by org staff.</p>
+    <p class="small">We read your Discord name, avatar and Project Six server roles. Your roles decide what you can see.</p>
     <a class="small" id="backToSite" href="#">&larr; Back to the website</a>
   </div>
 </div>
@@ -537,7 +656,8 @@ function toast(msg, kind) {
 /* ---------- State ---------- */
 const S = {
   token: null, data: null, tab: 'dashboard', busy: false,
-  woStatus: 'open', woDiv: 'all', fleetCat: 'all', fleetView: 'org', crewEdit: null
+  woStatus: 'open', woDiv: 'all', fleetCat: 'all', fleetView: 'org', crewEdit: null,
+  calMonth: '', calDay: '', calFilter: 'all', divTab: '', staffTab: 'overview', rolesData: null, rolesLoading: false
 };
 const TOKEN_KEY = 'p6_member_session';
 const STATE_KEY = 'p6_oauth_state';
@@ -653,6 +773,7 @@ const D = () => S.data;
 const me = () => S.data.me;
 function member(id) { return (D().members || []).find(m => m.id === id) || (id === me().id ? me() : null); }
 function divOf(id) { return (D().divisions || []).find(d => d.id === id) || null; }
+const ORG_DIV = { id: 'all', name: 'Org-wide', color: '#93a1a8' };
 function divIndex(id) { return (D().divisions || []).findIndex(d => d.id === id); }
 function patch(divId, size) { const d = divOf(divId); return d ? patchSVG(d, divIndex(divId), size) : ''; }
 function nameOf(id) { const m = member(id); return m ? (m.displayName || m.username) : 'Former member'; }
@@ -664,18 +785,21 @@ function avatar(id, small) {
   return `<span class="${cls}" aria-hidden="true">${esc(n.trim().charAt(0).toUpperCase())}</span>`;
 }
 function who(id) { return `<span class="who">${avatar(id, true)}<span>${esc(nameOf(id))}</span></span>`; }
-const canLeadDiv = div => me().isAdmin || (me().role === 'lead' && me().division === div);
+const canLeadDiv = div => me().isAdmin || (me().role === 'lead' && (me().leads || [me().division]).includes(div));
 const pillFor = (k, extra) => `<span class="pill ${esc(k)} ${extra || ''}">${esc(label(k))}</span>`;
 function catalogInfo(model) { const c = (D().catalog || []).find(x => x[0].toLowerCase() === String(model).toLowerCase()); return c ? { maker: c[1], category: c[2] } : { maker: '', category: 'other' }; }
 
 /* ---------- Render ---------- */
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
+  { id: 'calendar', label: 'Calendar' },
+  { id: 'divisions', label: 'Divisions' },
   { id: 'work', label: 'Work Orders' },
   { id: 'logistics', label: 'Logistics' },
   { id: 'fleet', label: 'Fleet' },
   { id: 'ledger', label: 'Ledger' },
-  { id: 'crew', label: 'Crew' }
+  { id: 'crew', label: 'Crew' },
+  { id: 'staff', label: 'Staff', staff: true }
 ];
 
 function render() {
@@ -685,13 +809,14 @@ function render() {
   $('meAvatar').innerHTML = avatar(me().id);
   $('meName').textContent = me().displayName || me().username;
   const reviewCount = D().workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
-  const pendingCount = me().isAdmin ? D().members.filter(m => m.status === 'pending').length : 0;
-  $('tabs').innerHTML = TABS.map(t => {
+  const pendingCount = me().isAdmin && !D().rolesMode ? D().members.filter(m => m.status === 'pending').length : 0;
+  if (!TABS.some(t => t.id === S.tab && (!t.staff || me().isAdmin))) S.tab = 'dashboard';
+  $('tabs').innerHTML = TABS.filter(t => !t.staff || me().isAdmin).map(t => {
     const n = t.id === 'work' ? reviewCount : t.id === 'crew' ? pendingCount : 0;
     return `<button class="tab${S.tab === t.id ? ' on' : ''}" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}" type="button">${t.label}${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
   const view = $('view');
-  const fn = { dashboard: viewDashboard, work: viewWork, logistics: viewLogistics, fleet: viewFleet, ledger: viewLedger, crew: viewCrew }[S.tab];
+  const fn = { dashboard: viewDashboard, calendar: viewCalendar, divisions: viewDivisions, work: viewWork, logistics: viewLogistics, fleet: viewFleet, ledger: viewLedger, crew: viewCrew, staff: viewStaff }[S.tab];
   view.innerHTML = fn();
   if (S.tab === 'logistics') loadMarket();
   const on = $('tabs').querySelector('.tab.on');
@@ -700,7 +825,9 @@ function render() {
 
 function renderPending() {
   const m = me();
-  $('pendingText').textContent = `Welcome, ${m.displayName || m.username}. Your account is waiting for approval from org staff. While you wait, add your RSI handle and pick a home division.`;
+  $('pendingText').textContent = D().rolesMode
+    ? `Welcome, ${m.displayName || m.username}. You’re signed in, but your Discord account doesn’t have a member role in the Project Six server yet. Once staff give you a role (Recruit or higher), press Check again.`
+    : `Welcome, ${m.displayName || m.username}. Your account is waiting for approval from org staff. While you wait, add your RSI handle and pick a home division.`;
   const f = $('pendingForm');
   f.elements.rsiHandle.value = m.rsiHandle || '';
   f.elements.division.innerHTML = '<option value="">Not sure yet</option>' + D().divisions.map(d => `<option value="${d.id}">${esc(d.name)} — ${esc(d.focus)}</option>`).join('');
@@ -715,13 +842,18 @@ function viewDashboard() {
   const openWork = d.workorders.filter(w => w.status === 'open' || (w.status === 'active' && w.assignees.length < w.slots));
   const moving = d.runs.filter(r => r.status === 'loading' || r.status === 'in-transit');
   const myShips = d.ships.filter(s => s.ownerId === m.id);
-  const div = divOf(m.division);
+  const homeDiv = (m.divisions || [])[0] || m.division;
+  const div = divOf(homeDiv);
+  const cal = calEvents();
+  const majors = upcoming(cal.filter(e => e.major), 120).slice(0, 3);
+  const soon = upcoming(cal.filter(e => !e.major), 21).slice(0, 5);
+  const news = (d.news || [])[0];
   return `
     <div class="page-head">
       <div style="display:flex;align-items:center;gap:16px">
-        ${div ? patch(m.division, 54) : ''}
-        <div><div class="eyebrow">${div ? esc(div.name) : 'No division yet'}</div><h1>Welcome back, ${esc(m.displayName || m.username)}</h1>
-        <p>${m.role === 'admin' ? 'Admin' : m.role === 'lead' ? 'Division lead' : 'Member'}${m.rsiHandle ? ' · ' + esc(m.rsiHandle) : ''}</p></div>
+        ${div ? patch(homeDiv, 54) : ''}
+        <div><div class="eyebrow">${(m.divisions || []).length > 1 ? (m.divisions || []).map(x => esc((divOf(x) || {}).name || '')).join(' · ') : div ? esc(div.name) : 'No division yet'}</div><h1>Welcome back, ${esc(m.displayName || m.username)}</h1>
+        <p>${m.role === 'admin' ? 'Staff' : m.role === 'lead' ? 'Division lead' : 'Member'}${m.rsiHandle ? ' · ' + esc(m.rsiHandle) : ''}</p></div>
       </div>
     </div>
     <div class="stats">
@@ -729,6 +861,16 @@ function viewDashboard() {
       <div class="stat"><div class="stat-label">My earnings</div><div class="stat-value">${auec(d.ledger.myEarnings)}<small>aUEC</small></div><div class="stat-note">From paid work orders</div></div>
       <div class="stat"><div class="stat-label">Open work</div><div class="stat-value">${openWork.length}</div><div class="stat-note">${toReview.length ? toReview.length + ' awaiting your review' : 'Jobs taking crew'}</div></div>
       <div class="stat"><div class="stat-label">Cargo moving</div><div class="stat-value">${moving.reduce((a, r) => a + r.scu, 0).toLocaleString('en-US')}<small>SCU</small></div><div class="stat-note">${moving.length} active run${moving.length === 1 ? '' : 's'}</div></div>
+    </div>
+    ${majors.length ? `<h2 class="sub section">★ Major events</h2><div class="majors">${majors.map(e => `<button class="major-card" type="button" data-act="cal-open" data-id="${esc(e.id)}"><span class="when">${esc(fmtDateTime(e.start))} · ${esc(rel(e.start))}</span><strong>${esc(e.title)}</strong>${e.location ? `<small>${esc(e.location)}</small>` : ''}</button>`).join('')}</div>` : ''}
+    <div class="grid-2 grid-split section">
+      <div>
+        <div class="toolbar" style="margin-bottom:10px"><h2 class="sub" style="margin:0">Coming up for you</h2><button class="btn btn-ghost btn-sm" type="button" data-tab="calendar">Full calendar</button></div>
+        ${agendaList(soon, 'No division or org events in the next three weeks.')}
+        ${news ? `<h2 class="sub section">Latest newsletter</h2><article class="panel news-item"><span class="meta">${esc(news.author || 'Project Six')} · ${esc(fmtDate(news.published))}</span><h3>${esc(news.title)}</h3><p class="news-body">${esc(news.summary || '')}</p>
+          <div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-act="news-open">Read</button></div></article>` : ''}
+      </div>
+      <div>${miniCal(cal)}</div>
     </div>
     <div class="grid-2 section">
       <div>
@@ -750,7 +892,7 @@ function viewDashboard() {
 }
 
 function woRow(w) {
-  return `<div class="row" style="--div:${esc((divOf(w.division) || {}).color || '')}">
+  return `<div class="row" style="--div:${esc((divOf(w.division) || ORG_DIV).color || '')}">
     <div style="display:flex;gap:12px;align-items:center;min-width:0">${patch(w.division, 28)}
       <div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${w.reward ? auec(w.reward) + ' aUEC · ' : ''}${w.assignees.length}/${w.slots} crew${w.due ? ' · due ' + esc(rel(w.due)) : ''}</span></div></div>
     ${pillFor(w.status)}</div>`;
@@ -760,7 +902,9 @@ function woRow(w) {
 function viewWork() {
   const d = D();
   const statuses = ['open', 'active', 'review', 'complete', 'all'];
-  let list = d.workorders.filter(w => S.woDiv === 'all' || w.division === S.woDiv);
+  const divChoices = d.divisions.filter(x => myDivIds().includes(x.id));
+  if (S.woDiv !== 'all' && S.woDiv !== 'org' && !divChoices.some(x => x.id === S.woDiv)) S.woDiv = 'all';
+  let list = d.workorders.filter(w => S.woDiv === 'all' || (S.woDiv === 'org' ? w.division === 'all' : w.division === S.woDiv));
   const counts = {};
   statuses.forEach(s => { counts[s] = s === 'all' ? list.length : list.filter(w => w.status === s).length; });
   if (S.woStatus !== 'all') list = list.filter(w => w.status === S.woStatus);
@@ -771,13 +915,13 @@ function viewWork() {
       ${me().isLead ? '<div class="head-actions"><button class="btn btn-solid" type="button" data-act="wo-new">New work order</button></div>' : ''}</div>
     <div class="toolbar">
       <div class="chips">${statuses.map(s => `<button class="chip${S.woStatus === s ? ' on' : ''}" type="button" data-wo-status="${s}">${s === 'all' ? 'All' : label(s)} <span class="num">${counts[s]}</span></button>`).join('')}</div>
-      <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">All divisions</option>${d.divisions.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">${me().isAdmin ? 'All divisions' : 'All my work'}</option><option value="org"${S.woDiv === 'org' ? ' selected' : ''}>Org-wide</option>${divChoices.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
     </div>
     ${list.length ? `<div class="wo-grid">${list.map(woCard).join('')}</div>` : `<p class="empty">No work orders here.${me().isLead && S.woStatus === 'open' ? ' Post the first one with “New work order”.' : ''}</p>`}`;
 }
 
 function woCard(w) {
-  const m = me(), div = divOf(w.division) || { name: 'Unknown', color: '' };
+  const m = me(), div = divOf(w.division) || (w.division === 'all' ? ORG_DIV : { name: 'Unknown', color: '' });
   const mine = w.assignees.includes(m.id);
   const manage = canLeadDiv(w.division) || w.createdBy === m.id;
   const review = canLeadDiv(w.division);
@@ -817,7 +961,7 @@ function woCard(w) {
 
 function woForm(w) {
   const m = me(), d = D();
-  const divs = d.divisions.filter(x => canLeadDiv(x.id));
+  const divs = (m.isAdmin ? [ORG_DIV] : []).concat(d.divisions.filter(x => canLeadDiv(x.id)));
   w = w || { title: '', division: divs[0] ? divs[0].id : '', type: 'Other', description: '', location: '', reward: 0, slots: 1, priority: 'normal', due: '' };
   openDialog(w.id ? 'Edit work order' : 'New work order', `
     <form class="dlg-body" data-form="wo" novalidate>
@@ -1026,17 +1170,21 @@ function viewLedger() {
 function viewCrew() {
   const d = D(), m = me();
   const pending = m.isAdmin ? d.members.filter(x => x.status === 'pending') : [];
+  const inDiv = (x, id) => (x.divisions || [x.division]).includes(id);
   const suspended = m.isAdmin ? d.members.filter(x => x.status === 'suspended') : [];
   const active = d.members.filter(x => !x.status || x.status === 'active');
-  const groups = d.divisions.map(div => ({ div, people: active.filter(x => x.division === div.id) }));
-  const none = active.filter(x => !divOf(x.division));
+  const groups = d.divisions.map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) }));
+  const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)));
   const roleRank = { admin: 0, lead: 1, member: 2 };
   const sortP = arr => arr.slice().sort((a, b) => roleRank[a.role] - roleRank[b.role] || (a.displayName || '').localeCompare(b.displayName || ''));
   const personRow = p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
-    <div class="actions">${p.role !== 'member' ? `<span class="pill role-${p.role}">${p.role === 'lead' ? 'Lead' : 'Admin'}</span>` : ''}${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
+    <div class="actions">${p.role !== 'member' ? `<span class="pill role-${p.role}">${p.role === 'lead' ? 'Lead' : 'Staff'}</span>` : ''}${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
   return `
     <div class="page-head"><div><div class="eyebrow">Roster</div><h1>Crew</h1><p>${active.length} active member${active.length === 1 ? '' : 's'} across six divisions.</p></div></div>
-    ${pending.length ? `<h2 class="sub">Awaiting approval <span class="pill pending">${pending.length}</span></h2>
+    ${pending.length && d.rolesMode ? `<h2 class="sub">Signed in without a member role <span class="pill pending">${pending.length}</span></h2>
+      <div class="panel rows">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
+        <span class="row-sub">@${esc(p.username)} · give them a member role in Discord to let them in</span></div></div></div>`).join('')}</div>` : ''}
+    ${pending.length && !d.rolesMode ? `<h2 class="sub">Awaiting approval <span class="pill pending">${pending.length}</span></h2>
       <div class="panel rows">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
         <span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}${divOf(p.division) ? ' · wants ' + esc(divOf(p.division).name) : ''} · signed up ${esc(rel(p.joined))}</span></div></div>
         <div class="actions"><button class="btn btn-ok btn-sm" type="button" data-act="member-approve" data-id="${esc(p.id)}">Approve</button>
@@ -1060,10 +1208,10 @@ function memberForm(id) {
       <div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
       <div class="form-grid">
         <div class="field"><label for="mDiv">Division</label><select id="mDiv" name="division"><option value="">None</option>${D().divisions.map(x => `<option value="${x.id}"${x.id === p.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
-        <div class="field"><label for="mRole">Role</label><select id="mRole" name="role"${self ? ' disabled' : ''}>${['member', 'lead', 'admin'].map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${r === 'lead' ? 'Division lead' : r.charAt(0).toUpperCase() + r.slice(1)}</option>`).join('')}</select></div>
+        <div class="field"><label for="mRole">Role</label><select id="mRole" name="role"${self || D().rolesMode ? ' disabled' : ''}>${['member', 'lead', 'admin'].map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${r === 'lead' ? 'Division lead' : r.charAt(0).toUpperCase() + r.slice(1)}</option>`).join('')}</select></div>
         <div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status"${self ? ' disabled' : ''}>${['active', 'pending', 'suspended'].map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>
       </div>
-      <p class="hint">Leads can post and review work orders for their division and manage supply requests. Suspending signs the member out everywhere.</p>
+      <p class="hint">${D().rolesMode ? 'Access and divisions come from Discord roles; change them in Discord. Suspending blocks the portal even if they keep their roles, and signs them out everywhere.' : 'Leads can post and review work orders for their division and manage supply requests. Suspending signs the member out everywhere.'}</p>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
 }
@@ -1086,6 +1234,307 @@ function noteForm(title, actionName, id, required, cta) {
       <div class="field"><label for="nNote">${required ? 'Note *' : 'Note (optional)'}</label><textarea id="nNote" name="note" maxlength="1000" ${required ? 'required' : ''} placeholder="${actionName === 'wo.submit' ? 'What did the crew deliver? Include amounts, screenshots links, etc.' : 'What should the crew fix or add?'}"></textarea></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${cta}</button></div>
     </form>`);
+}
+
+/* ---------- Calendar ---------- */
+const MAJOR_COLOR = '#e6e2da', ORG_COLOR = '#93a1a8';
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const keyDate = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const fmtTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
+const fmtLongDay = k => keyDate(k).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+function myDivIds() { return me().isAdmin ? D().divisions.map(d => d.id) : (me().divisions || []).filter(id => divOf(id)); }
+function evColor(e) { return e.major ? MAJOR_COLOR : e.division === 'all' ? ORG_COLOR : ((divOf(e.division) || {}).color || ORG_COLOR); }
+function evGroup(e) { return e.major ? 'Major event' : e.division === 'all' ? 'Org-wide' : ((divOf(e.division) || {}).name || 'Event'); }
+function canPostCal(div) { return me().isAdmin || (!!div && div !== 'all' && canLeadDiv(div)); }
+function canPostAnyCal() { return me().isAdmin || myDivIds().some(canLeadDiv); }
+function calEvents() { return D().calendar || []; }
+function evKeys(e) { const s = new Date(e.start); const en = e.end ? new Date(e.end) : s; return [dayKey(s), dayKey(en < s ? s : en)]; }
+function eventsOn(key, list) { return list.filter(e => { const [a, b] = evKeys(e); return key >= a && key <= b; }); }
+function upcoming(list, days) {
+  const now = Date.now(), until = now + (days || 60) * 864e5;
+  return list.filter(e => { const end = Date.parse(e.end || e.start) || 0; return end >= now - 3 * 3600e3 && Date.parse(e.start) <= until; });
+}
+function filterCal(list, f) {
+  if (!f || f === 'all') return list;
+  if (f === 'major') return list.filter(e => e.major);
+  if (f === 'org') return list.filter(e => !e.major && e.division === 'all');
+  return list.filter(e => e.division === f);
+}
+function monthDays(y, m) {
+  const first = new Date(y, m, 1);
+  const start = new Date(y, m, 1 - first.getDay());
+  const days = [];
+  for (let i = 0; i < 42; i++) days.push(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i));
+  if (days[35].getMonth() !== m) days.length = 35;
+  return days;
+}
+function calMonth() { return S.calMonth || dayKey(new Date()).slice(0, 7); }
+function shiftMonth(ym, n) { const [y, m] = ym.split('-').map(Number); const d = new Date(y, m - 1 + n, 1); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`; }
+function goingCount(e) { return Object.values(e.rsvps || {}).filter(v => v === 'going').length; }
+
+function evCard(e) {
+  const d = new Date(e.start), mine = (e.rsvps || {})[me().id];
+  const when = (e.end && dayKey(new Date(e.end)) !== dayKey(d)) ? `${fmtDateTime(e.start)} – ${fmtDateTime(e.end)}` : `${fmtTime(e.start)}${e.end ? ' – ' + fmtTime(e.end) : ''}`;
+  return `<button class="ev-card" type="button" style="--c:${esc(evColor(e))}" data-act="cal-open" data-id="${esc(e.id)}">
+    <div class="ev-when"><span>${MON[d.getMonth()]}</span><b>${d.getDate()}</b></div>
+    <div class="ev-main"><span class="ev-tag">${e.major ? '★ ' : ''}${esc(evGroup(e))}</span><strong>${esc(e.title)}</strong>
+      <small>${esc(when)}${e.location ? ' · ' + esc(e.location) : ''}${!e.major && goingCount(e) ? ` · <span class="ev-going">${goingCount(e)} going</span>` : ''}${mine ? ` · <span class="ev-going">You: ${esc(mine)}</span>` : ''}</small></div>
+  </button>`;
+}
+
+function agendaList(list, emptyText) {
+  if (!list.length) return `<p class="empty" style="padding:8px 0">${emptyText}</p>`;
+  let last = '', out = '';
+  list.forEach(e => {
+    const k = dayKey(new Date(e.start));
+    if (k !== last) { out += `<div class="agenda-day">${esc(fmtLongDay(k))}</div>`; last = k; }
+    out += evCard(e);
+  });
+  return `<div class="agenda">${out}</div>`;
+}
+
+function miniCal(list, title) {
+  const now = new Date(), y = now.getFullYear(), m = now.getMonth(), today = dayKey(now);
+  return `<div class="panel mini">
+    <div class="mini-head"><b>${title ? esc(title) : MON[m] + ' ' + y}</b><button class="btn btn-ghost btn-sm" type="button" data-tab="calendar">Open calendar</button></div>
+    <div class="mini-grid">${WD.map(w => `<span class="wd">${w.charAt(0)}</span>`).join('')}
+    ${monthDays(y, m).map(d => {
+      const k = dayKey(d), evs = eventsOn(k, list);
+      const colors = [...new Set(evs.map(evColor))].slice(0, 3);
+      return `<button type="button" class="mini-day${d.getMonth() !== m ? ' out' : ''}${k === today ? ' today' : ''}" data-cal-jump="${k}" aria-label="${esc(fmtLongDay(k))}${evs.length ? ', ' + evs.length + ' event' + (evs.length === 1 ? '' : 's') : ''}">${d.getDate()}<span class="md">${colors.map(c => `<i style="--c:${esc(c)}"></i>`).join('')}</span></button>`;
+    }).join('')}</div></div>`;
+}
+
+function viewCalendar() {
+  const ym = calMonth(), [y, mo] = ym.split('-').map(Number), m = mo - 1;
+  const now = new Date(), today = dayKey(now);
+  const ids = myDivIds();
+  const filters = [['all', 'All', ''], ['major', 'Major', MAJOR_COLOR], ['org', 'Org-wide', ORG_COLOR]].concat(ids.map(id => [id, divOf(id).name, divOf(id).color]));
+  if (!filters.some(f => f[0] === S.calFilter)) S.calFilter = 'all';
+  const list = filterCal(calEvents(), S.calFilter);
+  const days = monthDays(y, m);
+  const sel = S.calDay;
+  const side = sel
+    ? `<div class="toolbar" style="margin-bottom:10px"><h2 class="sub" style="margin:0">${esc(fmtLongDay(sel))}</h2>${canPostAnyCal() ? `<button class="btn btn-ghost btn-sm" type="button" data-act="cal-new" data-day="${sel}">Add event</button>` : ''}</div>${agendaList(eventsOn(sel, list), 'Nothing scheduled this day.')}`
+    : `<h2 class="sub">Coming up</h2>${agendaList(upcoming(list, 45).slice(0, 12), 'Nothing scheduled in the next few weeks.')}`;
+  return `
+    <div class="page-head"><div><div class="eyebrow">Schedule</div><h1>Calendar</h1><p>Major events for everyone, org-wide events, and events for ${me().isAdmin ? 'every division' : 'your divisions'}.</p></div>
+      ${canPostAnyCal() ? '<div class="head-actions"><button class="btn btn-solid" type="button" data-act="cal-new">New event</button></div>' : ''}</div>
+    <div class="toolbar"><div class="chips legend">${filters.map(f => `<button class="chip${S.calFilter === f[0] ? ' on' : ''}" type="button" data-cal-filter="${f[0]}">${f[2] ? `<span class="sw" style="--c:${esc(f[2])}"></span>` : ''}${esc(f[1])}</button>`).join('')}</div></div>
+    <div class="cal-layout">
+      <section class="panel" aria-label="Month view">
+        <div class="cal-bar"><span class="cal-title">${new Date(y, m, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
+          <div class="cal-nav"><button class="btn btn-ghost" type="button" data-cal-nav="-1" aria-label="Previous month">&#8249;</button><button class="btn btn-ghost" type="button" data-cal-nav="0">Today</button><button class="btn btn-ghost" type="button" data-cal-nav="1" aria-label="Next month">&#8250;</button></div></div>
+        <div class="cal-grid">${WD.map(w => `<div class="cal-wd">${w}</div>`).join('')}
+          ${days.map(d => {
+            const k = dayKey(d), evs = eventsOn(k, list).sort((a, b) => (b.major - a.major) || Date.parse(a.start) - Date.parse(b.start));
+            return `<div class="cal-cell${d.getMonth() !== m ? ' out' : ''}${k === today ? ' today' : ''}${k === sel ? ' sel' : ''}" role="button" tabindex="0" data-cal-day="${k}" aria-label="${esc(fmtLongDay(k))}${evs.length ? ', ' + evs.length + ' event' + (evs.length === 1 ? '' : 's') : ''}">
+              <span class="cal-num">${d.getDate()}</span>
+              ${evs.slice(0, 3).map(e => `<button type="button" class="cal-ev${e.major ? ' major' : ''}" style="--c:${esc(evColor(e))}" data-act="cal-open" data-id="${esc(e.id)}" title="${esc(e.title)}">${dayKey(new Date(e.start)) === k ? `<span class="t">${esc(fmtTime(e.start))}</span>` : ''}${e.major ? '★ ' : ''}${esc(e.title)}</button>`).join('')}
+              ${evs.length > 3 ? `<span class="cal-more">+${evs.length - 3} more</span>` : ''}
+              <span class="cal-dots">${[...new Set(evs.map(evColor))].slice(0, 4).map(c => `<i class="cal-dot" style="--c:${esc(c)}"></i>`).join('')}</span>
+            </div>`;
+          }).join('')}</div>
+      </section>
+      <aside>${side}</aside>
+    </div>`;
+}
+
+function evDialog(id) {
+  const e = calEvents().find(x => x.id === id); if (!e) return;
+  const m = me(), mine = (e.rsvps || {})[m.id] || '';
+  const going = Object.keys(e.rsvps || {}).filter(k => e.rsvps[k] === 'going');
+  const maybe = Object.keys(e.rsvps || {}).filter(k => e.rsvps[k] === 'maybe');
+  const manage = !e.major && (canPostCal(e.division) || e.createdBy === m.id);
+  const div = divOf(e.division);
+  openDialog(e.major ? 'Major event' : 'Event', `
+    <div class="dlg-body">
+      <div class="ev-hero">${div ? patch(e.division, 54) : ''}<div><span class="ev-tag" style="--c:${esc(evColor(e))}">${e.major ? '<span class="major-badge">★ Major event</span>' : esc(evGroup(e))}</span><h3>${esc(e.title)}</h3></div></div>
+      <div class="ev-facts">
+        <span><b>When:</b> ${esc(fmtDateTime(e.start))}${e.end ? ' – ' + esc(fmtDateTime(e.end)) : ''} <span class="hint">(${esc(rel(e.start))})</span></span>
+        ${e.type ? `<span><b>Type:</b> ${esc(e.type)}</span>` : ''}
+        ${e.location ? `<span><b>Where:</b> ${esc(e.location)}</span>` : ''}
+        ${e.createdBy ? `<span><b>Posted by:</b> ${esc(nameOf(e.createdBy))}</span>` : ''}
+      </div>
+      ${e.description ? `<p class="ev-desc">${esc(e.description)}</p>` : ''}
+      ${e.major ? `<p class="hint">Major events are open to everyone and also appear on the public website.</p>
+        <div class="actions">${e.link && /^https:\/\//.test(e.link) ? `<a class="btn btn-ghost btn-sm" href="${esc(e.link)}" target="_blank" rel="noopener">Event link</a>` : ''}<a class="btn btn-ghost btn-sm" href="${esc(CONFIG.siteUrl)}#events" target="_blank" rel="noopener">View on website</a>${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="site-edit" data-kind="events" data-id="${esc(e.id.replace(/^major-/, ''))}">Edit</button>` : ''}</div>`
+      : `<div class="stack">
+          <div class="rsvp"><span class="lbl">Your RSVP</span>
+            <button class="btn btn-ghost btn-sm${mine === 'going' ? ' on' : ''}" type="button" data-act="cal-rsvp" data-id="${esc(e.id)}" data-status="${mine === 'going' ? '' : 'going'}">Going</button>
+            <button class="btn btn-ghost btn-sm${mine === 'maybe' ? ' on' : ''}" type="button" data-act="cal-rsvp" data-id="${esc(e.id)}" data-status="${mine === 'maybe' ? '' : 'maybe'}">Maybe</button></div>
+          ${going.length ? `<div><span class="lbl">Going · ${going.length}</span><div class="owners" style="margin-top:6px">${going.map(k => `<span class="owner">${avatar(k, true)}<span>${esc(nameOf(k))}</span></span>`).join('')}</div></div>` : ''}
+          ${maybe.length ? `<div><span class="lbl">Maybe · ${maybe.length}</span><div class="owners" style="margin-top:6px">${maybe.map(k => `<span class="owner off">${avatar(k, true)}<span>${esc(nameOf(k))}</span></span>`).join('')}</div></div>` : ''}
+        </div>`}
+      ${manage ? `<div class="dlg-foot"><button class="btn btn-danger btn-sm" type="button" data-act="cal-remove" data-id="${esc(e.id)}" data-confirm="Confirm delete">Delete</button><button class="btn btn-ghost btn-sm" type="button" data-act="cal-edit" data-id="${esc(e.id)}">Edit</button></div>` : ''}
+    </div>`);
+}
+
+function calForm(e, day) {
+  const d = D();
+  const opts = (me().isAdmin ? [['all', 'Org-wide (all members)']] : []).concat(d.divisions.filter(x => canPostCal(x.id)).map(x => [x.id, x.name]));
+  const startDefault = day ? `${day}T20:00` : '';
+  e = e || { title: '', division: S.tab === 'divisions' && canPostCal(S.divTab) ? S.divTab : opts[0] ? opts[0][0] : '', type: 'Operation', start: '', end: '', location: '', description: '' };
+  openDialog(e.id ? 'Edit event' : 'New event', `
+    <form class="dlg-body" data-form="cal" novalidate>
+      <input type="hidden" name="id" value="${esc(e.id || '')}">
+      <div class="field"><label for="cTitle">Title *</label><input id="cTitle" name="title" maxlength="100" required value="${esc(e.title)}" placeholder="e.g. Friday night fleet op"></div>
+      <div class="form-grid">
+        <div class="field"><label for="cDiv">Who can see it</label><select id="cDiv" name="division">${opts.map(o => `<option value="${o[0]}"${o[0] === e.division ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select></div>
+        <div class="field"><label for="cType">Type</label><select id="cType" name="type">${d.lists.calTypes.map(t => `<option${t === e.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+        <div class="field"><label for="cStart">Starts *</label><input id="cStart" name="start" type="datetime-local" required value="${esc(e.start ? toLocalInput(e.start) : startDefault)}"></div>
+        <div class="field"><label for="cEnd">Ends</label><input id="cEnd" name="end" type="datetime-local" value="${esc(toLocalInput(e.end))}"></div>
+        <div class="field full"><label for="cLoc">Location</label><input id="cLoc" name="location" maxlength="120" value="${esc(e.location)}" placeholder="e.g. Port Olisar, Stanton"></div>
+        <div class="field full"><label for="cDesc">Details</label><textarea id="cDesc" name="description" maxlength="2000" placeholder="Meeting point, ships, roles needed…">${esc(e.description)}</textarea></div>
+      </div>
+      <p class="hint">Division events only show for members of that division. For a big event everyone should see, including visitors to the website, staff can post a major event under Staff.</p>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${e.id ? 'Save changes' : 'Add to calendar'}</button></div>
+    </form>`);
+}
+
+/* ---------- Divisions ---------- */
+function viewDivisions() {
+  const ids = myDivIds();
+  const head = `<div class="page-head"><div><div class="eyebrow">Your units</div><h1>Divisions</h1><p>${me().isAdmin ? 'Every division, with its schedule, work and roster.' : 'The divisions you belong to through your Discord roles.'}</p></div></div>`;
+  if (!ids.length) return head + `<div class="panel panel-pad"><p class="empty" style="padding:0">You’re not in a division yet. ${D().rolesMode ? 'Ask staff in Discord for a division role, then refresh this page.' : 'Pick a home division in your profile.'}</p></div>`;
+  if (!ids.includes(S.divTab)) S.divTab = ids[0];
+  const div = divOf(S.divTab);
+  const people = D().members.filter(x => (!x.status || x.status === 'active') && (x.divisions || [x.division]).includes(div.id));
+  const evs = upcoming(calEvents().filter(e => e.division === div.id), 60);
+  const wos = D().workorders.filter(w => w.division === div.id && (w.status === 'open' || w.status === 'active' || w.status === 'review'));
+  const leads = people.filter(p => p.role === 'admin' || (p.leads || []).includes(div.id));
+  return head + `
+    ${ids.length > 1 ? `<div class="chips div-chips" style="margin-bottom:16px">${ids.map(id => `<button class="chip${id === div.id ? ' on' : ''}" type="button" data-div-tab="${id}">${esc(divOf(id).name)}</button>`).join('')}</div>` : ''}
+    <section class="panel div-hero" style="--div:${esc(div.color)}">
+      ${patchSVG(div, divIndex(div.id), 88)}
+      <div><div class="eyebrow" style="color:${esc(div.color)}">${esc(div.focus)}</div><h1>${esc(div.name)}</h1><p>${esc(div.blurb)}</p></div>
+      <div class="div-stats"><div><b>${people.length}</b><span>Members</span></div><div><b>${evs.length}</b><span>Upcoming</span></div><div><b>${wos.length}</b><span>Open work</span></div></div>
+    </section>
+    <div class="grid-2 grid-split section">
+      <div>
+        <div class="toolbar" style="margin-bottom:10px"><h2 class="sub" style="margin:0">Upcoming events</h2>${canPostCal(div.id) ? '<button class="btn btn-ghost btn-sm" type="button" data-act="cal-new">New event</button>' : ''}</div>
+        ${agendaList(evs.slice(0, 8), 'No events planned for this division yet.')}
+        <div class="toolbar section" style="margin-bottom:10px"><h2 class="sub" style="margin:0">Work orders</h2><button class="btn btn-ghost btn-sm" type="button" data-act="div-work" data-id="${div.id}">View all</button></div>
+        <div class="panel rows">${wos.length ? wos.slice(0, 6).map(woRow).join('') : '<div class="row"><span class="empty" style="padding:4px 0">No open work orders.</span></div>'}</div>
+      </div>
+      <div>
+        ${miniCal(calEvents().filter(e => e.division === div.id || e.major), 'This month')}
+        <h2 class="sub section">Roster <span class="num" style="color:var(--dim)">${people.length}</span></h2>
+        <div class="panel rows">${people.length ? people.sort((a, b) => leads.includes(b) - leads.includes(a) || (a.displayName || '').localeCompare(b.displayName || '')).map(p => `
+          <div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">${p.rsiHandle ? 'RSI: ' + esc(p.rsiHandle) : '@' + esc(p.username)}</span></div></div>
+          ${p.role === 'admin' ? '<span class="pill role-admin">Staff</span>' : leads.includes(p) ? '<span class="pill role-lead">Lead</span>' : ''}</div>`).join('') : '<div class="row"><span class="hint">No members yet.</span></div>'}</div>
+      </div>
+    </div>`;
+}
+
+/* ---------- Staff ---------- */
+function viewStaff() {
+  if (!me().isAdmin || !D().staff) return '<p class="empty">Staff only.</p>';
+  const tabs = [['overview', 'Overview'], ['events', 'Major events'], ['news', 'Newsletters'], ['roles', 'Discord roles']];
+  if (!tabs.some(t => t[0] === S.staffTab)) S.staffTab = 'overview';
+  const body = { overview: staffOverview, events: staffEvents, news: staffNews, roles: staffRoles }[S.staffTab]();
+  return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>Site content, Discord access and setup. Visible to Admin, Manager and Director roles.</p></div></div>
+    <div class="subtabs chips">${tabs.map(t => `<button class="chip${S.staffTab === t[0] ? ' on' : ''}" type="button" data-staff-tab="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
+}
+
+function staffOverview() {
+  const st = D().staff.setup, d = D();
+  const items = [
+    [st.discordLogin, 'Discord sign-in', 'DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET and DISCORD_REDIRECT_URI in Script Properties.'],
+    [st.guild, 'Discord server', 'DISCORD_GUILD_ID: only members of the Project Six server can sign in, and roles decide access.'],
+    [st.bot, 'Discord bot', 'DISCORD_BOT_TOKEN: reads server roles and re-checks members every few minutes.'],
+    [d.rolesMode, 'Role access', d.rolesMode ? 'Access follows Discord roles. Adjust the mapping under Discord roles.' : 'Manual approval is in use until Discord roles are connected.'],
+    [st.webhook, 'Announcements (optional)', 'DISCORD_ANNOUNCE_WEBHOOK: new major events and newsletters are posted to a Discord channel.'],
+    [st.market, 'Market data', 'UEX_TOKEN: live commodity prices for the Market page and logistics.']
+  ];
+  const pending = d.members.filter(x => x.status === 'pending').length;
+  const majors = upcoming(calEvents().filter(e => e.major), 365).length;
+  return `<div class="stats">
+      <div class="stat"><div class="stat-label">Active members</div><div class="stat-value">${d.members.filter(x => x.status === 'active').length}</div></div>
+      <div class="stat"><div class="stat-label">Without access</div><div class="stat-value">${pending}</div><div class="stat-note">${d.rolesMode ? 'Signed in, no member role' : 'Awaiting approval'}</div></div>
+      <div class="stat"><div class="stat-label">Major events</div><div class="stat-value">${majors}</div><div class="stat-note">Upcoming, on the website</div></div>
+      <div class="stat"><div class="stat-label">Newsletters</div><div class="stat-value">${d.staff.newsletters.filter(n => n.status === 'published').length}</div><div class="stat-note">Published</div></div>
+    </div>
+    <h2 class="sub section">Setup</h2>
+    <div class="panel checklist">${items.map(i => `<div class="check-row"><span class="mark ${i[0] ? 'y' : 'n'}">${i[0] ? '✓' : '!'}</span><div><b>${esc(i[1])}</b><span>${esc(i[2])}</span></div></div>`).join('')}</div>`;
+}
+
+function staffEvents() {
+  const list = D().staff.events;
+  return `<div class="toolbar"><p class="hint" style="max-width:640px">Major events show on the public website’s Events page and in every member’s calendar. Use the calendar for division or members-only events.</p><button class="btn btn-solid" type="button" data-act="site-new" data-kind="events">New major event</button></div>
+    <div class="panel rows">${list.length ? list.map(e => `<div class="row"><div class="row-main"><span class="row-title">${esc(e.title)}</span><span class="row-sub">${esc(fmtDateTime(e.start))}${e.location ? ' · ' + esc(e.location) : ''} · ${esc(e.type)}</span></div>
+      <div class="actions"><span class="pill ${e.status === 'published' ? 'complete' : 'pending'}">${e.status === 'published' ? 'Published' : 'Draft'}</span><button class="btn btn-ghost btn-sm" type="button" data-act="site-edit" data-kind="events" data-id="${esc(e.id)}">Edit</button><button class="btn btn-danger btn-sm" type="button" data-act="site-remove" data-kind="events" data-id="${esc(e.id)}" data-confirm="Confirm delete">Delete</button></div></div>`).join('')
+      : '<div class="row"><span class="empty" style="padding:4px 0">No major events yet.</span></div>'}</div>`;
+}
+
+function staffNews() {
+  const list = D().staff.newsletters;
+  return `<div class="toolbar"><p class="hint" style="max-width:640px">Published newsletters appear on the website’s Newsletters page and on every member’s dashboard.</p><button class="btn btn-solid" type="button" data-act="site-new" data-kind="newsletters">New newsletter</button></div>
+    <div class="panel rows">${list.length ? list.map(n => `<div class="row"><div class="row-main"><span class="row-title">${esc(n.title)}</span><span class="row-sub">${esc(n.author || '—')} · ${esc(n.published ? fmtDate(n.published) : 'not published')}</span></div>
+      <div class="actions"><span class="pill ${n.status === 'published' ? 'complete' : 'pending'}">${n.status === 'published' ? 'Published' : 'Draft'}</span><button class="btn btn-ghost btn-sm" type="button" data-act="site-edit" data-kind="newsletters" data-id="${esc(n.id)}">Edit</button><button class="btn btn-danger btn-sm" type="button" data-act="site-remove" data-kind="newsletters" data-id="${esc(n.id)}" data-confirm="Confirm delete">Delete</button></div></div>`).join('')
+      : '<div class="row"><span class="empty" style="padding:4px 0">No newsletters yet.</span></div>'}</div>`;
+}
+
+function siteForm(kind, item) {
+  const d = D();
+  if (kind === 'events') {
+    const e = item || { title: '', type: 'Operation', start: '', end: '', location: '', description: '', link: '', status: 'published' };
+    openDialog(e.id ? 'Edit major event' : 'New major event', `
+      <form class="dlg-body" data-form="site-event" novalidate>
+        <input type="hidden" name="id" value="${esc(e.id || '')}">
+        <div class="field"><label for="seTitle">Title *</label><input id="seTitle" name="title" maxlength="120" required value="${esc(e.title)}"></div>
+        <div class="form-grid">
+          <div class="field"><label for="seType">Type</label><select id="seType" name="type">${d.lists.eventTypes.map(t => `<option${t === e.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+          <div class="field"><label for="seStatus">Status</label><select id="seStatus" name="status"><option value="published"${e.status === 'published' ? ' selected' : ''}>Published</option><option value="draft"${e.status !== 'published' ? ' selected' : ''}>Draft</option></select></div>
+          <div class="field"><label for="seStart">Starts *</label><input id="seStart" name="start" type="datetime-local" required value="${esc(toLocalInput(e.start))}"></div>
+          <div class="field"><label for="seEnd">Ends</label><input id="seEnd" name="end" type="datetime-local" value="${esc(toLocalInput(e.end))}"></div>
+          <div class="field full"><label for="seLoc">Location</label><input id="seLoc" name="location" maxlength="120" value="${esc(e.location)}"></div>
+          <div class="field full"><label for="seLink">Link (https, optional)</label><input id="seLink" name="link" maxlength="300" value="${esc(e.link)}" placeholder="e.g. Discord event link"></div>
+          <div class="field full"><label for="seDesc">Description</label><textarea id="seDesc" name="description" maxlength="2000">${esc(e.description)}</textarea></div>
+        </div>
+        <p class="hint">Everyone sees published major events: website visitors, guests and every member and division.</p>
+        <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
+      </form>`);
+  } else {
+    const n = item || { title: '', author: me().displayName || me().username, summary: '', body: '', status: 'draft' };
+    openDialog(n.id ? 'Edit newsletter' : 'New newsletter', `
+      <form class="dlg-body" data-form="site-news" novalidate>
+        <input type="hidden" name="id" value="${esc(n.id || '')}">
+        <div class="field"><label for="snTitle">Title *</label><input id="snTitle" name="title" maxlength="120" required value="${esc(n.title)}"></div>
+        <div class="form-grid">
+          <div class="field"><label for="snAuthor">Author</label><input id="snAuthor" name="author" maxlength="60" value="${esc(n.author)}"></div>
+          <div class="field"><label for="snStatus">Status</label><select id="snStatus" name="status"><option value="draft"${n.status !== 'published' ? ' selected' : ''}>Draft</option><option value="published"${n.status === 'published' ? ' selected' : ''}>Published</option></select></div>
+          <div class="field full"><label for="snSummary">Summary</label><input id="snSummary" name="summary" maxlength="300" value="${esc(n.summary)}" placeholder="Leave blank to use the first lines"></div>
+          <div class="field full"><label for="snBody">Body *</label><textarea id="snBody" name="body" maxlength="20000" style="min-height:220px" placeholder="Use a blank line between paragraphs. **bold** works.">${esc(n.body)}</textarea></div>
+        </div>
+        <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
+      </form>`);
+  }
+}
+
+function staffRoles() {
+  if (!S.rolesData) {
+    if (!S.rolesLoading) {
+      S.rolesLoading = true;
+      api('roles.list').then(r => { S.rolesData = r; }).catch(err => { S.rolesData = { error: err.message }; }).finally(() => { S.rolesLoading = false; if (S.tab === 'staff' && S.staffTab === 'roles') render(); });
+    }
+    return '<div class="panel panel-pad"><div class="spinner" aria-label="Loading roles"></div></div>';
+  }
+  const r = S.rolesData;
+  if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
+  if (!r.guild || !r.bot) return `<div class="panel panel-pad stack"><p>${!r.guild ? 'Add <b>DISCORD_GUILD_ID</b>' : 'Add <b>DISCORD_BOT_TOKEN</b>'} in Apps Script → Project Settings → Script Properties, then reload this page.</p><p class="hint">The bot only needs to be in the server; it doesn’t need any permissions.</p></div>`;
+  const divs = D().divisions;
+  return `<form data-form="roles" novalidate>
+    <div class="toolbar"><p class="hint" style="max-width:700px">${r.saved ? 'Saved mapping.' : 'Suggested from role names. Nothing is saved until you press Save.'} Members need a role with <b>Member</b> or higher to use the portal. Division roles decide which division events, work orders and rosters they see.</p>
+      <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Reload from Discord</button><button class="btn btn-solid" type="submit">Save mapping</button></div></div>
+    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Discord role</th><th>Access</th><th>Division</th></tr></thead><tbody>
+      ${r.roles.map(x => `<tr data-role="${esc(x.id)}" data-name="${esc(x.name)}"><td><span class="role-name" style="--c:${esc(x.color || '')}"><i></i>${esc(x.name)}</span></td>
+        <td><select name="access" aria-label="Access for ${esc(x.name)}">${[['', 'No access'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']].map(o => `<option value="${o[0]}"${o[0] === x.access ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></td>
+        <td><select name="division" aria-label="Division for ${esc(x.name)}"><option value="">—</option>${divs.map(dv => `<option value="${dv.id}"${dv.id === x.division ? ' selected' : ''}>${esc(dv.name)}</option>`).join('')}</select></td></tr>`).join('')}
+    </tbody></table></div></form>`;
 }
 
 /* ---------- Dialog ---------- */
@@ -1121,6 +1570,18 @@ document.addEventListener('click', async e => {
   const fc = e.target.closest('[data-fleet-cat]');
   if (fc) { S.fleetCat = fc.dataset.fleetCat; render(); return; }
   if (e.target.closest('[data-logout]')) { signOut(); return; }
+  const cn = e.target.closest('[data-cal-nav]');
+  if (cn) { const n = Number(cn.dataset.calNav); S.calMonth = n ? shiftMonth(calMonth(), n) : ''; if (!n) S.calDay = dayKey(new Date()); render(); return; }
+  const cf = e.target.closest('[data-cal-filter]');
+  if (cf) { S.calFilter = cf.dataset.calFilter; render(); return; }
+  const cj = e.target.closest('[data-cal-jump]');
+  if (cj) { S.tab = 'calendar'; S.calDay = cj.dataset.calJump; S.calMonth = cj.dataset.calJump.slice(0, 7); store.set('p6_member_tab', S.tab); render(); window.scrollTo({ top: 0 }); return; }
+  const dt = e.target.closest('[data-div-tab]');
+  if (dt) { S.divTab = dt.dataset.divTab; render(); return; }
+  const stb = e.target.closest('[data-staff-tab]');
+  if (stb) { S.staffTab = stb.dataset.staffTab; render(); return; }
+  const cd = e.target.closest('[data-cal-day]');
+  if (cd && !e.target.closest('[data-act]')) { S.calDay = S.calDay === cd.dataset.calDay ? '' : cd.dataset.calDay; render(); return; }
 
   const b = e.target.closest('[data-act]');
   if (!b) return;
@@ -1149,7 +1610,22 @@ document.addEventListener('click', async e => {
     case 'member-approve': { const p = d.members.find(x => x.id === id); act('member.update', { id, status: 'active', division: p.division || '' }, 'Member approved.'); break; }
     case 'member-decline': act('member.update', { id, status: 'suspended' }, 'Application declined.'); break;
     case 'member-edit': memberForm(id); break;
+    case 'cal-new': calForm(null, b.dataset.day); break;
+    case 'cal-open': evDialog(id); break;
+    case 'cal-edit': calForm(calEvents().find(x => x.id === id)); break;
+    case 'cal-remove': if (await act('cal.remove', { id }, 'Event deleted.')) closeDialog(); break;
+    case 'cal-rsvp': if (await act('cal.rsvp', { id, status: b.dataset.status }, b.dataset.status ? 'RSVP saved.' : 'RSVP cleared.')) evDialog(id); break;
+    case 'div-work': S.tab = 'work'; S.woDiv = id; S.woStatus = 'open'; render(); window.scrollTo({ top: 0 }); break;
+    case 'news-open': { const n = (d.news || [])[0]; if (n) openDialog('Newsletter', `<div class="dlg-body"><span class="hint">${esc(n.author || 'Project Six')} · ${esc(fmtDate(n.published))}</span><h3 style="font-family:var(--f-label);font-size:1.4rem">${esc(n.title)}</h3><div class="news-body">${esc(n.body).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div></div>`); break; }
+    case 'site-new': siteForm(b.dataset.kind); break;
+    case 'site-edit': { const list = b.dataset.kind === 'events' ? d.staff.events : d.staff.newsletters; siteForm(b.dataset.kind, list.find(x => x.id === id)); break; }
+    case 'site-remove': if (await act('site.remove', { kind: b.dataset.kind, id }, 'Deleted.')) closeDialog(); break;
+    case 'roles-reload': S.rolesData = null; render(); break;
   }
+});
+
+document.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-cal-day]')) { e.preventDefault(); e.target.click(); }
 });
 
 document.addEventListener('change', e => {
@@ -1193,6 +1669,24 @@ document.addEventListener('submit', async e => {
       case 'profile':
         ok = await act('profile.update', { rsiHandle: v('rsiHandle'), division: f.elements.division.disabled ? me().division : v('division') }, 'Profile saved.');
         break;
+      case 'cal':
+        if (!v('title').trim() || !v('start')) { toast('Add a title and start time.', 'err'); break; }
+        ok = await act('cal.save', { id: v('id'), title: v('title'), division: v('division'), type: v('type'), start: fromLocalInput(v('start')), end: fromLocalInput(v('end')), location: v('location'), description: v('description') }, v('id') ? 'Event updated.' : 'Event added.');
+        break;
+      case 'site-event':
+        if (!v('title').trim() || !v('start')) { toast('Add a title and start time.', 'err'); break; }
+        ok = await act('site.save', { kind: 'events', item: { id: v('id'), title: v('title'), type: v('type'), status: v('status'), start: fromLocalInput(v('start')), end: fromLocalInput(v('end')), location: v('location'), link: v('link'), description: v('description') } }, 'Major event saved.');
+        break;
+      case 'site-news':
+        if (!v('title').trim() || !v('body').trim()) { toast('Add a title and body.', 'err'); break; }
+        ok = await act('site.save', { kind: 'newsletters', item: { id: v('id'), title: v('title'), author: v('author'), status: v('status'), summary: v('summary'), body: v('body') } }, 'Newsletter saved.');
+        break;
+      case 'roles': {
+        const roles = [...f.querySelectorAll('tr[data-role]')].map(tr => ({ id: tr.dataset.role, name: tr.dataset.name, access: tr.querySelector('[name=access]').value, division: tr.querySelector('[name=division]').value }));
+        ok = await act('roles.save', { roles }, 'Role mapping saved.');
+        if (ok) { S.rolesData = null; render(); }
+        break;
+      }
       case 'note':
         if (f.elements.note.required && !v('note').trim()) { toast('Add a note.', 'err'); break; }
         ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, f.dataset.action === 'wo.submit' ? 'Submitted for review.' : 'Sent back to the crew.');
