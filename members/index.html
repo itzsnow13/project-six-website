@@ -442,6 +442,26 @@ button.owner:hover { border-color: var(--accent); }
 .org-money { color: var(--accent); letter-spacing: .02em; text-transform: none; }
 .page-head .optional-note { margin-top: 6px; }
 .opt { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--dim); }
+.roster-head { flex-wrap: wrap; }
+.roster-title { flex: 1; min-width: 160px; }
+.lead-card { display: grid; justify-items: end; gap: 4px; text-align: right; margin-left: auto; }
+.lead-who { display: inline-flex; align-items: center; gap: 8px; padding: 5px 10px 5px 5px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--div) 55%, transparent); background: color-mix(in srgb, var(--div) 12%, transparent); cursor: pointer; }
+.lead-who b { font-size: .92rem; }
+.sup-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); }
+.sup-strip .lbl { margin-right: 4px; }
+.sup-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 3px; border-radius: 999px; border: 1px solid rgba(143,176,208,.45); font-size: .86rem; cursor: pointer; }
+.sup-chip:hover, .lead-who:hover { border-color: var(--accent); }
+.roster-more { padding: 6px 16px 12px; }
+.roster-more:empty { display: none; }
+.roster-search { width: min(360px, 100%); padding: 9px 12px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font: inherit; }
+.roster-search.mini { width: min(220px, 100%); padding: 7px 10px; font-size: .9rem; }
+.roster-search.wide { width: 100%; max-width: 560px; }
+.roster-search:focus { outline: none; border-color: var(--accent); }
+.roster-bar { margin-bottom: 12px; }
+.unassigned { margin-bottom: 8px; }
+.aux-toggle { cursor: pointer; background: transparent; color: var(--muted); font: inherit; }
+.aux-toggle.on { color: var(--text); background: var(--accent-soft); }
+.aux-state { margin-left: 4px; color: var(--accent); font-weight: 700; }
 .mgmt-label { padding: 12px 16px 4px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); border-top: 1px solid var(--line); }
 .pill.stage-received { color: var(--steel); border-color: rgba(147,161,168,.5); }
 .pill.stage-forwarded { color: var(--accent); border-color: rgba(201,181,142,.45); }
@@ -1009,6 +1029,7 @@ function render() {
   const fn = { dashboard: viewDashboard, ops: viewOps, divisions: viewDivisions, fleet: viewFleet, treasury: viewTreasury, crew: viewCrew, staff: viewStaff }[S.tab];
   view.innerHTML = fn();
   if (S.tab === 'ops' && S.sub.ops === 'logistics') loadMarket();
+  if (S.tab === 'crew') applyRoster();
   const on = $('tabs').querySelector('.tab.on');
   if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -1459,7 +1480,16 @@ function canManage(p) {
   if (p.id === m.id && !m.owner) return false;
   return !!(m.isCommand || m.isManager || (m.lead && (!p.crew || p.crew === m.lead)));
 }
+const canAuxAny = () => !!(me().lead || me().isManager || me().isCommand);
+const rosterKey = p => [p.username, p.displayName, p.rsiHandle].filter(Boolean).join(' ').toLowerCase();
+const byUser = (a, b) => (a.username || '').localeCompare(b.username || '', undefined, { sensitivity: 'base' });
+
 function viewCrew() {
+  const nav = subnav('crew');
+  return nav + (S.sub.crew === 'search' ? viewMemberSearch() : viewRoster());
+}
+
+function viewRoster() {
   const d = D(), m = me();
   const pending = m.isStaff ? d.members.filter(x => x.status === 'pending') : [];
   const review = m.isStaff ? d.members.filter(x => x.status === 'review') : [];
@@ -1467,33 +1497,78 @@ function viewCrew() {
   const suspended = m.isStaff ? d.members.filter(x => x.status === 'suspended') : [];
   const active = d.members.filter(x => !x.status || x.status === 'active');
   const groups = d.divisions.map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) })).filter(g => !g.div.command || g.people.length);
-  const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)));
-  const titleRank = t => ['director', 'manager', 'lead', 'admin', 'supervisor'].indexOf(t) + 1 || 9;
-  const sortP = arr => arr.slice().sort((a, b) => titleRank(a.title) - titleRank(b.title) || (a.role === 'lead' ? 0 : 1) - (b.role === 'lead' ? 0 : 1) || (a.displayName || '').localeCompare(b.displayName || ''));
-  const personRow = p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
-    <div class="actions">${canManage(p) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">${m.lead && !m.isCommand && !m.isManager && !p.crew ? 'Assign' : 'Manage'}</button>` : ''}</div></div>`;
+  const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)))
+    .sort((a, b) => (Date.parse(b.joined) || 0) - (Date.parse(a.joined) || 0));
+  const manageBtn = p => canManage(p) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">${m.lead && !m.isCommand && !m.isManager && !p.crew ? 'Assign' : 'Manage'}</button>` : '';
+  const personRow = p => `<div class="row" data-q="${esc(rosterKey(p))}"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
+    <div class="actions">${manageBtn(p)}</div></div>`;
+  const list = (people, limit, which) => `<div class="rows roster-list" data-limit="${limit}" data-which="${which}">${people.map(personRow).join('')}</div><p class="roster-more hint"></p>`;
+  const block = g => {
+    const leads = g.people.filter(p => p.lead === g.div.id);
+    const sups = g.people.filter(p => p.supervisor === g.div.id && !leads.includes(p));
+    const crew = g.people.filter(p => !leads.includes(p) && !sups.includes(p)).sort(byUser);
+    return `<section class="panel div-block roster-block" style="--div:${esc(g.div.color)}">
+      <div class="div-head roster-head">${patchSVG(g.div, divIndex(g.div.id), 44)}<div class="roster-title"><h3>${esc(g.div.name)}</h3><p>${esc(g.div.focus)} · ${g.people.length} member${g.people.length === 1 ? '' : 's'}</p></div>
+        ${g.div.command ? '' : `<div class="lead-card">${leads.length ? leads.map(p => `<span class="lbl">Lead</span><span class="lead-who" data-profile="${esc(p.id)}" role="button" tabindex="0">${avatar(p.id, true)}<b>${esc(nameOf(p.id))}</b></span>`).join('') : '<span class="lbl">Lead</span><span class="hint">Not assigned</span>'}</div>`}</div>
+      ${g.div.command ? '' : `<div class="sup-strip"><span class="lbl">Supervisors</span>${sups.length ? sups.map(p => `<span class="sup-chip" data-profile="${esc(p.id)}" role="button" tabindex="0">${avatar(p.id, true)}${esc(nameOf(p.id))}</span>`).join('') : '<span class="hint">None yet</span>'}</div>`}
+      <div class="mgmt-label">Crew <span class="num">${crew.length}</span></div>
+      ${list(crew, 6, 'all')}
+    </section>`;
+  };
   return `
     <div class="page-head"><div><div class="eyebrow">Roster</div><h1>Crew</h1><p>${active.length} active member${active.length === 1 ? '' : 's'}.${m.isCommand ? ' Move people between divisions with Manage. Only the owner puts someone in Command.' : m.lead ? ` Assign members to ${esc((divOf(m.lead) || {}).name || 'your division')} from the unassigned list.` : ''}</p></div></div>
     ${review.length ? `<h2 class="sub">Recruits in review <span class="pill review">${review.length}</span></h2>
       <div class="panel rows" style="margin-bottom:24px">${review.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span>
         <span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''} · signed up ${esc(rel(p.joined))}</span></div></div></div>`).join('')}</div>` : ''}
     ${pending.length && d.rolesMode ? `<h2 class="sub">Signed in without a member role <span class="pill pending">${pending.length}</span></h2>
-      <div class="panel rows">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
+      <div class="panel rows" style="margin-bottom:24px">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
         <span class="row-sub">@${esc(p.username)} · give them a member role in Discord to let them in</span></div></div></div>`).join('')}</div>` : ''}
     ${pending.length && !d.rolesMode ? `<h2 class="sub">Awaiting approval <span class="pill pending">${pending.length}</span></h2>
-      <div class="panel rows">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
+      <div class="panel rows" style="margin-bottom:24px">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
         <span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}${divOf(p.division) ? ' · wants ' + esc(divOf(p.division).name) : ''} · signed up ${esc(rel(p.joined))}</span></div></div>
         <div class="actions"><button class="btn btn-ok btn-sm" type="button" data-act="member-approve" data-id="${esc(p.id)}">Approve</button>
         <button class="btn btn-danger btn-sm" type="button" data-act="member-decline" data-id="${esc(p.id)}" data-confirm="Confirm decline">Decline</button></div></div>`).join('')}</div>` : ''}
-    <div class="grid-2 section">
-      ${none.length && (m.lead || m.isCommand) ? `<section class="panel div-block unassigned"><div class="div-head"><div><h3>Unassigned</h3><p>${none.length} member${none.length === 1 ? '' : 's'} waiting for a division</p></div></div><div class="rows">${sortP(none).map(personRow).join('')}</div></section>` : ''}
-      ${groups.map(g => `<section class="panel div-block">
-        <div class="div-head">${patchSVG(g.div, divIndex(g.div.id), 44)}<div><h3>${esc(g.div.name)}</h3><p>${esc(g.div.focus)} · ${g.people.length} member${g.people.length === 1 ? '' : 's'}</p></div></div>
-        <div class="rows">${g.people.length ? sortP(g.people).map(personRow).join('') : '<div class="row"><span class="hint">No members yet.</span></div>'}</div>
-      </section>`).join('')}
-      ${none.length && !(m.lead || m.isCommand) ? `<section class="panel div-block unassigned"><div class="div-head"><div><h3>Unassigned</h3><p>${none.length} member${none.length === 1 ? '' : 's'}</p></div></div><div class="rows">${sortP(none).map(personRow).join('')}</div></section>` : ''}
-    </div>
+    ${none.length ? `<section class="panel div-block unassigned roster-block">
+      <div class="div-head roster-head"><div class="roster-title"><h3>Unassigned</h3><p>${none.length} member${none.length === 1 ? '' : 's'} without a division · newest first</p></div>
+        <input class="roster-search mini" type="search" data-roster-q="unassigned" value="${esc(S.unQ || '')}" placeholder="Search unassigned…" aria-label="Search unassigned members"></div>
+      ${list(none, 4, 'unassigned')}
+    </section>` : ''}
+    <div class="toolbar section roster-bar"><h2 class="sub" style="margin:0">Divisions</h2>
+      <input class="roster-search" type="search" data-roster-q="all" value="${esc(S.crewQ || '')}" placeholder="Search crew by name or RSI handle…" aria-label="Search crew"></div>
+    <div class="grid-2">${groups.map(block).join('')}</div>
     ${suspended.length ? `<h2 class="sub section">Suspended</h2><div class="panel rows">${suspended.map(personRow).join('')}</div>` : ''}`;
+}
+
+/* Shows the first few matches in each roster list; typing narrows it down. */
+function applyRoster() {
+  document.querySelectorAll('.roster-list').forEach(box => {
+    const q = ((box.dataset.which === 'unassigned' ? S.unQ : S.crewQ) || '').trim().toLowerCase();
+    const limit = Number(box.dataset.limit) || 6;
+    const rows = [...box.querySelectorAll('.row[data-q]')];
+    const hits = rows.filter(r => !q || r.dataset.q.includes(q));
+    rows.forEach(r => { r.hidden = true; });
+    hits.slice(0, limit).forEach(r => { r.hidden = false; });
+    const more = box.nextElementSibling;
+    if (more && more.classList.contains('roster-more')) {
+      more.textContent = !rows.length ? 'Nobody here yet.' : !hits.length ? 'No matches.' : hits.length > limit ? `Showing ${limit} of ${hits.length}. Search to narrow it down.` : '';
+    }
+  });
+}
+
+function viewMemberSearch() {
+  return `
+    <div class="page-head"><div><div class="eyebrow">Leads and up</div><h1>Member search</h1><p>Find any member, open their profile and set auxiliary groups. Auxiliaries can see that division’s calendar and events; they don’t show on the roster.</p></div></div>
+    <input class="roster-search wide" type="search" data-member-q value="${esc(S.memberQ || '')}" placeholder="Start typing a name or RSI handle…" aria-label="Search members" autofocus>
+    <div class="panel rows section" id="memberResults">${memberResults()}</div>`;
+}
+function memberResults() {
+  const q = (S.memberQ || '').trim().toLowerCase();
+  if (!q) return '<div class="row"><span class="hint">Type at least one letter.</span></div>';
+  const hits = D().members.filter(x => (!x.status || x.status === 'active') && rosterKey(x).includes(q)).sort(byUser).slice(0, 25);
+  if (!hits.length) return '<div class="row"><span class="hint">No members match.</span></div>';
+  return hits.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span>
+      <span class="row-sub">${(p.divisions || []).filter(divOf).map(x => esc(divOf(x).name)).join(', ') || 'Unassigned'}${(p.aux || []).length ? ' · aux: ' + p.aux.filter(divOf).map(x => esc(divOf(x).name)).join(', ') : ''}</span></div></div>
+    <div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-profile="${esc(p.id)}">Open profile</button></div></div>`).join('');
 }
 
 function memberForm(id) {
@@ -1520,7 +1595,9 @@ function profileView(id) {
   const m = member(id); if (!m) return;
   const self = id === me().id;
   const divs = (m.divisions && m.divisions.length ? m.divisions : (m.division ? [m.division] : [])).filter(x => divOf(x));
-  const primary = divOf(divs[0]), aux = divs.slice(1).map(divOf);
+  const primary = divOf(divs[0]), others = divs.slice(1).map(divOf);
+  const viewer = me(), auxNow = (m.aux || []).filter(divOf);
+  const auxChoices = D().divisions.filter(x => !x.command && !divs.includes(x.id) && (viewer.isCommand || viewer.isManager || viewer.lead === x.id));
   const ships = D().ships.filter(x => x.ownerId === id).sort((a, b) => a.model.localeCompare(b.model));
   const rank = headline(m);
   const crewChip = d => `<span class="crew-chip" style="border-color:color-mix(in srgb, ${esc(d.color)} 45%, transparent)">${patchSVG(d, divIndex(d.id), 22)}${esc(d.name)}</span>`;
@@ -1535,7 +1612,11 @@ function profileView(id) {
         <div class="prof-fact"><span class="lbl">Primary crew</span><b>${primary ? `${patchSVG(primary, divIndex(primary.id), 24)}${esc(primary.name)}` : '<span style="color:var(--dim)">None yet</span>'}</b></div>
         <div class="prof-fact"><span class="lbl">Hangar</span><b class="num">${ships.length} ship${ships.length === 1 ? '' : 's'}</b></div>
       </div>
-      ${aux.length ? `<div class="stack" style="gap:8px"><span class="lbl">Auxiliaries</span><div class="owners">${aux.map(crewChip).join('')}</div></div>` : ''}
+      ${others.length ? `<div class="stack" style="gap:8px"><span class="lbl">Other crews</span><div class="owners">${others.map(crewChip).join('')}</div></div>` : ''}
+      ${canAuxAny() && auxChoices.length ? `<div class="stack aux-box" style="gap:8px"><span class="lbl">Auxiliary groups</span>
+        <div class="owners">${auxChoices.map(x => { const on = auxNow.includes(x.id); return `<button class="crew-chip aux-toggle${on ? ' on' : ''}" type="button" data-act="aux-toggle" data-id="${esc(id)}" data-div="${x.id}" data-on="${!on}" aria-pressed="${on}" style="border-color:color-mix(in srgb, ${esc(x.color)} 45%, transparent)">${patchSVG(x, divIndex(x.id), 22)}${esc(x.name)}<span class="aux-state">${on ? '✓' : '+'}</span></button>`; }).join('')}</div>
+        <p class="hint">Auxiliaries see that division’s calendar and events. They don’t appear on the roster.</p></div>`
+        : auxNow.length && (self || canAuxAny()) ? `<div class="stack" style="gap:8px"><span class="lbl">Auxiliary groups</span><div class="owners">${auxNow.map(x => crewChip(divOf(x))).join('')}</div></div>` : ''}
       <div class="stack" style="gap:6px"><span class="lbl">Hangar</span>
         ${ships.length ? `<div class="prof-ships">${ships.map(x => `<div class="prof-ship"><b>${esc(x.model)}${x.nickname ? ` <span>“${esc(x.nickname)}”</span>` : ''}</b><span>${esc(label(catalogInfo(x.model).category))}${x.available === 'yes' ? '' : ' · not available'}</span></div>`).join('')}</div>` : '<p class="hint">No pledged ships registered.</p>'}</div>
       ${self ? '<div class="dlg-foot"><button class="btn btn-solid" type="button" data-act="profile-edit">Edit profile</button></div>' : ''}
@@ -1646,7 +1727,7 @@ function miniCal(list, title) {
 function viewCalendar() {
   const ym = calMonth(), [y, mo] = ym.split('-').map(Number), m = mo - 1;
   const now = new Date(), today = dayKey(now);
-  const ids = myDivIds();
+  const ids = myDivIds().concat((me().aux || []).filter(x => divOf(x) && !myDivIds().includes(x)));
   const filters = [['all', 'All', ''], ['major', 'Major', MAJOR_COLOR], ['org', 'Org-wide', ORG_COLOR]].concat(ids.map(id => [id, divOf(id).name, divOf(id).color]));
   if (!filters.some(f => f[0] === S.calFilter)) S.calFilter = 'all';
   const list = filterCal(calEvents(), S.calFilter);
@@ -1932,6 +2013,7 @@ function captureRoles() {
 /* ---------- Navigation groups ---------- */
 const GROUPS = {
   ops: () => [['work', 'Work orders'], ['calendar', 'Calendar'], ['logistics', 'Logistics']],
+  crew: () => [['roster', 'Roster']].concat(canAuxAny() ? [['search', 'Member search']] : []),
   treasury: () => [['mine', 'My funds']].concat(me().canTreasury ? [['approvals', 'Approvals']] : []).concat(me().isManager ? [['treasurer', 'Treasurer'], ['ledger', 'Ledger']] : [])
 };
 const SUB_OF = { work: 'ops', calendar: 'ops', logistics: 'ops' };
@@ -2229,6 +2311,7 @@ document.addEventListener('click', async e => {
       break;
     }
     case 'profile-edit': profileForm(); break;
+    case 'aux-toggle': if (await act('member.aux', { id, division: b.dataset.div, on: b.dataset.on === 'true' }, b.dataset.on === 'true' ? 'Added as auxiliary.' : 'Auxiliary removed.')) profileView(id); break;
     case 'role-up': case 'role-down': { captureRoles(); const i = Number(id), j = a === 'role-up' ? i - 1 : i + 1; const L = S.rolesData.roles; if (j >= 0 && j < L.length) { [L[i], L[j]] = [L[j], L[i]]; render(); } break; }
     case 'roles-clear': S.rolesData.roles = []; render(); toast('List cleared. Press Save permissions to confirm.', 'ok'); break;
     case 'role-remove': captureRoles(); S.rolesData.roles.splice(Number(id), 1); render(); break;
@@ -2236,6 +2319,8 @@ document.addEventListener('click', async e => {
 });
 
 document.addEventListener('input', e => {
+  if (e.target.matches('[data-roster-q]')) { if (e.target.dataset.rosterQ === 'unassigned') S.unQ = e.target.value; else S.crewQ = e.target.value; applyRoster(); return; }
+  if (e.target.matches('[data-member-q]')) { S.memberQ = e.target.value; const r = $('memberResults'); if (r) r.innerHTML = memberResults(); return; }
   if (e.target.matches('[data-share-total], [data-share-amt]')) shareSum(e.target.form);
 });
 document.addEventListener('click', e => {
@@ -2442,7 +2527,7 @@ function marketPanel() {
 setInterval(() => {
   if (!S.token || !S.data || S.busy || document.hidden || dlg.open) return;
   const ae = document.activeElement;
-  if (ae && ae.closest && ae.closest('#view form')) return;
+  if (ae && ae.closest && (ae.closest('#view form') || (ae.matches('input, textarea, select') && ae.closest('#view')))) return;
   const fast = S.tab === 'ops' || S.tab === 'dashboard' || S.tab === 'treasury';
   const age = Date.now() - Date.parse(S.data.synced || 0);
   if (age > (fast ? 30000 : 90000)) loadAll(true);
