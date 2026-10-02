@@ -292,9 +292,27 @@ a { color: inherit; }
 @media (max-width: 820px)  { .ship { --cols: 2; } }
 @media (max-width: 540px)  { .ship { --cols: 1; } .ship p { min-height: 0; } }
 
+/* Join band (home) */
+.join-band {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 28px 40px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 36px 40px; position: relative; overflow: hidden;
+}
+.join-band::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--accent); }
+.join-copy { max-width: 640px; min-width: 0; }
+.join-steps { list-style: none; display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 20px; }
+.join-steps li { display: flex; align-items: center; gap: 10px; font-family: var(--f-label); font-weight: 600; font-size: 1rem; letter-spacing: .04em; color: var(--text); }
+.join-steps span { width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--line-2); display: grid; place-items: center; font-weight: 700; font-size: .85rem; color: var(--accent); }
+.join-btn { flex: none; padding: 14px 30px; }
+
 /* Enlist */
+.enlist-aside { min-width: 0; }
+.enlist-aside .list-heading { margin-top: 6px; }
+.ready-list { list-style: none; display: grid; gap: 12px; }
+.ready-list li { position: relative; padding-left: 26px; color: var(--muted); }
+.ready-list li::before { content: ''; position: absolute; left: 2px; top: .45em; width: 10px; height: 6px; border-left: 2px solid var(--ok); border-bottom: 2px solid var(--ok); transform: rotate(-45deg); }
 .enlist-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 48px; align-items: start; }
-.enlist-note { margin-top: 18px; padding-left: 14px; border-left: 2px solid var(--accent); color: var(--muted); font-size: .95rem; }
+.enlist-note { margin-top: 26px; padding-left: 14px; border-left: 2px solid var(--accent); color: var(--muted); font-size: .95rem; }
 .enlist-panel { position: relative; min-width: 0; }
 
 .stepper { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
@@ -561,6 +579,8 @@ a { color: inherit; }
 }
 @media (max-width: 600px) {
   .divisions { grid-template-columns: 1fr; }
+  .join-band { padding: 26px 22px; }
+  .join-btn { width: 100%; }
   .ev-row { flex-direction: column; gap: 14px; padding: 18px; }
   .news { padding: 20px; }
   .ev-past-item { flex-direction: column; gap: 2px; }
@@ -598,7 +618,7 @@ a { color: inherit; }
       <li><a href="#fleet" data-go="fleet">Fleet</a></li>
       <li><a href="#events" data-page="events">Events</a></li>
       <li><a href="#newsletters" data-page="newsletters">Newsletters</a></li>
-      <li><a href="#enlist" data-go="enlist">Enlist</a></li>
+      <li><a href="#join" data-go="join">Enlist</a></li>
       <li><a href="#updates" data-go="updates" class="nav-updates">RSI Updates</a></li>
     </ul>
   </div>
@@ -621,7 +641,7 @@ a { color: inherit; }
     <h1 class="hero-title" id="heroTitle" data-org-name>Project Six</h1>
     <p class="hero-sub fade-2">Pilots, haulers, miners and explorers flying together in the 'verse. Join a crew, pick a role, and find your next op.</p>
     <div class="hero-actions fade-3">
-      <a class="btn btn-solid" href="#enlist" data-go="enlist">Enlist now</a>
+      <a class="btn btn-solid" href="#enlist" data-page="enlist">Enlist now</a>
       <a class="btn btn-ghost" href="#updates" data-go="updates">Latest RSI updates</a>
     </div>
   </div>
@@ -781,16 +801,81 @@ a { color: inherit; }
   </div>
 </section>
 
-<!-- ============ ENLIST ============ -->
-<section class="section" id="enlist">
+<!-- ============ JOIN (home teaser) ============ -->
+<section class="section" id="join">
   <div class="wrap">
-    <div class="enlist-grid">
-      <div class="section-head">
+    <div class="join-band">
+      <div class="join-copy">
         <div class="eyebrow">Join us</div>
         <h2 class="section-title">Enlist</h2>
-        <p class="section-lede">Three quick steps. All ships and skill levels are welcome.</p>
-        <p class="enlist-note">Org staff review every application and reply in Discord DMs within 72 hours.</p>
+        <p class="section-lede">Looking for a crew? Project Six welcomes pilots of every ship and skill level. Applying takes about three minutes, and org staff reply in Discord within 72 hours.</p>
+        <ol class="join-steps">
+          <li><span>1</span>Fill out the form</li>
+          <li><span>2</span>Post it in Discord</li>
+          <li><span>3</span>Apply on RSI</li>
+        </ol>
       </div>
+      <a class="btn btn-solid join-btn" href="#enlist" data-page="enlist">Enlist now</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============ UPDATES (RSI feed carousel) ============ -->
+<section class="section alt" id="updates">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="eyebrow">From Roberts Space Industries</div>
+      <h2 class="section-title">RSI Updates</h2>
+      <p class="section-lede">The latest patch releases and Comm-Link news, pulled from RSI's public feed.</p>
+    </div>
+
+    <div class="updates-bar">
+      <div class="feed-status"><span class="feed-dot loading" id="feedDot"></span><span id="feedText">Connecting to RSI…</span></div>
+      <div class="updates-controls">
+        <button class="chip is-active" data-ufilter="all">All</button>
+        <button class="chip" data-ufilter="patch">Patches</button>
+        <button class="chip" data-ufilter="news">News</button>
+        <button class="icon-btn" id="autoBtn" aria-pressed="true">&#10074;&#10074; Pause</button>
+        <button class="icon-btn" id="refreshBtn">&#8635; Refresh</button>
+      </div>
+    </div>
+
+    <div class="track" id="track" aria-live="polite"></div>
+
+    <div class="updates-foot">
+      <div class="arrows">
+        <button class="arrow" id="upPrev" aria-label="Previous post">&#10094;</button>
+        <button class="arrow" id="upNext" aria-label="Next post">&#10095;</button>
+      </div>
+      <div class="progress"><span id="progress"></span></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ ENLIST PAGE ============ -->
+<main id="pageEnlist" class="page" hidden>
+  <section class="page-hero">
+    <div class="wrap">
+      <a class="back-link" href="#home" data-go="home">&larr; Home</a>
+      <div class="eyebrow">Join us</div>
+      <h1 class="page-title">Enlist</h1>
+      <p class="section-lede">Three quick steps. All ships and skill levels are welcome.</p>
+    </div>
+  </section>
+  <section class="section page-body" id="enlist">
+    <div class="wrap">
+      <div class="enlist-grid">
+      <aside class="enlist-aside">
+        <h2 class="list-heading">Before you start</h2>
+        <ul class="ready-list">
+          <li>An RSI account with your citizen handle</li>
+          <li>A Discord account so we can reach you</li>
+          <li>About three minutes</li>
+        </ul>
+        <p class="enlist-note">Org staff review every application and reply in Discord DMs within 72 hours.</p>
+      </aside>
 
       <div class="enlist-panel">
         <div class="stepper" id="stepper">
@@ -899,42 +984,8 @@ a { color: inherit; }
         </div>
       </div>
     </div>
-  </div>
-</section>
-
-
-<!-- ============ UPDATES (RSI feed carousel) ============ -->
-<section class="section alt" id="updates">
-  <div class="wrap">
-    <div class="section-head">
-      <div class="eyebrow">From Roberts Space Industries</div>
-      <h2 class="section-title">RSI Updates</h2>
-      <p class="section-lede">The latest patch releases and Comm-Link news, pulled from RSI's public feed.</p>
     </div>
-
-    <div class="updates-bar">
-      <div class="feed-status"><span class="feed-dot loading" id="feedDot"></span><span id="feedText">Connecting to RSI…</span></div>
-      <div class="updates-controls">
-        <button class="chip is-active" data-ufilter="all">All</button>
-        <button class="chip" data-ufilter="patch">Patches</button>
-        <button class="chip" data-ufilter="news">News</button>
-        <button class="icon-btn" id="autoBtn" aria-pressed="true">&#10074;&#10074; Pause</button>
-        <button class="icon-btn" id="refreshBtn">&#8635; Refresh</button>
-      </div>
-    </div>
-
-    <div class="track" id="track" aria-live="polite"></div>
-
-    <div class="updates-foot">
-      <div class="arrows">
-        <button class="arrow" id="upPrev" aria-label="Previous post">&#10094;</button>
-        <button class="arrow" id="upNext" aria-label="Next post">&#10095;</button>
-      </div>
-      <div class="progress"><span id="progress"></span></div>
-    </div>
-  </div>
-</section>
-
+  </section>
 </main>
 
 <!-- ============ EVENTS PAGE ============ -->
@@ -1035,7 +1086,8 @@ const menuBtn = document.getElementById('menuBtn');
 const pages = {
   home: document.getElementById('pageHome'),
   events: document.getElementById('pageEvents'),
-  newsletters: document.getElementById('pageNewsletters')
+  newsletters: document.getElementById('pageNewsletters'),
+  enlist: document.getElementById('pageEnlist')
 };
 let currentPage = 'home';
 
@@ -1048,7 +1100,7 @@ function showPage(name, opts = {}) {
   Object.entries(pages).forEach(([key, el]) => { el.hidden = key !== name; });
   currentPage = name;
   if (name !== 'home') {
-    navLinks.forEach(a => a.classList.toggle('active', a.dataset.page === name));
+    navLinks.forEach(a => a.classList.toggle('active', a.dataset.page === name || (name === 'enlist' && a.dataset.go === 'join')));
     setHash('#' + name);
   } else if (!opts.keepHash) {
     setHash('#home');
@@ -1086,10 +1138,11 @@ const spy = new IntersectionObserver(entries => {
   entries.forEach(entry => {
     if (!entry.isIntersecting) return;
     const id = entry.target.id;
-    navLinks.forEach(a => a.classList.toggle('active', a.dataset.go === id || (id === 'upcoming' && a.dataset.page === 'events')));
+    const pageFor = { upcoming: 'events' }[id];
+    navLinks.forEach(a => a.classList.toggle('active', a.dataset.go === id || (pageFor && a.dataset.page === pageFor)));
   });
 }, { rootMargin: '-45% 0px -50% 0px' });
-['home', 'divisions', 'fleet', 'upcoming', 'enlist', 'updates'].forEach(id => spy.observe(document.getElementById(id)));
+['home', 'divisions', 'fleet', 'upcoming', 'join', 'updates'].forEach(id => spy.observe(document.getElementById(id)));
 
 // Open #events / #newsletters directly
 const startHash = (location.hash || '').slice(1);
