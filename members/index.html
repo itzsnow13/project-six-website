@@ -367,8 +367,27 @@ dialog::backdrop { background: rgba(8,9,10,.72); backdrop-filter: blur(3px); }
 .role-table tr.add td { background: var(--bg-alt); }
 .role-table select[name=title], .role-table select[name=access] { min-width: 130px; }
 .role-table [name=rid] { min-width: 190px; }
+.role-table [name=rname] { min-width: 200px; }
+.role-table .x[disabled] { opacity: .25; cursor: default; }
+.role-table .x { font-size: 1.1rem; padding: 4px 6px; }
 button.owner { background: transparent; color: var(--text); font: inherit; font-size: .84rem; }
 button.owner:hover { border-color: var(--accent); }
+/* Profiles */
+[data-profile] { cursor: pointer; }
+[data-profile]:hover .nm { color: var(--accent); }
+.av-lg { width: 64px; height: 64px; font-size: 1.4rem; }
+.prof-head { display: flex; gap: 16px; align-items: center; }
+.prof-head h3 { font-family: var(--f-label); font-size: 1.35rem; font-weight: 700; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.prof-sub { color: var(--muted); font-size: .9rem; margin-top: 2px; }
+.prof-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+.prof-fact { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 4px; min-width: 0; }
+.prof-fact b { display: flex; align-items: center; gap: 8px; font-family: var(--f-label); font-size: 1.05rem; }
+.crew-chip { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border: 1px solid var(--line-2); border-radius: 999px; font-size: .86rem; }
+.crew-chip .patch { width: 22px; height: auto; }
+.prof-ships { display: grid; gap: 0; }
+.prof-ship { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
+.prof-ship:first-child { border-top: 0; }
+.prof-ship span { color: var(--muted); }
 .subtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
 .grid-split { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 .ev-main small { display: block; }
@@ -428,14 +447,15 @@ button.owner:hover { border-color: var(--accent); }
 <div class="gate" id="screenPending" hidden>
   <div class="gate-card">
     <svg width="64" height="64" viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#ECE9E3" points="266.4,58.0 422.3,148.0 368.3,179.2 266.4,120.4"/><polygon fill="#ECE9E3" points="432.7,166.0 432.7,346.0 378.7,314.8 378.7,197.2"/><polygon fill="#ECE9E3" points="422.3,364.0 266.4,454.0 266.4,391.6 368.3,332.8"/><polygon fill="#ECE9E3" points="245.6,454.0 89.7,364.0 143.7,332.8 245.6,391.6"/><polygon fill="#ECE9E3" points="79.3,346.0 79.3,166.0 133.3,197.2 133.3,314.8"/><polygon fill="#C9B58E" points="89.7,148.0 245.6,58.0 245.6,120.4 143.7,179.2"/></svg>
-    <h1>Almost there</h1>
+    <h1 id="pendingTitle">Almost there</h1>
     <p id="pendingText">Your account is waiting for approval from org staff.</p>
+    <div id="pendingCard" style="width:100%"></div>
     <form id="pendingForm" novalidate>
       <div class="field"><label for="pRsi">RSI handle</label><input id="pRsi" name="rsiHandle" maxlength="40" placeholder="e.g. Orion_Pilot" autocomplete="off"></div>
       <div class="field"><label for="pDiv">Home division</label><select id="pDiv" name="division"></select></div>
       <button class="btn btn-solid" type="submit">Save profile</button>
     </form>
-    <p class="small">Approval usually happens within 72 hours. You'll get access as soon as staff approve you.</p>
+    <p class="small" id="pendingSmall">Approval usually happens within 72 hours. You'll get access as soon as staff approve you.</p>
     <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" id="pendingRefresh">Check again</button><button class="btn btn-ghost btn-sm" type="button" data-logout>Sign out</button></div>
   </div>
 </div>
@@ -829,7 +849,7 @@ function primaryDiv(m) { return m ? ((m.divisions || [])[0] || m.division || '')
 function nameTag(id, opts) {
   const m = member(id), o = opts || {};
   const rank = m ? RANKS[m.title] : null, crew = divOf(primaryDiv(m));
-  return `<span class="tag-name">${rank ? `<span title="${rank.label}" style="display:inline-flex">${rankIcon(m.title)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle ? `<span class="rank-tag" style="--c:${rank.c}">${rank.label}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
+  return `<span class="tag-name"${o.noClick ? '' : ` data-profile="${esc(id)}" role="button" tabindex="0" title="View profile"`}>${rank ? `<span title="${rank.label}" style="display:inline-flex">${rankIcon(m.title)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle ? `<span class="rank-tag" style="--c:${rank.c}">${rank.label}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
 }
 function who(id) { return nameTag(id); }
 const canLeadDiv = div => me().isAdmin || (me().role === 'lead' && (me().leads || [me().division]).includes(div));
@@ -873,13 +893,21 @@ function render() {
 
 function renderPending() {
   const m = me();
-  $('pendingText').textContent = D().rolesMode
+  const review = !!D().review;
+  $('pendingTitle').textContent = review ? 'Application in review' : 'Almost there';
+  $('pendingSmall').textContent = review ? 'Once onboarding is done, staff will update your Discord role and the portal opens up on its own. Press Check again any time.' : 'Approval usually happens within 72 hours. You’ll get access as soon as staff approve you.';
+  $('pendingCard').innerHTML = review ? `<div class="prof-fact" style="text-align:left;width:100%"><span class="lbl">Rank</span><b>${esc(m.rank || 'Recruit')}</b></div>` : '';
+  $('pendingText').textContent = review
+    ? `Welcome, ${m.displayName || m.username}. You’re a recruit and your application is in review. Until you’re cleared, only your profile is available here.`
+    : D().rolesMode
     ? `Welcome, ${m.displayName || m.username}. You’re signed in, but your Discord account doesn’t have a member role in the Project Six server yet. Once staff give you a role (Recruit or higher), press Check again.`
     : `Welcome, ${m.displayName || m.username}. Your account is waiting for approval from org staff. While you wait, add your RSI handle and pick a home division.`;
   const f = $('pendingForm');
   f.elements.rsiHandle.value = m.rsiHandle || '';
-  f.elements.division.innerHTML = '<option value="">Not sure yet</option>' + D().divisions.map(d => `<option value="${d.id}">${esc(d.name)} — ${esc(d.focus)}</option>`).join('');
-  f.elements.division.value = m.division || '';
+  const crews = crewOptions(m);
+  f.elements.division.innerHTML = '<option value="">' + (D().rolesMode ? 'None' : 'Not sure yet') + '</option>' + crews.map(d => `<option value="${d.id}">${esc(d.name)} — ${esc(d.focus)}</option>`).join('');
+  f.elements.division.value = (m.divisions || [])[0] || m.division || '';
+  f.elements.division.closest('.field').querySelector('label').textContent = D().rolesMode ? 'Primary crew' : 'Home division';
 }
 
 /* ---------- Dashboard ---------- */
@@ -1147,7 +1175,7 @@ function viewFleet() {
   if (S.fleetCat !== 'all') list = list.filter(g => g.category === S.fleetCat);
   const pilots = new Set(d.ships.map(s => s.ownerId)).size;
   return `
-    <div class="page-head"><div><div class="eyebrow">Hangar</div><h1>Fleet</h1><p>${d.ships.length} ships from ${pilots} pilot${pilots === 1 ? '' : 's'}. Registered ships appear on the public Fleet page as counts, without names.</p></div></div>
+    <div class="page-head"><div><div class="eyebrow">Hangar</div><h1>Fleet</h1><p>${d.ships.length} pledged ships from ${pilots} pilot${pilots === 1 ? '' : 's'}. Registered ships appear on the public Fleet page as counts, without names.</p></div></div>
     <div class="grid-2" style="grid-template-columns:minmax(0,1fr) minmax(0,2fr)">
       <div>
         <h2 class="sub">My hangar <span class="num" style="color:var(--dim)">${mine.length}</span></h2>
@@ -1155,6 +1183,8 @@ function viewFleet() {
           <div class="field"><label for="sModel">Ship model</label><input id="sModel" name="model" list="catalogList" maxlength="60" placeholder="Start typing, e.g. Carrack" autocomplete="off"></div>
           <div class="field"><label for="sNick">Nickname (optional)</label><input id="sNick" name="nickname" maxlength="40" placeholder="e.g. Wanderer"></div>
           <label class="check"><input type="checkbox" name="available" checked> Available for org ops</label>
+          <label class="check"><input type="checkbox" name="pledged" required> This ship is pledged (not bought in-game)</label>
+          <p class="hint">Only pledged ships count. In-game purchases reset with wipes, so the org hangar doesn’t track them. Nicknames must be unique across the org.</p>
           <button class="btn btn-solid" type="submit">Register ship</button>
           <datalist id="catalogList">${d.catalog.map(c => `<option value="${esc(c[0])}">${esc(c[1])}</option>`).join('')}</datalist>
         </form>
@@ -1172,7 +1202,7 @@ function viewFleet() {
           <article class="panel hcard">
             <div class="hcard-top"><h3>${esc(g.model)}</h3><span class="count">×${g.ships.length}</span></div>
             <div class="cat">${esc(label(g.category))}${g.maker ? ' · ' + esc(g.maker) : ''}</div>
-            <div class="owners">${g.ships.map(s => `<span class="owner${s.available === 'yes' ? '' : ' off'}" title="${s.available === 'yes' ? 'Available for ops' : 'Not available'}">${avatar(s.ownerId, true)}<span>${esc(nameOf(s.ownerId))}${s.nickname ? ' · ' + esc(s.nickname) : ''}</span></span>`).join('')}</div>
+            <div class="owners">${g.ships.map(s => `<span class="owner${s.available === 'yes' ? '' : ' off'}" title="${s.available === 'yes' ? 'Available for ops' : 'Not available'}" data-profile="${esc(s.ownerId)}">${avatar(s.ownerId, true)}<span>${esc(nameOf(s.ownerId))}${s.nickname ? ' · ' + esc(s.nickname) : ''}</span></span>`).join('')}</div>
           </article>`).join('')}</div>` : '<p class="empty">No ships registered yet.</p>'}
       </div>
     </div>`;
@@ -1218,6 +1248,7 @@ function viewLedger() {
 function viewCrew() {
   const d = D(), m = me();
   const pending = m.isAdmin ? d.members.filter(x => x.status === 'pending') : [];
+  const review = m.isAdmin ? d.members.filter(x => x.status === 'review') : [];
   const inDiv = (x, id) => (x.divisions || [x.division]).includes(id);
   const suspended = m.isAdmin ? d.members.filter(x => x.status === 'suspended') : [];
   const active = d.members.filter(x => !x.status || x.status === 'active');
@@ -1229,6 +1260,9 @@ function viewCrew() {
     <div class="actions">${p.role === 'lead' ? '<span class="pill role-lead">Lead</span>' : ''}${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
   return `
     <div class="page-head"><div><div class="eyebrow">Roster</div><h1>Crew</h1><p>${active.length} active member${active.length === 1 ? '' : 's'} across six divisions.</p></div></div>
+    ${review.length ? `<h2 class="sub">Recruits in review <span class="pill review">${review.length}</span></h2>
+      <div class="panel rows" style="margin-bottom:24px">${review.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span>
+        <span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''} · signed up ${esc(rel(p.joined))}</span></div></div></div>`).join('')}</div>` : ''}
     ${pending.length && d.rolesMode ? `<h2 class="sub">Signed in without a member role <span class="pill pending">${pending.length}</span></h2>
       <div class="panel rows">${pending.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span>
         <span class="row-sub">@${esc(p.username)} · give them a member role in Discord to let them in</span></div></div></div>`).join('')}</div>` : ''}
@@ -1264,14 +1298,45 @@ function memberForm(id) {
     </form>`);
 }
 
+function profileView(id) {
+  const m = member(id); if (!m) return;
+  const self = id === me().id;
+  const divs = (m.divisions && m.divisions.length ? m.divisions : (m.division ? [m.division] : [])).filter(x => divOf(x));
+  const primary = divOf(divs[0]), aux = divs.slice(1).map(divOf);
+  const ships = D().ships.filter(x => x.ownerId === id).sort((a, b) => a.model.localeCompare(b.model));
+  const rank = RANKS[m.title];
+  const crewChip = d => `<span class="crew-chip" style="border-color:color-mix(in srgb, ${esc(d.color)} 45%, transparent)">${patchSVG(d, divIndex(d.id), 22)}${esc(d.name)}</span>`;
+  openDialog(self ? 'My profile' : 'Member profile', `
+    <div class="dlg-body">
+      <div class="prof-head">${avatar(id).replace('class="av"', 'class="av av-lg"')}<div style="min-width:0">
+        <h3>${esc(m.displayName || m.username)}${rank ? `<span class="rank-tag" style="--c:${rank.c}">${rank.label}</span>` : ''}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</h3>
+        <div class="prof-sub">@${esc(m.username)}${m.rsiHandle ? ` · RSI: <a href="https://robertsspaceindustries.com/citizens/${encodeURIComponent(m.rsiHandle)}" target="_blank" rel="noopener">${esc(m.rsiHandle)}</a>` : ''}</div></div></div>
+      <div class="prof-facts">
+        <div class="prof-fact"><span class="lbl">Rank</span><b>${rank ? rankIcon(m.title, 18) : ''}${esc(m.rank || (m.role === 'admin' ? 'Staff' : 'Member'))}</b></div>
+        <div class="prof-fact"><span class="lbl">Primary crew</span><b>${primary ? `${patchSVG(primary, divIndex(primary.id), 24)}${esc(primary.name)}` : '<span style="color:var(--dim)">None yet</span>'}</b></div>
+        <div class="prof-fact"><span class="lbl">Hangar</span><b class="num">${ships.length} ship${ships.length === 1 ? '' : 's'}</b></div>
+      </div>
+      ${aux.length ? `<div class="stack" style="gap:8px"><span class="lbl">Auxiliaries</span><div class="owners">${aux.map(crewChip).join('')}</div></div>` : ''}
+      <div class="stack" style="gap:6px"><span class="lbl">Hangar</span>
+        ${ships.length ? `<div class="prof-ships">${ships.map(x => `<div class="prof-ship"><b>${esc(x.model)}${x.nickname ? ` <span>“${esc(x.nickname)}”</span>` : ''}</b><span>${esc(label(catalogInfo(x.model).category))}${x.available === 'yes' ? '' : ' · not available'}</span></div>`).join('')}</div>` : '<p class="hint">No pledged ships registered.</p>'}</div>
+      ${self ? '<div class="dlg-foot"><button class="btn btn-solid" type="button" data-act="profile-edit">Edit profile</button></div>' : ''}
+    </div>`);
+}
+
+function crewOptions(m) {
+  const map = D().rolesMode && (m.divisions || []).length;
+  const list = map ? m.divisions.map(divOf).filter(Boolean) : D().divisions;
+  return list;
+}
+
 function profileForm() {
   const m = me();
   openDialog('My profile', `
     <form class="dlg-body" data-form="profile" novalidate>
       <div class="who">${avatar(m.id)}<div class="row-main"><span class="row-title">${esc(m.displayName || m.username)}</span><span class="row-sub">@${esc(m.username)}</span></div></div>
       <div class="field"><label for="prRsi">RSI handle</label><input id="prRsi" name="rsiHandle" maxlength="40" value="${esc(m.rsiHandle)}" autocomplete="off"></div>
-      <div class="field"><label for="prDiv">Home division</label><select id="prDiv" name="division"${m.role === 'lead' ? ' disabled' : ''}><option value="">Not sure yet</option>${D().divisions.map(x => `<option value="${x.id}"${x.id === m.division ? ' selected' : ''}>${esc(x.name)} — ${esc(x.focus)}</option>`).join('')}</select>
-        ${m.role === 'lead' ? '<span class="hint">Division leads change division through an admin.</span>' : ''}</div>
+      <div class="field"><label for="prDiv">Primary crew</label><select id="prDiv" name="division"${m.role === 'lead' && !D().rolesMode ? ' disabled' : ''}><option value="">None</option>${crewOptions(m).map(x => `<option value="${x.id}"${x.id === ((m.divisions || [])[0] || m.division) ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+        <span class="hint">${D().rolesMode ? 'Crews come from your Discord roles. Your primary crew shows next to your name; the rest are listed as auxiliaries on your profile.' : 'Shown next to your name across the portal.'}</span></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
 }
@@ -1576,7 +1641,7 @@ function staffRoles() {
   if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
   const divs = D().divisions, owner = r.owner;
   const titleOpts = [['', '—'], ['director', 'Director'], ['manager', 'Manager'], ['admin', 'Admin'], ['staff', 'Staff']];
-  const accessOpts = [['', 'No access'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']];
+  const accessOpts = [['', 'No access'], ['recruit', 'Recruit (in review)'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']];
   const sel = (name, opts, v, label) => `<select name="${name}" aria-label="${esc(label)}">${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
   const row = (x, i) => `<tr data-row="${i}">
       <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="e.g. Recruit" aria-label="Portal role name"></td>
@@ -1585,20 +1650,17 @@ function staffRoles() {
       <td>${sel('title', titleOpts, x.title, 'Title')}</td>
       <td>${sel('division', [['', '—']].concat(divs.map(d => [d.id, d.name])), x.division, 'Division')}</td>
       ${owner ? `<td class="sys-col"><input type="checkbox" name="sysadmin" style="width:18px;height:18px;accent-color:var(--accent)"${x.sysadmin ? ' checked' : ''} aria-label="Systems Admin"></td>` : ''}
-      <td><button class="x" type="button" data-act="role-remove" data-id="${i}" aria-label="Remove role">&times;</button></td>
+      <td style="white-space:nowrap"><button class="x" type="button" data-act="role-up" data-id="${i}" aria-label="Move up"${i === 0 ? ' disabled' : ''}>&#8593;</button><button class="x" type="button" data-act="role-down" data-id="${i}" aria-label="Move down"${i === r.roles.length - 1 ? ' disabled' : ''}>&#8595;</button><button class="x" type="button" data-act="role-remove" data-id="${i}" aria-label="Remove role">&times;</button></td>
     </tr>`;
-  const seen = (r.seen || []).filter(x => !r.roles.some(y => y.id === x.id));
   return `<form data-form="roles" novalidate>
-    <div class="toolbar"><p class="hint" style="max-width:720px">Each row links a portal role to a Discord role by its ID. When a member’s roles change in Discord, the portal picks it up within a few minutes. <b>Access</b> lets them in, <b>Title</b> sets the rank icon and tag (highest wins), <b>Division</b> sets which division content they see.${owner ? ' Only you can see the <b>Systems Admin</b> column.' : ''}</p>
-      <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Refresh</button><button class="btn btn-solid" type="submit">Save permissions</button></div></div>
+    <div class="toolbar"><p class="hint" style="max-width:740px">Each row links a portal role to a Discord role by its ID. When someone gets or loses that role in Discord, the portal follows within a few minutes.
+      <b>Access</b>: Recruit sees only their profile while in review; Division lead runs the division set on that row and is a member everywhere else. <b>Title</b> sets the staff icon and tag. <b>Division</b> adds that crew. Rows higher up outrank lower ones for the rank shown on profiles.${owner ? ' Only you can see the <b>Systems Admin</b> column.' : ''}</p>
+      <div class="head-actions">${owner && r.roles.length ? '<button class="btn btn-danger btn-sm" type="button" data-act="roles-clear" data-confirm="Clear every row?">Clear all</button>' : ''}<button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Undo changes</button><button class="btn btn-solid" type="submit">Save permissions</button></div></div>
     <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Portal role</th><th>Discord role ID</th><th>Access</th><th>Title</th><th>Division</th>${owner ? '<th class="sys-col">Systems Admin</th>' : ''}<th></th></tr></thead><tbody>
       ${r.roles.length ? r.roles.map(row).join('') : `<tr><td colspan="${owner ? 7 : 6}" class="hint" style="padding:18px 14px">No roles yet. Add one below.</td></tr>`}
       <tr class="add"><td colspan="${owner ? 7 : 6}"><button class="btn btn-ghost btn-sm" type="button" data-act="role-add">+ Add role</button>
         <span class="hint" style="margin-left:10px">Role ID: Discord → Server Settings → Roles → right-click a role → Copy Role ID (Developer Mode on).</span></td></tr>
     </tbody></table></div>
-    ${seen.length ? `<h2 class="sub section">Role IDs on members, not set up yet</h2>
-      <div class="panel panel-pad"><p class="hint" style="margin-bottom:10px">These Discord roles are held by members who have signed in. Add the ones that should mean something in the portal.</p>
-      <div class="owners">${seen.map(x => `<button class="owner" type="button" data-act="role-add" data-rid="${esc(x.id)}" style="cursor:pointer;padding:4px 10px"><span class="num">${esc(x.id)}</span><span style="color:var(--dim)">· ${x.members} member${x.members === 1 ? '' : 's'}</span><b style="color:var(--accent)">+</b></button>`).join('')}</div></div>` : ''}
   </form>`;
 }
 
@@ -1659,6 +1721,8 @@ document.addEventListener('click', async e => {
   const cd = e.target.closest('[data-cal-day]');
   if (cd && !e.target.closest('[data-act]')) { S.calDay = S.calDay === cd.dataset.calDay ? '' : cd.dataset.calDay; render(); return; }
 
+  const pr = e.target.closest('[data-profile]');
+  if (pr && !e.target.closest('#profileBtn')) { e.preventDefault(); profileView(pr.dataset.profile); return; }
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const id = b.dataset.id, a = b.dataset.act, d = D();
@@ -1706,12 +1770,15 @@ document.addEventListener('click', async e => {
       const last = rows[rows.length - 1]; if (last) last.querySelector('[name=rname]').focus();
       break;
     }
+    case 'profile-edit': profileForm(); break;
+    case 'role-up': case 'role-down': { captureRoles(); const i = Number(id), j = a === 'role-up' ? i - 1 : i + 1; const L = S.rolesData.roles; if (j >= 0 && j < L.length) { [L[i], L[j]] = [L[j], L[i]]; render(); } break; }
+    case 'roles-clear': S.rolesData.roles = []; render(); toast('List cleared. Press Save permissions to confirm.', 'ok'); break;
     case 'role-remove': captureRoles(); S.rolesData.roles.splice(Number(id), 1); render(); break;
   }
 });
 
 document.addEventListener('keydown', e => {
-  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-cal-day]')) { e.preventDefault(); e.target.click(); }
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-cal-day], [data-profile]')) { e.preventDefault(); e.target.click(); }
 });
 
 document.addEventListener('change', e => {
@@ -1744,7 +1811,8 @@ document.addEventListener('submit', async e => {
         break;
       case 'ship':
         if (!v('model').trim()) { toast('Pick a ship model.', 'err'); break; }
-        ok = await act('ship.add', { model: v('model'), nickname: v('nickname'), available: f.elements.available.checked }, 'Ship registered.');
+        if (!f.elements.pledged.checked) { toast('Tick the box to confirm the ship is pledged.', 'err'); break; }
+        ok = await act('ship.add', { model: v('model'), nickname: v('nickname'), available: f.elements.available.checked, pledged: true }, 'Ship registered.');
         break;
       case 'ledger':
         ok = await act('ledger.add', { type: v('type'), amount: v('amount'), memberId: v('memberId'), note: v('note') }, 'Entry added.');
@@ -1770,6 +1838,7 @@ document.addEventListener('submit', async e => {
       case 'roles': {
         captureRoles();
         const roles = S.rolesData.roles.filter(x => x.id || x.name);
+        if (!roles.length && !r_owner()) { toast('Add at least one role.', 'err'); break; }
         const bad = roles.find(x => !/^\d{5,25}$/.test(x.id));
         if (bad) { toast(`“${bad.name || 'A role'}” needs its Discord role ID (a long number).`, 'err'); break; }
         const ids = roles.map(x => x.id), dup = ids.find((x, i) => ids.indexOf(x) !== i);
@@ -1796,7 +1865,7 @@ $('pendingForm').addEventListener('submit', async e => {
 });
 $('pendingRefresh').addEventListener('click', () => loadAll());
 $('loginBtn').addEventListener('click', startLogin);
-$('profileBtn').addEventListener('click', profileForm);
+$('profileBtn').addEventListener('click', () => profileView(me().id));
 $('backToSite').href = CONFIG.siteUrl;
 $('brandLink').href = CONFIG.siteUrl;
 
