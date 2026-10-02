@@ -759,6 +759,39 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
   .dossier:hover, .dossier:focus-within { transform: none; }
 }
 
+/* Enlist: verified application */
+.must-box { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; padding: 10px 14px; border-left: 3px solid var(--accent); background: var(--accent-soft, rgba(201,181,142,.12)); border-radius: 0 6px 6px 0; }
+.must-box b { font-family: var(--f-label); letter-spacing: .14em; text-transform: uppercase; font-size: .8rem; color: var(--accent); }
+.must-box span { color: var(--muted); font-size: .9rem; }
+.field input[readonly] { color: var(--muted); background: var(--surface-2); cursor: default; }
+.enl-msg { padding: 10px 14px; border-radius: 8px; font-size: .94rem; border: 1px solid var(--line-2); }
+.enl-msg.ok { border-color: rgba(95,207,126,.5); background: rgba(95,207,126,.08); color: #9fe9b5; }
+.enl-msg.bad { border-color: rgba(229,96,82,.55); background: rgba(229,96,82,.08); color: #ffb1a8; }
+.enl-msg.info { border-color: rgba(201,181,142,.45); background: rgba(201,181,142,.08); }
+.enl-msg a { color: inherit; text-decoration: underline; }
+.enl-who { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.enl-who img, .enl-who > span { width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--surface-2); font-weight: 700; }
+.enl-who div { display: grid; gap: 2px; min-width: 0; }
+.enl-who small { color: var(--muted); }
+.okc { color: var(--ok); font-weight: 700; }
+.btn-discord { display: inline-flex; align-items: center; gap: 10px; background: #5865f2; color: #fff; border-color: #5865f2; }
+.btn-discord:hover { background: #6b77f5; color: #fff; }
+.btn-discord svg { width: 20px; height: 20px; fill: currentColor; }
+.code-box { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px dashed var(--line-2); border-radius: 8px; background: var(--bg); min-width: 0; }
+.code-box code { flex: 1; min-width: 0; overflow-wrap: anywhere; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .95rem; color: var(--text); }
+.code-box .copy-btn { position: static; flex: none; }
+.code-box.big code { font-size: 1.45rem; letter-spacing: .12em; color: var(--accent); }
+.enl-list { margin: 0 0 0 20px; display: grid; gap: 6px; color: var(--muted); }
+.enl-list a { color: var(--accent); }
+.confirm-line { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 8px; cursor: pointer; color: var(--muted); }
+.confirm-line input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--accent); flex: none; }
+.confirm-line:has(input:checked) { border-color: var(--ok); color: var(--text); background: rgba(95,207,126,.06); }
+.btn-submit:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.enlist-done .btn { margin-top: 6px; }
+.enlist-done.bad .done-check circle, .enlist-done.bad .done-check path { stroke: var(--danger); }
+.enlist-done.bad h3 { color: #ff8a7d; }
+.step-actions .link-btn { margin-top: 0; }
+
 /* Responsive */
 @media (max-width: 1280px) {
   .menu-btn { display: grid; place-items: center; }
@@ -1291,7 +1324,7 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
       <a class="back-link" href="#home" data-go="home">&larr; Home</a>
       <div class="eyebrow">Join us</div>
       <h1 class="page-title">Enlist</h1>
-      <p class="section-lede">Three quick steps. All ships and skill levels are welcome.</p>
+      <p class="section-lede">Four steps, about five minutes. All ships and skill levels are welcome.</p>
     </div>
   </section>
   <section class="section page-body" id="enlist">
@@ -1300,11 +1333,11 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
       <aside class="enlist-aside">
         <h2 class="list-heading">Before you start</h2>
         <ul class="ready-list">
-          <li>An RSI account with your citizen handle</li>
-          <li>A Discord account so we can reach you</li>
-          <li>About three minutes</li>
+          <li>A Discord account that has joined the <a id="discordLink2" href="#" target="_blank" rel="noopener">Project Six server</a></li>
+          <li>Your RSI account, so you can edit your profile bio</li>
+          <li>About five minutes</li>
         </ul>
-        <p class="enlist-note">Org staff review every application and reply in Discord DMs within 72 hours.</p>
+        <p class="enlist-note">A division lead reviews every application, usually within 72 hours. You can follow its status live in the member portal.</p>
         <figure class="enlist-art" aria-hidden="true"><div class="enlist-art-img"></div><figcaption>Hex Corps Operatives · HCO-3</figcaption></figure>
       </aside>
 
@@ -1314,33 +1347,46 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
           <div class="step" data-step="1">
           <button class="step-head" type="button" id="stepHead1" aria-controls="stepBody1" aria-expanded="false">
             <span class="step-mark"><span class="step-num">1</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5"/><path d="M7.2 12.4l3.2 3.2 6.4-6.6"/></svg></span>
-            <span class="step-text"><span class="step-title">Fill out the form</span><span class="step-sub" data-default="Your handle, division and timezone.">Your handle, division and timezone.</span></span>
+            <span class="step-text"><span class="step-title">Sign in with Discord</span><span class="step-sub" data-default="Confirms you’re in the Project Six Discord server.">Confirms you’re in the Project Six Discord server.</span></span>
             <span class="step-chev" aria-hidden="true"></span>
           </button>
             <div class="step-body" id="stepBody1" role="region" aria-labelledby="stepHead1">
               <div class="step-inner">
+                <div class="step-content" id="s1Body"><p class="step-help">Checking…</p></div>
+              </div>
+            </div>
+          </div>
+          <div class="step" data-step="2">
+          <button class="step-head" type="button" id="stepHead2" aria-controls="stepBody2" aria-expanded="false">
+            <span class="step-mark"><span class="step-num">2</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5"/><path d="M7.2 12.4l3.2 3.2 6.4-6.6"/></svg></span>
+            <span class="step-text"><span class="step-title">Fill out the form</span><span class="step-sub" data-default="Your handle, division and timezone.">Your handle, division and timezone.</span></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+            <div class="step-body" id="stepBody2" role="region" aria-labelledby="stepHead2">
+              <div class="step-inner">
                 <form class="step-content" id="enlistForm" novalidate>
+                  <div class="must-box"><b>Must be filled out</b><span>Fields marked * are required.</span></div>
                   <div class="form-row">
                     <div class="field">
                       <label for="fHandle">RSI handle *</label>
-                      <input id="fHandle" name="handle" type="text" placeholder="e.g. Orion_Pilot" autocomplete="off" required>
+                      <input id="fHandle" name="handle" type="text" placeholder="e.g. Orion_Pilot" autocomplete="off" required maxlength="60">
                     </div>
                     <div class="field">
-                      <label for="fDiscord">Discord username *</label>
-                      <input id="fDiscord" name="discord" type="text" placeholder="e.g. orion_pilot" autocomplete="off" required>
+                      <label for="fDiscord">Discord username</label>
+                      <input id="fDiscord" name="discord" type="text" readonly tabindex="-1" placeholder="From your sign-in">
                     </div>
                   </div>
                   <div class="form-row">
                     <div class="field">
                       <label for="fDivision">Division *</label>
                       <select id="fDivision" name="division">
-                        <option>1st Carrier Battle Group (Capital fleet)</option>
-                        <option>Strike Group Hex (Fighters &amp; escort)</option>
-                        <option>Hex Corps Operatives (Elite ground forces)</option>
-                        <option>6th Support and Recovery Group (Medical &amp; support)</option>
-                        <option>Hex 12th Logistics (Cargo &amp; supply)</option>
-                        <option>Deepcore Industrial Corps (Mining &amp; salvage)</option>
-                        <option>Not sure yet</option>
+                        <option value="carrier">1st Carrier Battle Group (Capital fleet)</option>
+                        <option value="strike">Strike Group Hex (Fighters &amp; escort)</option>
+                        <option value="hco">Hex Corps Operatives (Elite ground forces)</option>
+                        <option value="support">6th Support and Recovery Group (Medical &amp; support)</option>
+                        <option value="logistics">Hex 12th Logistics (Cargo &amp; supply)</option>
+                        <option value="industry">Deepcore Industrial Corps (Mining &amp; salvage)</option>
+                        <option value="">Not sure yet</option>
                       </select>
                     </div>
                     <div class="field">
@@ -1354,55 +1400,47 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
                   </div>
                   <div class="field">
                     <label for="fAbout">About you (optional)</label>
-                    <textarea id="fAbout" name="about" placeholder="Ships you fly, how long you've played, what you want to do in the org..."></textarea>
+                    <textarea id="fAbout" name="about" maxlength="1500" placeholder="Ships you fly, how long you've played, what you want to do in the org..."></textarea>
                   </div>
                   <div class="step-actions">
                     <button class="btn btn-solid" type="submit">Continue</button>
-                    <p class="form-note" id="formNote">Fields marked * are required.</p>
+                    <p class="form-note" id="formNote">Fields marked * must be filled out.</p>
                   </div>
                 </form>
               </div>
             </div>
           </div>
-
-          <div class="step" data-step="2">
-          <button class="step-head" type="button" id="stepHead2" aria-controls="stepBody2" aria-expanded="false">
-            <span class="step-mark"><span class="step-num">2</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5"/><path d="M7.2 12.4l3.2 3.2 6.4-6.6"/></svg></span>
-            <span class="step-text"><span class="step-title">Post it in Discord</span><span class="step-sub" data-default="Copy your application and paste it in our recruitment channel.">Copy your application and paste it in our recruitment channel.</span></span>
-            <span class="step-chev" aria-hidden="true"></span>
-          </button>
-            <div class="step-body" id="stepBody2" role="region" aria-labelledby="stepHead2">
-              <div class="step-inner">
-                <div class="step-content">
-                  <p class="step-help">Copy your application, then paste it in the <strong>#recruitment</strong> channel of our Discord server.</p>
-                  <div class="app-box">
-                    <textarea id="appText" readonly rows="7" aria-label="Your application"></textarea>
-                    <button class="copy-btn" type="button" id="copyBtn">Copy</button>
-                  </div>
-                  <div class="step-actions">
-                    <a class="btn btn-solid" id="discordBtn" href="#" target="_blank" rel="noopener noreferrer">Go to Discord</a>
-                    <span class="form-note">Opens in a new tab and copies your application.</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <div class="step" data-step="3">
           <button class="step-head" type="button" id="stepHead3" aria-controls="stepBody3" aria-expanded="false">
             <span class="step-mark"><span class="step-num">3</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5"/><path d="M7.2 12.4l3.2 3.2 6.4-6.6"/></svg></span>
-            <span class="step-text"><span class="step-title">Apply on RSI</span><span class="step-sub" data-default="Request to join Project Six on the RSI website.">Request to join Project Six on the RSI website.</span></span>
+            <span class="step-text"><span class="step-title">Verify your RSI profile</span><span class="step-sub" data-default="Proves the RSI handle is yours.">Proves the RSI handle is yours.</span></span>
             <span class="step-chev" aria-hidden="true"></span>
           </button>
             <div class="step-body" id="stepBody3" role="region" aria-labelledby="stepHead3">
               <div class="step-inner">
+                <div class="step-content" id="s3Body"></div>
+              </div>
+            </div>
+          </div>
+          <div class="step" data-step="4">
+          <button class="step-head" type="button" id="stepHead4" aria-controls="stepBody4" aria-expanded="false">
+            <span class="step-mark"><span class="step-num">4</span><svg class="check" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5"/><path d="M7.2 12.4l3.2 3.2 6.4-6.6"/></svg></span>
+            <span class="step-text"><span class="step-title">Request to join on RSI</span><span class="step-sub" data-default="Send your join request, then submit.">Send your join request, then submit.</span></span>
+            <span class="step-chev" aria-hidden="true"></span>
+          </button>
+            <div class="step-body" id="stepBody4" role="region" aria-labelledby="stepHead4">
+              <div class="step-inner">
                 <div class="step-content">
-                  <p class="step-help">Request to join <strong data-org-name>Project Six</strong> on the RSI website so we can add you to the roster. Come back here when you're done.</p>
+                  <p class="step-help">Request to join <strong data-org-name>Project Six</strong> on the RSI website. In the request message, paste this line so staff can match it to you:</p>
+                  <div class="code-box"><code id="rsiMsg">…</code><button class="copy-btn" type="button" id="rsiMsgCopy">Copy</button></div>
                   <div class="step-actions">
-                    <a class="btn btn-ghost" id="joinBtn" href="#" target="_blank" rel="noopener noreferrer">Join the org</a>
-                    <button class="btn btn-solid" type="button" id="completeBtn" disabled>Complete</button>
+                    <a class="btn btn-ghost" id="joinBtn" href="#" target="_blank" rel="noopener noreferrer">Open Project Six on RSI</a>
                   </div>
-                  <p class="form-note" id="completeNote">Complete unlocks after you open the org page.</p>
+                  <label class="confirm-line"><input type="checkbox" id="rsiSent"> I sent my join request on RSI with today’s date and my Discord username.</label>
+                  <div class="step-actions">
+                    <button class="btn btn-solid btn-submit" type="button" id="submitApp" disabled>Submit application</button>
+                    <p class="form-note" id="submitNote">Tick the box once your RSI request is sent.</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1411,9 +1449,9 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
 
         <div class="enlist-done" id="enlistDone" hidden tabindex="-1">
           <svg class="done-check" viewBox="0 0 52 52" aria-hidden="true"><circle cx="26" cy="26" r="24"/><path d="M15 27l7.5 7.5L37.5 19"/></svg>
-          <h3>Thank you for applying!</h3>
-          <p>We'll respond within 72 hours in your Discord DMs.</p>
-          <button class="link-btn" type="button" id="reviewBtn">Review my steps</button>
+          <h3 id="doneTitle">Application submitted</h3>
+          <p id="doneText">A division lead will review it. Follow its status live in the member portal.</p>
+          <a class="btn btn-solid" id="doneBtn" href="#">View my application</a>
         </div>
       </div>
     </div>
@@ -1515,7 +1553,7 @@ const CONFIG = {
 document.querySelectorAll('[data-org-name]').forEach(el => el.textContent = CONFIG.orgName);
 document.getElementById('rsiLink').href = CONFIG.rsiOrgUrl;
 document.getElementById('discordLink').href = CONFIG.discordUrl;
-document.getElementById('discordBtn').href = CONFIG.discordUrl;
+document.getElementById('discordLink2').href = CONFIG.discordUrl;
 document.getElementById('joinBtn').href = CONFIG.rsiOrgUrl;
 document.getElementById('year').textContent = new Date().getFullYear();
 
@@ -1966,26 +2004,42 @@ const fleetView = (function fleet() {
   return { render };
 })();
 
-/* ---------- Enlist: three-step application flow ---------- */
+/* ---------- Enlist: Discord → form → RSI profile check → RSI join request ---------- */
 (function enlist() {
+  const TOKEN_KEY = 'p6_member_session';
   const stepper = document.getElementById('stepper');
   const steps = [...stepper.querySelectorAll('.step')];
+  const s1 = document.getElementById('s1Body');
+  const s3 = document.getElementById('s3Body');
   const form = document.getElementById('enlistForm');
   const note = document.getElementById('formNote');
-  const appText = document.getElementById('appText');
-  const copyBtn = document.getElementById('copyBtn');
-  const discordBtn = document.getElementById('discordBtn');
-  const joinBtn = document.getElementById('joinBtn');
-  const completeBtn = document.getElementById('completeBtn');
-  const completeNote = document.getElementById('completeNote');
+  const rsiMsg = document.getElementById('rsiMsg');
+  const rsiSent = document.getElementById('rsiSent');
+  const submitBtn = document.getElementById('submitApp');
+  const submitNote = document.getElementById('submitNote');
   const done = document.getElementById('enlistDone');
-  const reviewBtn = document.getElementById('reviewBtn');
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const portal = CONFIG.membersUrl;
+  const state = { done: [false, false, false, false], open: 0, info: null, data: null, started: false };
+  const token = () => { try { return localStorage.getItem(TOKEN_KEY); } catch (_) { return null; } };
 
-  const state = { done: [false, false, false], open: 0, posted: '' };
+  async function api(action, extra) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 30000);
+    let json;
+    try {
+      const res = await fetch(CONFIG.feedUrl, { method: 'POST', body: JSON.stringify(Object.assign({ action, token: token() }, extra || {})), signal: ctrl.signal });
+      json = await res.json();
+    } catch (_) {
+      throw new Error('Can’t reach the server. Check your connection and try again.');
+    } finally { clearTimeout(timer); }
+    if (!json.ok) { const e = new Error(json.error || 'Something went wrong.'); e.auth = /sign in|session/i.test(json.error || ''); throw e; }
+    return json;
+  }
 
   function render() {
     const firstOpen = state.done.indexOf(false);
-    const reachable = firstOpen === -1 ? 2 : firstOpen;
+    const reachable = firstOpen === -1 ? steps.length - 1 : firstOpen;
     steps.forEach((step, i) => {
       const isOpen = i === state.open;
       const locked = i > reachable && !state.done[i];
@@ -1998,126 +2052,164 @@ const fleetView = (function fleet() {
       step.querySelector('.step-body').inert = !isOpen;
     });
   }
-
   function open(i, focus) {
     state.open = i;
+    if (i === 3) rsiMsg.textContent = step4Text();
     render();
-    if (focus) {
-      setTimeout(() => {
-        const el = steps[i].querySelector('input, a.btn, button.btn:not(:disabled)');
-        if (el) el.focus({ preventScroll: true });
-        steps[i].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 350);
+    if (focus) setTimeout(() => {
+      const el = steps[i].querySelector('input:not([readonly]), a.btn, button.btn:not(:disabled)');
+      if (el) el.focus({ preventScroll: true });
+      steps[i].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 350);
+  }
+  function setSub(i, text) { const sub = steps[i].querySelector('.step-sub'); sub.textContent = text || sub.dataset.default; }
+  function undo(from) { for (let i = from; i < state.done.length; i++) { state.done[i] = false; setSub(i, ''); } }
+  steps.forEach((step, i) => step.querySelector('.step-head').addEventListener('click', () => { if (state.open !== i) open(i, false); }));
+  const msg = (kind, html) => `<div class="enl-msg ${kind}">${html}</div>`;
+
+  /* Step 1: Discord sign-in (the portal checks server membership when you sign in) */
+  async function step1() {
+    let err = '';
+    try { err = sessionStorage.getItem('p6_apply_error') || ''; sessionStorage.removeItem('p6_apply_error'); } catch (_) {}
+    if (!token()) {
+      s1.innerHTML = `<p class="step-help">Sign in with the Discord account you used to join our server. We only read your username and check that you’re in the <strong>Project Six</strong> server.</p>
+        ${err ? msg('bad', esc(err) + (/join/i.test(err) ? ` <a href="${esc(CONFIG.discordUrl)}" target="_blank" rel="noopener">Join the Discord</a>, then try again.` : '')) : ''}
+        <div class="step-actions"><a class="btn btn-solid btn-discord" href="${esc(portal)}?apply=1"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.6 5.3A16.6 16.6 0 0 0 15.5 4l-.5 1a15 15 0 0 0-6 0l-.5-1a16.6 16.6 0 0 0-4.1 1.3C1.8 9.2 1.1 13 1.4 16.8a16.8 16.8 0 0 0 5 2.5l1.1-1.7a10.8 10.8 0 0 1-1.7-.8l.4-.3a11.9 11.9 0 0 0 10.2 0l.4.3c-.5.3-1.1.6-1.7.8l1.1 1.7a16.7 16.7 0 0 0 5-2.5c.4-4.4-.7-8.2-3-11.5zM8.7 14.5c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm6.6 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z"/></svg>Sign in with Discord</a>
+          <a class="btn btn-ghost" href="${esc(CONFIG.discordUrl)}" target="_blank" rel="noopener">Join our Discord first</a></div>`;
+      return;
     }
+    s1.innerHTML = '<p class="step-help">Checking your Discord account…</p>';
+    let info;
+    try { info = await api('apply.status'); } catch (e) {
+      if (e.auth) { try { localStorage.removeItem(TOKEN_KEY); } catch (_) {} return step1(); }
+      s1.innerHTML = msg('bad', esc(e.message)) + '<div class="step-actions"><button class="btn btn-ghost" type="button" data-retry>Try again</button></div>';
+      s1.querySelector('[data-retry]').onclick = step1;
+      return;
+    }
+    state.info = info;
+    const me = info.me, name = esc(me.displayName || me.username);
+    const who = `<div class="enl-who">${me.avatar ? `<img src="https://cdn.discordapp.com/avatars/${esc(me.id)}/${esc(me.avatar)}.png?size=64" alt="">` : `<span>${esc((me.username || '?').charAt(0).toUpperCase())}</span>`}<div><b>${name}</b><small>@${esc(me.username)} · in the Project Six server <span class="okc">✓</span></small></div></div>`;
+    const portalBtn = label => `<a class="btn btn-solid" href="${esc(portal)}">${label}</a>`;
+    const signOut = '<button class="link-btn" type="button" data-switch>Not you? Use a different account</button>';
+    if (me.status === 'active') { s1.innerHTML = who + msg('ok', 'You’re already a member of Project Six.') + `<div class="step-actions">${portalBtn('Open the dashboard')}</div>`; }
+    else if (info.reason === 'open') { s1.innerHTML = who + msg('info', 'You already have an application in review.') + `<div class="step-actions">${portalBtn('Track my application')}</div>`; }
+    else if (info.reason === 'accepted') { s1.innerHTML = who + msg('ok', 'Your application was accepted. Finish onboarding in the member portal.') + `<div class="step-actions">${portalBtn('Open the portal')}</div>`; }
+    else if (info.reason === 'wait') { s1.innerHTML = who + msg('bad', `Your last application was denied. You can apply again after <b>${esc(new Date(info.waitUntil).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</b>.`) + `<div class="step-actions">${portalBtn('See the comments')}</div>`; }
+    else {
+      s1.innerHTML = who + `<div class="step-actions"><button class="btn btn-solid" type="button" data-next>Continue</button>${signOut}</div>`;
+      s1.querySelector('[data-next]').onclick = () => { state.done[0] = true; setSub(0, `${me.username} · in the server`); open(1, true); };
+      form.elements.discord.value = me.username;
+      if (info.rsi.verified && !form.elements.handle.value) form.elements.handle.value = info.rsi.verified;
+    }
+    const sw = s1.querySelector('[data-switch]');
+    if (sw) sw.onclick = () => { try { localStorage.removeItem(TOKEN_KEY); } catch (_) {} undo(0); step1(); render(); };
   }
 
-  function setSub(i, text) {
-    const sub = steps[i].querySelector('.step-sub');
-    sub.textContent = text || sub.dataset.default;
-  }
-
-  function applicationText() {
-    return `**New ${CONFIG.orgName} application**
-RSI handle: ${form.elements.handle.value.trim()}
-Discord: ${form.elements.discord.value.trim()}
-Division: ${form.elements.division.value}
-Timezone: ${form.elements.tz.value}
-About: ${form.elements.about.value.trim() || '—'}`;
-  }
-
-  async function copy(text) {
-    try { await navigator.clipboard.writeText(text); return true; }
-    catch (_) { appText.focus(); appText.select(); return false; }
-  }
-
-  steps.forEach((step, i) => {
-    step.querySelector('.step-head').addEventListener('click', () => {
-      if (state.open === i) return;
-      open(i, false);
-    });
-  });
-
-  // Step 1
+  /* Step 2: the form */
   form.addEventListener('submit', e => {
     e.preventDefault();
     const handle = form.elements.handle;
-    const discord = form.elements.discord;
-    const missing = [handle, discord].filter(el => !el.value.trim());
-    [handle, discord].forEach(el => el.classList.toggle('invalid', missing.includes(el)));
-    if (missing.length) {
-      note.textContent = 'Add your RSI handle and Discord username to continue.';
-      note.classList.add('warn');
-      missing[0].focus();
+    const h = handle.value.trim().replace(/^@/, '');
+    const bad = !/^[A-Za-z0-9_-]{3,60}$/.test(h);
+    handle.classList.toggle('invalid', bad);
+    if (bad) { note.textContent = 'Enter your RSI handle (letters, numbers, - and _).'; note.classList.add('warn'); handle.focus(); return; }
+    note.textContent = 'Fields marked * must be filled out.'; note.classList.remove('warn');
+    const data = { handle: h, division: form.elements.division.value, timezone: form.elements.tz.value, about: form.elements.about.value.trim() };
+    if (state.data && state.data.handle.toLowerCase() !== h.toLowerCase()) undo(2);
+    state.data = data;
+    state.done[1] = true;
+    const div = form.elements.division.selectedOptions[0].textContent.replace(/\s*\(.*$/, '');
+    setSub(1, `${h} · ${div} · ${data.timezone.split(' ')[0]}`);
+    step3();
+    open(state.done[2] ? 3 : 2, true);
+  });
+  form.elements.handle.addEventListener('input', () => form.elements.handle.classList.remove('invalid'));
+
+  /* Step 3: RSI profile code */
+  async function step3(error) {
+    const info = state.info, h = state.data ? state.data.handle : '';
+    if (!info || !h) return;
+    if (info.rsi.verified && info.rsi.verified.toLowerCase() === h.toLowerCase()) {
+      s3.innerHTML = msg('ok', `RSI profile <b>${esc(info.rsi.verified)}</b> verified. You can remove the code from your bio now.`) + '<div class="step-actions"><button class="btn btn-solid" type="button" data-next>Continue</button></div>';
+      s3.querySelector('[data-next]').onclick = () => open(3, true);
+      state.done[2] = true; setSub(2, `Verified as ${info.rsi.verified}`); render();
       return;
     }
-    note.textContent = 'Fields marked * are required.';
-    note.classList.remove('warn');
-
-    const text = applicationText();
-    if (state.posted && text !== state.posted) {
-      state.done[1] = false;
-      state.done[2] = false;
-      setSub(1, '');
-      setSub(2, '');
+    if (!info.rsi.code) {
+      s3.innerHTML = '<p class="step-help">Getting your code…</p>';
+      try { state.info = await api('apply.code'); } catch (e) { s3.innerHTML = msg('bad', esc(e.message)); return; }
+      return step3(error);
     }
-    appText.value = text;
-    state.done[0] = true;
-    setSub(0, `${handle.value.trim()} · ${form.elements.division.value} · ${form.elements.tz.value.split(' ')[0]}`);
+    s3.innerHTML = `<p class="step-help">To prove <strong>${esc(h)}</strong> is your RSI account, put this code in your RSI profile’s <strong>Short Bio</strong>:</p>
+      <div class="code-box big"><code>${esc(info.rsi.code)}</code><button class="copy-btn" type="button" data-copy="${esc(info.rsi.code)}">Copy</button></div>
+      <ol class="enl-list"><li>Open <a href="https://robertsspaceindustries.com/account/profile" target="_blank" rel="noopener">your RSI profile settings</a>.</li><li>Paste the code anywhere in <b>Short Bio</b> and press <b>Save</b>.</li><li>Come back and press <b>Verify</b>. It can take a minute for RSI to show the change.</li></ol>
+      ${error ? msg('bad', esc(error)) : ''}
+      <div class="step-actions"><button class="btn btn-solid" type="button" data-verify>Verify</button><button class="link-btn" type="button" data-edit>Wrong handle? Edit step 2</button></div>`;
+    s3.querySelector('[data-verify]').onclick = async ev => {
+      const b = ev.currentTarget; b.disabled = true; b.textContent = 'Checking RSI…';
+      try { state.info = await api('apply.verify', { handle: h }); step3(); }
+      catch (e) { if (e.auth) { undo(0); step1(); open(0); return; } step3(e.message); }
+    };
+    s3.querySelector('[data-edit]').onclick = () => open(1, true);
+  }
 
-    const next = state.done.indexOf(false);
-    if (next === -1) { finish(); return; }
-    open(next, true);
-  });
-  [form.elements.handle, form.elements.discord].forEach(el => el.addEventListener('input', () => el.classList.remove('invalid')));
-
-  // Step 2
-  let copiedTimer;
-  copyBtn.addEventListener('click', async () => {
-    const ok = await copy(appText.value);
-    copyBtn.textContent = ok ? 'Copied' : 'Press Ctrl+C';
-    copyBtn.classList.toggle('copied', ok);
-    clearTimeout(copiedTimer);
-    copiedTimer = setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 2200);
-  });
-
-  discordBtn.addEventListener('click', () => {
-    copy(appText.value);
-    state.posted = appText.value;
-    state.done[1] = true;
-    setSub(1, 'Application posted in Discord.');
-    render();
-    setTimeout(() => open(2, true), 650);
-  });
-
-  // Step 3
-  joinBtn.addEventListener('click', () => {
-    completeBtn.disabled = false;
-    completeNote.textContent = 'Finished your RSI request? Hit Complete.';
-  });
-
-  completeBtn.addEventListener('click', () => {
-    state.done[2] = true;
-    setSub(2, 'Join request sent on RSI.');
-    render();
-    setTimeout(finish, 650);
+  /* Step 4: RSI join request, then submit */
+  function step4Text() {
+    const d = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+    return `Project Six application · ${d} · Discord: ${state.info ? state.info.me.username : ''}`;
+  }
+  const joinBtn = document.getElementById('joinBtn');
+  joinBtn.addEventListener('click', () => { rsiMsg.textContent = step4Text(); });
+  rsiSent.addEventListener('change', () => { submitBtn.disabled = !rsiSent.checked; submitNote.textContent = rsiSent.checked ? 'Ready when you are.' : 'Tick the box once your RSI request is sent.'; });
+  document.getElementById('rsiMsgCopy').dataset.copySource = 'rsiMsg';
+  submitBtn.addEventListener('click', async () => {
+    if (!state.data) { open(1, true); return; }
+    submitBtn.disabled = true; submitBtn.textContent = 'Submitting…';
+    try {
+      const info = await api('apply.submit', Object.assign({ rsiRequested: true }, state.data));
+      state.info = info; state.done[3] = true; setSub(3, 'Application submitted'); render();
+      setTimeout(() => finish(info), 500);
+    } catch (e) {
+      submitNote.textContent = e.message; submitNote.classList.add('warn');
+      if (/Verify your RSI/.test(e.message)) { undo(2); step3(); open(2, true); }
+    } finally { submitBtn.textContent = 'Submit application'; submitBtn.disabled = !rsiSent.checked; }
   });
 
-  function finish() {
+  // Copy buttons (code and RSI message)
+  stepper.addEventListener('click', async e => {
+    const b = e.target.closest('.copy-btn'); if (!b) return;
+    const text = b.dataset.copy || (b.dataset.copySource && document.getElementById(b.dataset.copySource).textContent) || '';
+    let ok = false;
+    try { await navigator.clipboard.writeText(text); ok = true; } catch (_) {}
+    b.textContent = ok ? 'Copied' : 'Select it'; b.classList.toggle('copied', ok);
+    setTimeout(() => { b.textContent = 'Copy'; b.classList.remove('copied'); }, 2000);
+  });
+
+  function finish(info) {
+    const black = info.application && info.application.status === 'blacklisted';
     stepper.hidden = true;
     done.hidden = false;
+    done.classList.toggle('bad', black);
+    document.getElementById('doneTitle').textContent = black ? 'Application blacklisted' : 'Application submitted';
+    document.getElementById('doneText').textContent = black
+      ? 'Your earlier applications were denied three times, so this one was blacklisted automatically. You can appeal with a support ticket in the member portal.'
+      : 'A division lead will review it, usually within 72 hours. Follow its status live in the member portal.';
+    const btn = document.getElementById('doneBtn');
+    btn.href = portal; btn.textContent = black ? 'Open the portal to appeal' : 'View my application';
     done.style.animation = 'none'; void done.offsetWidth; done.style.animation = '';
     done.querySelectorAll('circle, path').forEach(el => { el.style.animation = 'none'; void el.getBBox(); el.style.animation = ''; });
     done.focus({ preventScroll: true });
     done.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  reviewBtn.addEventListener('click', () => {
-    done.hidden = true;
-    stepper.hidden = false;
-    open(0, false);
-  });
-
+  rsiMsg.textContent = step4Text();
+  render();
   open(0, false);
+  // Load the account state the first time the Enlist page is on screen.
+  const start = () => { if (state.started) return; state.started = true; step1(); };
+  if ('IntersectionObserver' in window) new IntersectionObserver((es, io) => { if (es.some(x => x.isIntersecting)) { io.disconnect(); start(); } }).observe(stepper);
+  else start();
+  window.addEventListener('storage', e => { if (e.key === TOKEN_KEY && state.started) { undo(0); step1(); open(0); } });
 })();
 
 /* ---------- Events and newsletters (read-only, from the Apps Script ?data=site route) ---------- */
