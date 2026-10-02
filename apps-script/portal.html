@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Rajdhani:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #121315; --bg-alt: #17181b; --surface: #1d1e22; --surface-2: #24262a;
+  --line: #2e3035; --line-2: #3d3f45; --text: #ebe8e2; --muted: #a7a39b; --dim: #75716a;
+  --accent: #c9b58e; --accent-hi: #ddcba6; --accent-ink: #1a1710;
+  --ok: #7fb38a; --danger: #d9776b;
+  --f-display: 'Orbitron', 'Rajdhani', system-ui, sans-serif;
+  --f-label: 'Rajdhani', 'Barlow', system-ui, sans-serif;
+  --f-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color-scheme: dark;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--f-body); font-size: 15px; line-height: 1.55; min-height: 100vh; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--bg-alt); }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand svg { width: 30px; height: 30px; }
+.brand b { font-family: var(--f-display); font-weight: 600; font-size: .9rem; letter-spacing: .14em; text-transform: uppercase; }
+.brand span { font-family: var(--f-label); font-weight: 600; font-size: .8rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); margin-left: 4px; }
+.who { display: flex; align-items: center; gap: 14px; font-size: .85rem; color: var(--dim); flex-wrap: wrap; }
+.who a { color: var(--muted); }
+
+.tabs { display: flex; gap: 6px; padding: 16px 20px 0; max-width: 1200px; margin: 0 auto; }
+.tab { padding: 8px 18px; border-radius: 999px; border: 1px solid var(--line-2); background: transparent; cursor: pointer;
+  font-family: var(--f-label); font-weight: 700; font-size: .9rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.tab.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; padding: 16px 20px 40px; max-width: 1200px; margin: 0 auto; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.panel-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.panel-head h2 { font-family: var(--f-label); font-weight: 700; font-size: 1rem; letter-spacing: .14em; text-transform: uppercase; }
+
+.list { list-style: none; max-height: calc(100vh - 220px); overflow: auto; }
+.item { display: grid; gap: 2px; padding: 12px 16px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.item:hover { background: var(--surface-2); }
+.item.sel { background: var(--surface-2); box-shadow: inset 3px 0 0 var(--accent); }
+.item-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item-meta { display: flex; gap: 8px; align-items: center; font-size: .82rem; color: var(--dim); flex-wrap: wrap; }
+.pill { font-family: var(--f-label); font-weight: 700; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; padding: 1px 7px; border-radius: 4px; border: 1px solid var(--line-2); color: var(--muted); }
+.pill.draft { color: var(--accent); border-color: rgba(201,181,142,.45); }
+.pill.past { color: var(--dim); }
+.empty { padding: 28px 16px; color: var(--dim); text-align: center; }
+
+form { display: grid; gap: 14px; padding: 16px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+label { font-family: var(--f-label); font-weight: 600; font-size: .8rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line-2); }
+input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+textarea { resize: vertical; min-height: 110px; }
+textarea.tall { min-height: 280px; }
+.hint { font-size: .8rem; color: var(--dim); }
+.status { display: flex; gap: 18px; }
+.status label { display: flex; align-items: center; gap: 6px; text-transform: none; letter-spacing: 0; font-family: var(--f-body); font-size: .92rem; color: var(--text); cursor: pointer; }
+.status input { width: auto; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn { padding: 10px 18px; border-radius: 6px; border: 1px solid transparent; cursor: pointer;
+  font-family: var(--f-label); font-weight: 700; font-size: .9rem; letter-spacing: .12em; text-transform: uppercase; }
+.btn-solid { background: var(--accent); color: var(--accent-ink); }
+.btn-solid:hover { background: var(--accent-hi); }
+.btn-ghost { background: transparent; border-color: var(--line-2); color: var(--text); }
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+.btn-danger { background: transparent; border-color: rgba(217,119,107,.5); color: var(--danger); margin-left: auto; }
+.btn-danger.armed { background: var(--danger); color: #1a0f0d; }
+.btn[disabled] { opacity: .5; cursor: wait; }
+
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); padding: 10px 16px; border-radius: 6px;
+  background: var(--surface-2); border: 1px solid var(--line-2); font-size: .92rem; max-width: calc(100% - 32px); }
+.toast.ok { border-color: rgba(127,179,138,.6); }
+.toast.err { border-color: rgba(217,119,107,.7); color: #f1c3bc; }
+.loading { padding: 60px 20px; text-align: center; color: var(--dim); }
+
+@media (max-width: 860px) {
+  .layout { grid-template-columns: 1fr; }
+  .list { max-height: 320px; }
+}
+@media (max-width: 520px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#ECE9E3" points="268.0,55.3 427.3,147.2 405.3,185.4 268.0,106.1"/><polygon fill="#ECE9E3" points="439.3,168.0 439.3,344.0 395.2,318.6 395.2,193.4"/><polygon fill="#ECE9E3" points="427.3,364.8 268.0,456.7 268.0,405.9 405.3,326.6"/><polygon fill="#ECE9E3" points="244.0,456.7 84.7,364.8 106.7,326.6 244.0,405.9"/><polygon fill="#ECE9E3" points="72.7,344.0 72.7,168.0 116.8,193.4 116.8,318.6"/><polygon fill="#C9B58E" points="84.7,147.2 244.0,55.3 244.0,106.1 106.7,185.4"/></svg>
+    <b>Project Six</b><span>Admin</span>
+  </div>
+  <div class="who"><span id="who"></span><a id="sheetLink" href="#" target="_blank" rel="noopener" hidden>Open data sheet</a></div>
+</header>
+
+<div class="tabs">
+  <button class="tab on" data-tab="events" type="button">Events</button>
+  <button class="tab" data-tab="newsletters" type="button">Newsletters</button>
+</div>
+
+<div id="app"><p class="loading">Loading…</p></div>
+
+<template id="tplEvents">
+  <div class="layout">
+    <section class="panel">
+      <div class="panel-head"><h2>Events</h2><button class="btn btn-ghost" type="button" data-new>New event</button></div>
+      <ul class="list" data-list></ul>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2 data-form-title>New event</h2></div>
+      <form data-form autocomplete="off">
+        <input type="hidden" name="id">
+        <div class="field"><label for="evTitle">Title *</label><input id="evTitle" name="title" maxlength="120" required></div>
+        <div class="row">
+          <div class="field"><label for="evType">Type</label><select id="evType" name="type"></select></div>
+          <div class="field"><label for="evLocation">Location</label><input id="evLocation" name="location" maxlength="120" placeholder="e.g. Orison, Crusader"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label for="evStart">Start *</label><input id="evStart" name="start" type="datetime-local" required></div>
+          <div class="field"><label for="evEnd">End</label><input id="evEnd" name="end" type="datetime-local"></div>
+        </div>
+        <p class="hint" data-tz></p>
+        <div class="field"><label for="evLink">Link</label><input id="evLink" name="link" maxlength="300" placeholder="https://discord.com/events/…"></div>
+        <div class="field"><label for="evDesc">Description</label><textarea id="evDesc" name="description" maxlength="2000"></textarea></div>
+        <div class="status">
+          <label><input type="radio" name="status" value="published" checked> Published</label>
+          <label><input type="radio" name="status" value="draft"> Draft (hidden from site)</label>
+        </div>
+        <div class="actions">
+          <button class="btn btn-solid" type="submit">Save</button>
+          <button class="btn btn-ghost" type="button" data-new>Clear</button>
+          <button class="btn btn-danger" type="button" data-delete hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</template>
+
+<template id="tplNewsletters">
+  <div class="layout">
+    <section class="panel">
+      <div class="panel-head"><h2>Newsletters</h2><button class="btn btn-ghost" type="button" data-new>New newsletter</button></div>
+      <ul class="list" data-list></ul>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><h2 data-form-title>New newsletter</h2></div>
+      <form data-form autocomplete="off">
+        <input type="hidden" name="id">
+        <div class="field"><label for="nlTitle">Title *</label><input id="nlTitle" name="title" maxlength="120" required></div>
+        <div class="field"><label for="nlAuthor">Author</label><input id="nlAuthor" name="author" maxlength="60" placeholder="e.g. Fleet Command"></div>
+        <div class="field"><label for="nlSummary">Summary</label><input id="nlSummary" name="summary" maxlength="300" placeholder="Shown in the list. Leave blank to use the start of the body."></div>
+        <div class="field">
+          <label for="nlBody">Body *</label>
+          <textarea id="nlBody" class="tall" name="body" maxlength="20000" required></textarea>
+          <p class="hint">Leave a blank line between paragraphs. Wrap text in **double asterisks** for bold. Links starting with https:// become clickable.</p>
+        </div>
+        <div class="status">
+          <label><input type="radio" name="status" value="published" checked> Published</label>
+          <label><input type="radio" name="status" value="draft"> Draft (hidden from site)</label>
+        </div>
+        <div class="actions">
+          <button class="btn btn-solid" type="submit">Save</button>
+          <button class="btn btn-ghost" type="button" data-new>Clear</button>
+          <button class="btn btn-danger" type="button" data-delete hidden>Delete</button>
+        </div>
+      </form>
+    </section>
+  </div>
+</template>
+
+<script>
+const state = { tab: 'events', data: null, selected: null, busy: false };
+const app = document.getElementById('app');
+const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const pad = n => String(n).padStart(2, '0');
+const toLocalInput = iso => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return isNaN(d) ? '' : `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const fromLocalInput = v => (v ? new Date(v).toISOString() : '');
+const fmt = iso => {
+  const d = new Date(iso);
+  return isNaN(d) ? '' : d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+};
+
+let toastTimer;
+function toast(msg, kind) {
+  let t = document.querySelector('.toast');
+  if (!t) { t = document.createElement('div'); t.className = 'toast'; document.body.appendChild(t); }
+  t.className = 'toast ' + (kind || '');
+  t.textContent = msg;
+  t.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3500);
+}
+
+function call(fn, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(err => reject(err))[fn](...args);
+  });
+}
+
+function setBusy(on) {
+  state.busy = on;
+  app.querySelectorAll('button, input, select, textarea').forEach(el => { el.disabled = on; });
+}
+
+async function load() {
+  try {
+    state.data = await call('adminLoad');
+    document.getElementById('who').textContent = 'Signed in as ' + state.data.user;
+    const sl = document.getElementById('sheetLink');
+    sl.href = state.data.sheetUrl; sl.hidden = false;
+    render();
+  } catch (err) {
+    app.innerHTML = '<p class="loading">' + esc(err && err.message ? err.message : 'Could not load the portal.') + '</p>';
+  }
+}
+
+function render() {
+  const tpl = document.getElementById(state.tab === 'events' ? 'tplEvents' : 'tplNewsletters');
+  app.replaceChildren(tpl.content.cloneNode(true));
+  const form = app.querySelector('[data-form]');
+
+  if (state.tab === 'events') {
+    form.elements.type.innerHTML = state.data.eventTypes.map(t => `<option>${esc(t)}</option>`).join('');
+    app.querySelector('[data-tz]').textContent = 'Times are entered in your time zone (' + tz + '). Visitors see them converted to their own.';
+  }
+
+  renderList();
+  fillForm(state.selected ? findItem(state.selected) : null);
+
+  app.querySelectorAll('[data-new]').forEach(b => b.addEventListener('click', () => { state.selected = null; renderList(); fillForm(null); }));
+  form.addEventListener('submit', save);
+
+  const del = app.querySelector('[data-delete]');
+  del.addEventListener('click', () => {
+    if (!del.classList.contains('armed')) {
+      del.classList.add('armed'); del.textContent = 'Confirm delete';
+      setTimeout(() => { del.classList.remove('armed'); del.textContent = 'Delete'; }, 4000);
+      return;
+    }
+    remove();
+  });
+}
+
+function items() { return state.data[state.tab] || []; }
+function findItem(id) { return items().find(i => i.id === id) || null; }
+
+function renderList() {
+  const list = app.querySelector('[data-list]');
+  const all = items();
+  if (!all.length) {
+    list.innerHTML = `<li class="empty">No ${state.tab === 'events' ? 'events' : 'newsletters'} yet. Use the form to add the first one.</li>`;
+    return;
+  }
+  const now = Date.now();
+  list.innerHTML = all.map(i => {
+    const when = state.tab === 'events' ? fmt(i.start) : fmt(i.published || i.created);
+    const past = state.tab === 'events' && Date.parse(i.end || i.start) < now;
+    const extra = state.tab === 'events' ? `<span>${esc(i.type)}</span>` : (i.author ? `<span>${esc(i.author)}</span>` : '');
+    return `<li class="item${i.id === state.selected ? ' sel' : ''}" data-id="${esc(i.id)}" tabindex="0">
+      <span class="item-title">${esc(i.title)}</span>
+      <span class="item-meta"><span>${esc(when)}</span>${extra}
+        ${i.status === 'draft' ? '<span class="pill draft">Draft</span>' : ''}${past ? '<span class="pill past">Past</span>' : ''}</span>
+    </li>`;
+  }).join('');
+  list.querySelectorAll('.item').forEach(li => {
+    const pick = () => { state.selected = li.dataset.id; renderList(); fillForm(findItem(li.dataset.id)); };
+    li.addEventListener('click', pick);
+    li.addEventListener('keydown', e => { if (e.key === 'Enter') pick(); });
+  });
+}
+
+function fillForm(item) {
+  const form = app.querySelector('[data-form]');
+  form.reset();
+  form.elements.id.value = '';
+  const title = app.querySelector('[data-form-title]');
+  const del = app.querySelector('[data-delete]');
+  const label = state.tab === 'events' ? 'event' : 'newsletter';
+  title.textContent = item ? 'Edit ' + label : 'New ' + label;
+  del.hidden = !item;
+  if (!item) return;
+  form.elements.id.value = item.id;
+  form.elements.title.value = item.title;
+  if (state.tab === 'events') {
+    form.elements.type.value = item.type;
+    form.elements.location.value = item.location;
+    form.elements.start.value = toLocalInput(item.start);
+    form.elements.end.value = toLocalInput(item.end);
+    form.elements.link.value = item.link;
+    form.elements.description.value = item.description;
+  } else {
+    form.elements.author.value = item.author;
+    form.elements.summary.value = item.summary;
+    form.elements.body.value = item.body;
+  }
+  form.querySelector(`input[name="status"][value="${item.status === 'draft' ? 'draft' : 'published'}"]`).checked = true;
+}
+
+async function save(e) {
+  e.preventDefault();
+  if (state.busy) return;
+  const f = e.target;
+  const payload = { id: f.elements.id.value, title: f.elements.title.value, status: f.querySelector('input[name="status"]:checked').value };
+  if (state.tab === 'events') {
+    Object.assign(payload, {
+      type: f.elements.type.value, location: f.elements.location.value, link: f.elements.link.value, description: f.elements.description.value,
+      start: fromLocalInput(f.elements.start.value), end: fromLocalInput(f.elements.end.value)
+    });
+  } else {
+    Object.assign(payload, { author: f.elements.author.value, summary: f.elements.summary.value, body: f.elements.body.value });
+  }
+  setBusy(true);
+  try {
+    const before = new Set(items().map(i => i.id));
+    state.data = await call('adminSave', state.tab, payload);
+    state.busy = false;
+    const added = items().find(i => !before.has(i.id));
+    state.selected = payload.id || (added && added.id) || null;
+    render();
+    toast(payload.status === 'draft' ? 'Saved as draft.' : 'Saved. Live on the site within a minute.', 'ok');
+  } catch (err) {
+    setBusy(false);
+    toast(err && err.message ? err.message : 'Save failed.', 'err');
+  }
+}
+
+async function remove() {
+  const id = app.querySelector('[data-form]').id.value;
+  if (!id) return;
+  setBusy(true);
+  try {
+    state.data = await call('adminDelete', state.tab, id);
+    state.busy = false;
+    state.selected = null;
+    render();
+    toast('Deleted.', 'ok');
+  } catch (err) {
+    setBusy(false);
+    toast(err && err.message ? err.message : 'Delete failed.', 'err');
+  }
+}
+
+document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+  if (state.busy || !state.data) return;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+  state.tab = t.dataset.tab;
+  state.selected = null;
+  render();
+}));
+
+load();
+</script>
+</body>
+</html>

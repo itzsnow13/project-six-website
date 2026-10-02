@@ -389,13 +389,84 @@ a { color: inherit; }
 .footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; padding-top: 22px; font-size: .85rem; color: var(--dim); }
 .footer-bottom p:last-child { max-width: 560px; font-size: .8rem; }
 
-/* Responsive */
-@media (max-width: 980px) {
-  .divisions { grid-template-columns: repeat(2, 1fr); }
-  .post { flex-basis: calc((100% - 16px) / 2); }
-  .enlist-grid { grid-template-columns: 1fr; gap: 32px; }
+/* Pages */
+.page[hidden] { display: none; }
+.section-head-row { max-width: none; display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.section-head-row > div { max-width: 640px; }
+.state-msg { color: var(--dim); padding: 28px 0; }
+.page-hero { padding-block: 56px 8px; }
+.page-title { font-family: var(--f-display); font-weight: 600; font-size: clamp(1.8rem, 4vw, 2.6rem); letter-spacing: .06em; text-transform: uppercase; }
+.back-link { display: inline-block; margin-bottom: 22px; font-family: var(--f-label); font-weight: 600; font-size: .9rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); text-decoration: none; }
+.back-link:hover { color: var(--accent); }
+.page-body { padding-top: 32px; }
+.list-heading { font-family: var(--f-label); font-weight: 700; font-size: 1rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+.list-heading:not(:first-child), #eventsPastWrap .list-heading { margin-top: 44px; }
+
+/* Event date block */
+.ev-date {
+  flex: none; width: 64px; padding: 8px 0 10px; text-align: center;
+  border: 1px solid var(--line-2); border-radius: 6px; background: var(--bg);
 }
-@media (max-width: 760px) {
+.ev-date .m { display: block; font-family: var(--f-label); font-weight: 700; font-size: .78rem; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+.ev-date .d { display: block; font-family: var(--f-display); font-weight: 600; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.ev-date .w { display: block; font-family: var(--f-label); font-weight: 600; font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+
+.ev-tag { font-family: var(--f-label); font-weight: 700; font-size: .72rem; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(201,181,142,.35); padding: 2px 8px; border-radius: 4px; }
+.ev-soon { font-family: var(--f-label); font-weight: 600; font-size: .8rem; letter-spacing: .08em; color: var(--steel); }
+.ev-soon.now { color: #6fdc8f; }
+.ev-meta { display: flex; flex-wrap: wrap; gap: 4px 14px; color: var(--muted); font-size: .92rem; }
+.ev-meta span { display: inline-flex; align-items: center; gap: 6px; }
+.ev-meta svg { width: 14px; height: 14px; stroke: var(--dim); fill: none; stroke-width: 2; flex: none; }
+
+/* Upcoming events (home) */
+.ev-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.ev-card {
+  display: flex; gap: 16px; align-items: flex-start; min-width: 0;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px;
+  transition: border-color .25s, transform .25s;
+}
+.ev-card:hover { border-color: rgba(201,181,142,.45); transform: translateY(-2px); }
+.ev-card-body { display: grid; gap: 6px; min-width: 0; }
+.ev-card-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ev-card h3 { font-family: var(--f-label); font-weight: 700; font-size: 1.2rem; line-height: 1.2; letter-spacing: .02em; overflow-wrap: anywhere; }
+
+/* Events page */
+.ev-list { display: grid; gap: 14px; }
+.ev-row {
+  display: flex; gap: 20px; align-items: flex-start;
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
+}
+.ev-row-body { display: grid; gap: 8px; min-width: 0; flex: 1; }
+.ev-row h3 { font-family: var(--f-label); font-weight: 700; font-size: 1.4rem; line-height: 1.2; letter-spacing: .02em; overflow-wrap: anywhere; }
+.ev-desc { color: var(--muted); white-space: pre-line; max-width: 70ch; overflow-wrap: anywhere; }
+.ev-row .btn { justify-self: start; margin-top: 4px; padding: 9px 16px; font-size: .85rem; }
+.ev-past { display: grid; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
+.ev-past-item { display: flex; justify-content: space-between; gap: 16px; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: .94rem; }
+.ev-past-item:first-child { border-top: 0; }
+.ev-past-item b { color: var(--text); font-weight: 600; overflow-wrap: anywhere; }
+.ev-past-item time { flex: none; color: var(--dim); font-variant-numeric: tabular-nums; }
+
+/* Newsletters page */
+.news-list { display: grid; gap: 16px; max-width: 820px; }
+.news {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 26px 28px;
+}
+.news-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; font-family: var(--f-label); font-weight: 600; font-size: .85rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+.news-meta .latest { color: var(--accent); }
+.news h2 { font-family: var(--f-display); font-weight: 600; font-size: clamp(1.15rem, 2.4vw, 1.45rem); letter-spacing: .04em; line-height: 1.3; overflow-wrap: anywhere; }
+.news-summary { color: var(--muted); margin-top: 10px; overflow-wrap: anywhere; }
+.news-body { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--line); display: grid; gap: 14px; max-width: 68ch; overflow-wrap: anywhere; }
+.news-body[hidden] { display: none; }
+.news-body a { color: var(--accent); }
+.news-body strong { color: var(--text); }
+.news-toggle {
+  margin-top: 14px; background: none; border: 0; padding: 0; cursor: pointer;
+  font-family: var(--f-label); font-weight: 700; font-size: .88rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
+}
+.news-toggle:hover { color: var(--accent-hi); }
+
+/* Responsive */
+@media (max-width: 1080px) {
   .menu-btn { display: grid; place-items: center; }
   .nav {
     display: none; position: absolute; top: var(--header-h); left: 0; right: 0;
@@ -404,11 +475,22 @@ a { color: inherit; }
   }
   .nav.open { display: flex; }
   .nav a { padding: 12px; }
+}
+@media (max-width: 980px) {
+  .ev-grid { grid-template-columns: 1fr; }
+  .divisions { grid-template-columns: repeat(2, 1fr); }
+  .post { flex-basis: calc((100% - 16px) / 2); }
+  .enlist-grid { grid-template-columns: 1fr; gap: 32px; }
+}
+@media (max-width: 760px) {
   .hero-arrow { display: none; }
   .section { padding-block: 64px; }
 }
 @media (max-width: 600px) {
   .divisions { grid-template-columns: 1fr; }
+  .ev-row { flex-direction: column; gap: 14px; padding: 18px; }
+  .news { padding: 20px; }
+  .ev-past-item { flex-direction: column; gap: 2px; }
   .form-row { grid-template-columns: 1fr; }
   .post { flex-basis: 88%; }
   .form { padding: 20px; }
@@ -439,11 +521,15 @@ a { color: inherit; }
       <li><a href="#home" data-go="home">Home</a></li>
       <li><a href="#divisions" data-go="divisions">Divisions</a></li>
       <li><a href="#fleet" data-go="fleet">Fleet</a></li>
+      <li><a href="#events" data-page="events">Events</a></li>
+      <li><a href="#newsletters" data-page="newsletters">Newsletters</a></li>
       <li><a href="#enlist" data-go="enlist">Enlist</a></li>
-      <li><a href="#updates" data-go="updates" class="nav-updates">Updates</a></li>
+      <li><a href="#updates" data-go="updates" class="nav-updates">RSI Updates</a></li>
     </ul>
   </div>
 </header>
+
+<main id="pageHome" class="page">
 
 <!-- ============ HERO CAROUSEL ============ -->
 <section class="hero" id="home">
@@ -603,6 +689,23 @@ a { color: inherit; }
   </div>
 </section>
 
+<!-- ============ UPCOMING EVENTS ============ -->
+<section class="section" id="upcoming">
+  <div class="wrap">
+    <div class="section-head section-head-row">
+      <div>
+        <div class="eyebrow">Calendar</div>
+        <h2 class="section-title">Upcoming Events</h2>
+        <p class="section-lede">Org ops, training nights and get-togethers. Times are shown in your local time zone.</p>
+      </div>
+      <a class="btn btn-ghost" href="#events" data-page="events">All events</a>
+    </div>
+    <div class="ev-grid" id="upcomingList" aria-live="polite">
+      <p class="state-msg">Loading events…</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============ ENLIST ============ -->
 <section class="section" id="enlist">
   <div class="wrap">
@@ -676,7 +779,7 @@ a { color: inherit; }
   <div class="wrap">
     <div class="section-head">
       <div class="eyebrow">From Roberts Space Industries</div>
-      <h2 class="section-title">Updates</h2>
+      <h2 class="section-title">RSI Updates</h2>
       <p class="section-lede">The latest patch releases and Comm-Link news, pulled from RSI's public feed.</p>
     </div>
 
@@ -703,6 +806,47 @@ a { color: inherit; }
   </div>
 </section>
 
+</main>
+
+<!-- ============ EVENTS PAGE ============ -->
+<main id="pageEvents" class="page" hidden>
+  <section class="page-hero">
+    <div class="wrap">
+      <a class="back-link" href="#home" data-go="home">&larr; Home</a>
+      <div class="eyebrow">Calendar</div>
+      <h1 class="page-title">Events</h1>
+      <p class="section-lede">Everything Project Six has planned. Times are shown in your local time zone.</p>
+    </div>
+  </section>
+  <section class="section page-body">
+    <div class="wrap">
+      <h2 class="list-heading">Upcoming</h2>
+      <div class="ev-list" id="eventsUpcoming" aria-live="polite"><p class="state-msg">Loading events…</p></div>
+      <div id="eventsPastWrap" hidden>
+        <h2 class="list-heading">Past events</h2>
+        <div class="ev-past" id="eventsPast"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ NEWSLETTERS PAGE ============ -->
+<main id="pageNewsletters" class="page" hidden>
+  <section class="page-hero">
+    <div class="wrap">
+      <a class="back-link" href="#home" data-go="home">&larr; Home</a>
+      <div class="eyebrow">From fleet command</div>
+      <h1 class="page-title">Newsletters</h1>
+      <p class="section-lede">Org news, announcements and recaps from Project Six leadership.</p>
+    </div>
+  </section>
+  <section class="section page-body">
+    <div class="wrap">
+      <div class="news-list" id="newsList" aria-live="polite"><p class="state-msg">Loading newsletters…</p></div>
+    </div>
+  </section>
+</main>
+
 <!-- ============ FOOTER ============ -->
 <footer class="footer">
   <div class="wrap">
@@ -724,7 +868,7 @@ a { color: inherit; }
           <span>Star Citizen</span>
         </a>
         <!-- Discord invite (href set from CONFIG) -->
-        <a class="ext" id="discordLink" href="https://discord.gg/" target="_blank" rel="noopener noreferrer">
+        <a class="ext" id="discordLink" href="https://discord.gg/projectsix" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.74 19.74 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.077.077 0 0 1-.008-.128c.126-.094.252-.192.372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.3 12.3 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.84 19.84 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
           <span>Discord</span>
         </a>
@@ -743,7 +887,7 @@ a { color: inherit; }
 const CONFIG = {
   orgName:    'Project Six',
   rsiOrgUrl:  'https://robertsspaceindustries.com/en/orgs/PSIX',   // e.g. https://robertsspaceindustries.com/orgs/YOURTAG
-  discordUrl: 'https://discord.gg/',                       // e.g. https://discord.gg/abc123
+  discordUrl: 'https://discord.gg/projectsix',
   feedUrl:    'https://script.google.com/macros/s/AKfycbxiuMk9a7qx4hF2nQhTEnsmTNG1dsCR_ex8w16kTm7s0s50tbPywfeL1zJvMhlvtHPttw/exec',                                          // Apps Script web app URL (see rsi-feed-relay.gs)
   checkEveryMinutes: 2                                     // polling interval for RSI posts
 };
@@ -755,18 +899,49 @@ document.getElementById('discordLink').href = CONFIG.discordUrl;
 document.getElementById('resultDiscord').href = CONFIG.discordUrl;
 document.getElementById('year').textContent = new Date().getFullYear();
 
-/* ---------- In-page navigation (scrollIntoView, iframe-safe) ---------- */
+/* ---------- Navigation: pages + in-page sections (scrollIntoView, iframe-safe) ---------- */
 const nav = document.getElementById('nav');
 const menuBtn = document.getElementById('menuBtn');
+const pages = {
+  home: document.getElementById('pageHome'),
+  events: document.getElementById('pageEvents'),
+  newsletters: document.getElementById('pageNewsletters')
+};
+let currentPage = 'home';
 
-document.querySelectorAll('[data-go]').forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const target = document.getElementById(link.dataset.go);
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    nav.classList.remove('open');
-    menuBtn.setAttribute('aria-expanded', 'false');
-  });
+function setHash(hash) {
+  try { history.replaceState(null, '', hash); } catch (_) { /* not allowed in some embeds */ }
+}
+
+function showPage(name, opts = {}) {
+  if (!pages[name]) name = 'home';
+  Object.entries(pages).forEach(([key, el]) => { el.hidden = key !== name; });
+  currentPage = name;
+  if (name !== 'home') {
+    navLinks.forEach(a => a.classList.toggle('active', a.dataset.page === name));
+    setHash('#' + name);
+  } else if (!opts.keepHash) {
+    setHash('#home');
+  }
+  if (!opts.noScroll) window.scrollTo({ top: 0, behavior: 'auto' });
+  document.dispatchEvent(new CustomEvent('pagechange', { detail: name }));
+}
+
+function closeMenu() {
+  nav.classList.remove('open');
+  menuBtn.setAttribute('aria-expanded', 'false');
+}
+
+document.addEventListener('click', e => {
+  const link = e.target.closest('[data-go], [data-page]');
+  if (!link) return;
+  e.preventDefault();
+  closeMenu();
+  if (link.dataset.page) { showPage(link.dataset.page); return; }
+  const id = link.dataset.go;
+  if (currentPage !== 'home') showPage('home', { noScroll: true });
+  const target = document.getElementById(id);
+  if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
 
 menuBtn.addEventListener('click', () => {
@@ -774,16 +949,21 @@ menuBtn.addEventListener('click', () => {
   menuBtn.setAttribute('aria-expanded', String(open));
 });
 
-// Highlight the nav item for the section in view
+// Highlight the nav item for the section in view (home page only)
 const navLinks = [...nav.querySelectorAll('a')];
 const spy = new IntersectionObserver(entries => {
+  if (currentPage !== 'home') return;
   entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      navLinks.forEach(a => a.classList.toggle('active', a.dataset.go === entry.target.id));
-    }
+    if (!entry.isIntersecting) return;
+    const id = entry.target.id;
+    navLinks.forEach(a => a.classList.toggle('active', a.dataset.go === id || (id === 'upcoming' && a.dataset.page === 'events')));
   });
 }, { rootMargin: '-45% 0px -50% 0px' });
-['home','divisions','fleet','enlist','updates'].forEach(id => spy.observe(document.getElementById(id)));
+['home', 'divisions', 'fleet', 'upcoming', 'enlist', 'updates'].forEach(id => spy.observe(document.getElementById(id)));
+
+// Open #events / #newsletters directly
+const startHash = (location.hash || '').slice(1);
+if (pages[startHash] && startHash !== 'home') showPage(startHash);
 
 /* ---------- Hero title letter reveal ---------- */
 const heroTitle = document.getElementById('heroTitle');
@@ -901,6 +1081,186 @@ About: ${form.about.value.trim() || '—'}`;
     const ok = await copy(out.value);
     msg.textContent = ok ? 'Copied again.' : 'Select the text below and copy it manually.';
   });
+})();
+
+/* ---------- Events and newsletters (read-only, from the Apps Script ?data=site route) ---------- */
+(function siteContent() {
+  const upcomingEl = document.getElementById('upcomingList');
+  const eventsEl = document.getElementById('eventsUpcoming');
+  const pastWrap = document.getElementById('eventsPastWrap');
+  const pastEl = document.getElementById('eventsPast');
+  const newsEl = document.getElementById('newsList');
+  let data = null;
+
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const safeUrl = u => (/^https:\/\/[^\s<>"']+$/i.test(u || '') ? u : '');
+  const tzName = d => {
+    try { return new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' }).formatToParts(d).find(p => p.type === 'timeZoneName').value; }
+    catch (_) { return ''; }
+  };
+  const time = d => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  const longDate = d => d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+
+  const ICON_CLOCK = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  const ICON_PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>';
+
+  function dateBlock(d) {
+    return `<div class="ev-date" aria-hidden="true">
+      <span class="m">${d.toLocaleDateString('en-US', { month: 'short' })}</span>
+      <span class="d">${d.getDate()}</span>
+      <span class="w">${d.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+    </div>`;
+  }
+
+  function whenText(ev) {
+    const s = new Date(ev.start);
+    const e = ev.end ? new Date(ev.end) : null;
+    let out = `${longDate(s)} · ${time(s)}`;
+    if (e) out += sameDay(s, e) ? ` – ${time(e)}` : ` – ${longDate(e)} ${time(e)}`;
+    return `${out} ${tzName(s)}`;
+  }
+
+  function soonText(ev) {
+    const now = Date.now();
+    const start = Date.parse(ev.start);
+    const end = ev.end ? Date.parse(ev.end) : start + 3 * 3600e3;
+    if (start <= now && now <= end) return '<span class="ev-soon now">Happening now</span>';
+    const mins = Math.round((start - now) / 60000);
+    if (mins < 60) return `<span class="ev-soon">Starts in ${Math.max(mins, 1)} min</span>`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `<span class="ev-soon">In ${hrs} hour${hrs === 1 ? '' : 's'}</span>`;
+    const days = Math.round(hrs / 24);
+    return `<span class="ev-soon">In ${days} day${days === 1 ? '' : 's'}</span>`;
+  }
+
+  function metaLine(ev) {
+    return `<div class="ev-meta">
+      <span>${ICON_CLOCK}${esc(whenText(ev))}</span>
+      ${ev.location ? `<span>${ICON_PIN}${esc(ev.location)}</span>` : ''}
+    </div>`;
+  }
+
+  function renderUpcoming() {
+    const list = data.events.slice(0, 3);
+    if (!list.length) {
+      upcomingEl.innerHTML = '<p class="state-msg">Nothing on the calendar yet. Check back soon or ask in Discord.</p>';
+      return;
+    }
+    upcomingEl.innerHTML = list.map(ev => {
+      const d = new Date(ev.start);
+      return `<article class="ev-card">
+        ${dateBlock(d)}
+        <div class="ev-card-body">
+          <div class="ev-card-top"><span class="ev-tag">${esc(ev.type || 'Event')}</span>${soonText(ev)}</div>
+          <h3>${esc(ev.title)}</h3>
+          ${metaLine(ev)}
+        </div>
+      </article>`;
+    }).join('');
+  }
+
+  function renderEventsPage() {
+    if (!data.events.length) {
+      eventsEl.innerHTML = '<p class="state-msg">No upcoming events right now. New ones are posted here and in Discord.</p>';
+    } else {
+      eventsEl.innerHTML = data.events.map(ev => {
+        const link = safeUrl(ev.link);
+        return `<article class="ev-row">
+          ${dateBlock(new Date(ev.start))}
+          <div class="ev-row-body">
+            <div class="ev-card-top"><span class="ev-tag">${esc(ev.type || 'Event')}</span>${soonText(ev)}</div>
+            <h3>${esc(ev.title)}</h3>
+            ${metaLine(ev)}
+            ${ev.description ? `<p class="ev-desc">${esc(ev.description)}</p>` : ''}
+            ${link ? `<a class="btn btn-ghost" href="${esc(link)}" target="_blank" rel="noopener noreferrer">Event details</a>` : ''}
+          </div>
+        </article>`;
+      }).join('');
+    }
+    const past = data.pastEvents || [];
+    pastWrap.hidden = !past.length;
+    pastEl.innerHTML = past.map(ev => {
+      const d = new Date(ev.start);
+      return `<div class="ev-past-item"><b>${esc(ev.title)}</b><time datetime="${esc(ev.start)}">${esc(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }))}</time></div>`;
+    }).join('');
+  }
+
+  // Newsletter body: escaped text, blank line = paragraph, **bold**, https links
+  function formatBody(text) {
+    return esc(text).split(/\n{2,}/).map(par => {
+      const html = par
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/https:\/\/[^\s<]+[^\s<.,;:!?)\]]/g, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`)
+        .replace(/\n/g, '<br>');
+      return `<p>${html}</p>`;
+    }).join('');
+  }
+
+  function renderNewsletters() {
+    const list = data.newsletters || [];
+    if (!list.length) {
+      newsEl.innerHTML = '<p class="state-msg">No newsletters published yet.</p>';
+      return;
+    }
+    newsEl.innerHTML = list.map((n, i) => {
+      const d = new Date(n.published);
+      const open = i === 0;
+      const bodyId = 'news-body-' + i;
+      return `<article class="news">
+        <div class="news-meta">
+          ${open ? '<span class="latest">Latest</span>' : ''}
+          <time datetime="${esc(n.published)}">${esc(isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}</time>
+          ${n.author ? `<span>${esc(n.author)}</span>` : ''}
+        </div>
+        <h2>${esc(n.title)}</h2>
+        ${open ? '' : `<p class="news-summary">${esc(n.summary)}</p>`}
+        <div class="news-body" id="${bodyId}" ${open ? '' : 'hidden'}>${formatBody(n.body)}</div>
+        ${open ? '' : `<button class="news-toggle" type="button" aria-expanded="false" aria-controls="${bodyId}">Read full update</button>`}
+      </article>`;
+    }).join('');
+    newsEl.querySelectorAll('.news-toggle').forEach(btn => btn.addEventListener('click', () => {
+      const body = document.getElementById(btn.getAttribute('aria-controls'));
+      const opening = body.hidden;
+      body.hidden = !opening;
+      btn.setAttribute('aria-expanded', String(opening));
+      btn.textContent = opening ? 'Show less' : 'Read full update';
+      const summary = btn.closest('.news').querySelector('.news-summary');
+      if (summary) summary.hidden = opening;
+    }));
+  }
+
+  function renderAll() {
+    renderUpcoming();
+    renderEventsPage();
+    renderNewsletters();
+  }
+
+  function renderError() {
+    const msg = '<p class="state-msg">Couldn’t load this right now. Try refreshing in a minute.</p>';
+    if (!data) { upcomingEl.innerHTML = msg; eventsEl.innerHTML = msg; newsEl.innerHTML = msg; }
+  }
+
+  async function load() {
+    if (!CONFIG.feedUrl) { renderError(); return; }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 10000);
+    try {
+      const res = await fetch(CONFIG.feedUrl + '?data=site&_=' + Date.now(), { signal: ctrl.signal, cache: 'no-store' });
+      const json = await res.json();
+      if (!json || !json.ok) throw new Error('bad response');
+      data = { events: json.events || [], pastEvents: json.pastEvents || [], newsletters: json.newsletters || [] };
+      renderAll();
+    } catch (_) {
+      renderError();
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  load();
+  setInterval(() => { if (!document.hidden) load(); }, 5 * 60000);
+  document.addEventListener('pagechange', e => { if (e.detail !== 'home') load(); });
 })();
 
 /* ---------- RSI updates carousel ----------

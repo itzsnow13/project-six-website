@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Project Six</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #121315; color: #a7a39b; font: 15px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  p { margin: 0; padding: 24px; text-align: center; }
+  a { color: #c9b58e; }
+</style>
+</head>
+<body>
+<p id="msg">Redirecting…</p>
+<script>
+  // Admin portal deployment URL (Apps Script web app, access: Only myself) with ?portal=1
+  const PORTAL_URL = 'https://script.google.com/macros/s/AKfycbyKVqYYFEYZIACZmHEzrA_8YloxtkBqXpFJuD919WW1M1O-RtYdK_sMvzgZCrozodz8Bg/exec?portal=1';
+
+  if (/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec\?portal=1$/.test(PORTAL_URL)) {
+    location.replace(PORTAL_URL);
+  } else {
+    document.getElementById('msg').textContent = 'Not found.';
+  }
+</script>
+</body>
+</html>
