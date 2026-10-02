@@ -422,6 +422,24 @@ button.owner:hover { border-color: var(--accent); }
 .div-head + .mgmt-label { border-top: 0; }
 [hidden] { display: none !important; }
 .optional-note { color: var(--accent); font-size: .88rem; }
+.org-note { margin: 0 0 18px; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 8px 8px 0; display: grid; gap: 4px; font-size: .9rem; color: var(--text); max-width: 900px; }
+.org-note p { margin: 0; }
+.dlg-body .org-note { margin: 14px 0 0; font-size: .84rem; }
+.choice { display: flex; gap: 10px; align-items: flex-start; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line-2); border-radius: 8px; cursor: pointer; }
+.choice input { margin-top: 3px; accent-color: var(--accent); }
+.choice span { display: grid; gap: 2px; }
+.choice small { color: var(--muted); font-size: .84rem; }
+.choice:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+.org-fund { margin: 14px 0 0; padding: 10px 14px 12px; border: 1px dashed var(--line-2); border-radius: 8px; }
+.org-fund legend { padding: 0 6px; font-family: var(--f-label); font-weight: 700; font-size: .78rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.dlg-body > .check { display: flex; gap: 8px; align-items: center; margin-top: 12px; }
+.dlg-body > .hint.contract-off { margin-top: 8px; }
+.share-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; }
+.share-sum { min-height: 1.2em; font-size: .9rem; color: var(--ok); margin: 4px 0 10px; }
+.share-sum.bad { color: var(--danger); }
+.pill.contract { color: #8fb0d0; border-color: rgba(143,176,208,.5); }
+.pill.failed { color: var(--danger); border-color: rgba(217,119,107,.45); }
+.org-money { color: var(--accent); letter-spacing: .02em; text-transform: none; }
 .page-head .optional-note { margin-top: 6px; }
 .opt { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--dim); }
 .mgmt-label { padding: 12px 16px 4px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); border-top: 1px solid var(--line); }
@@ -771,6 +789,7 @@ const LABELS = {
   deposit: 'Deposit', contribution: 'Contribution', sale: 'Sale', payout: 'Payout', expense: 'Expense',
   capital: 'Capital', combat: 'Combat', exploration: 'Exploration', cargo: 'Cargo', industry: 'Industry', support: 'Support', multirole: 'Multi-role', ground: 'Ground', other: 'Other'
 };
+LABELS.failed = 'Failed';
 const label = k => LABELS[k] || k;
 
 let toastTimer;
@@ -1076,171 +1095,248 @@ function woRow(w) {
 }
 
 /* ---------- Work orders ---------- */
-function canCreateIn(div) { return canLeadDiv(div) || (me().divisions || []).includes(div); }
-const OPTIONAL_NOTE = 'Sharing earnings is optional. Only report aUEC you want to give the org; the rest is yours.';
+const ORG_WORK_NOTE = 'Work orders and hauls are for work you run under the Project Six banner: building the org economy and bringing members in to work with you. If you’re going solo and keeping all the profit, don’t create one.';
+const OPTIONAL_NOTE = 'Sharing earnings is optional. On work outside an in-game contract you choose what share, if any, goes to the org; the rest is yours and the treasury never takes from it.';
+const isHaul = w => w.type === 'Hauling';
 function typesFor(div) { const by = D().lists.woTypesByDiv || {}; return by[div] || D().lists.woTypes; }
-function haulDivs() { return createDivs().filter(x => typesFor(x.id).includes('Hauling')); }
+function workTypes(div) { return typesFor(div).filter(t => t !== 'Hauling'); }
+function canCreateIn(div) { return canLeadDiv(div) || (me().divisions || []).includes(div); }
 function createDivs() {
   const m = me();
-  return ((m.isStaff || m.isCommand) ? [ORG_DIV] : []).concat(D().divisions.filter(x => canCreateIn(x.id) && (x.id !== 'hq' || m.isCommand)));
+  return ((m.isManager || m.isCommand) ? [ORG_DIV] : []).concat(D().divisions.filter(x => canCreateIn(x.id) && (x.id !== 'hq' || m.isCommand)));
 }
+function haulDivs() { return createDivs().filter(x => typesFor(x.id).includes('Hauling')); }
+function canFundDiv(div) { return div === 'all' ? !!(me().isManager || me().isCommand) : canLeadDiv(div); }
 function stageTracker(w) {
   const st = w.stages || ['Planned', 'Underway', 'Done'];
   const at = w.status === 'complete' ? st.length - 1 : w.stage;
   return `<ol class="stepper">${st.map((x, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}"><span>${esc(x)}</span></li>`).join('')}</ol>`;
 }
+function fundsFor(w) { return (D().funds || []).find(x => x.source === 'workorder' && x.refId === w.id && x.memberId === me().id && x.status !== 'rejected'); }
+function moneyLine(w) {
+  if (w.contracted) return 'In-game contract · split by the crew';
+  if (w.status === 'complete' && (w.profit || w.given)) return `${w.profit ? 'Made ' + auec(w.profit) + ' · ' : ''}gave ${auec(w.given)} to the org${w.profit ? ' · kept ' + auec(w.profit - w.given) : ''}`;
+  return '';
+}
+function orgMoney(w) {
+  const bits = [];
+  if (w.reward) bits.push(`${auec(w.reward)} aUEC org reward`);
+  if (w.fee) bits.push(`org covers ${auec(w.fee)} fee if it fails`);
+  return bits.join(' · ');
+}
+function payBtn(w) {
+  if (!me().isManager || w.paid) return '';
+  if (w.status === 'complete' && w.reward > 0 && w.assignees.length) return `<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" data-confirm="Pay from treasury?" type="button">Pay ${auec(w.reward)}</button>`;
+  if (w.status === 'failed' && w.fee > 0) return `<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" data-confirm="Cover from treasury?" type="button">Cover ${auec(w.fee)} fee</button>`;
+  return '';
+}
+function closedRow(w) {
+  const m = me(), f = fundsFor(w);
+  const canGive = w.status === 'complete' && !w.contracted && w.assignees.includes(m.id) && !f;
+  const sub = [w.type, (w.status === 'failed' ? 'failed ' : 'completed ') + rel(w.completedAt || w.updated), w.assignees.map(id => nameOf(id)).join(', ')].concat(moneyLine(w) ? [moneyLine(w)] : []);
+  return `<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0">${patch(w.division, 26)}<div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${sub.map(esc).join(' · ')}</span></div></div>
+    <div class="actions">${w.status === 'failed' ? '<span class="pill failed">Failed</span>' : ''}${f ? stagePill(f.status) : ''}${canGive ? `<button class="btn btn-ghost btn-sm" type="button" data-act="funds-for-wo" data-id="${w.id}">Give to org</button>` : ''}${payBtn(w)}</div></div>`;
+}
+function doneList(list, labelText) {
+  return `<details class="section done-list"${S.showDone ? ' open' : ''}><summary class="sub" data-toggle-done>${esc(labelText)} <span class="num" style="color:var(--dim)">${list.length}</span></summary>
+    ${list.length ? `<div class="panel rows">${list.slice(0, 30).map(closedRow).join('')}</div>` : '<p class="empty">Nothing yet.</p>'}</details>`;
+}
+const byClosed = (a, b) => Date.parse(b.completedAt || b.updated) - Date.parse(a.completedAt || a.updated);
+function orgNote() { return `<div class="org-note"><p>${esc(ORG_WORK_NOTE)}</p><p class="optional-note">${esc(OPTIONAL_NOTE)}</p></div>`; }
+
 function viewWork() {
   const d = D(), m = me();
   const divChoices = d.divisions.filter(x => myDivIds().includes(x.id));
   if (S.woDiv !== 'all' && S.woDiv !== 'org' && !divChoices.some(x => x.id === S.woDiv)) S.woDiv = 'all';
-  const inFilter = w => S.woDiv === 'all' || (S.woDiv === 'org' ? w.division === 'all' : w.division === S.woDiv);
+  const inFilter = w => !isHaul(w) && (S.woDiv === 'all' || (S.woDiv === 'org' ? w.division === 'all' : w.division === S.woDiv));
   const all = d.workorders.filter(inFilter);
   const mine = all.filter(w => w.status === 'active' && w.assignees.includes(m.id));
   const open = all.filter(w => (w.status === 'open' || w.status === 'active') && !w.assignees.includes(m.id) && w.assignees.length < w.slots);
   const others = all.filter(w => w.status === 'active' && !w.assignees.includes(m.id) && w.assignees.length >= w.slots);
-  const done = all.filter(w => w.status === 'complete').sort((a, b) => Date.parse(b.completedAt || b.updated) - Date.parse(a.completedAt || a.updated));
+  const done = all.filter(w => w.status === 'complete' || w.status === 'failed').sort(byClosed);
   const order = { urgent: 0, high: 1, normal: 2, low: 3 };
   open.sort((a, b) => order[a.priority] - order[b.priority] || Date.parse(b.created) - Date.parse(a.created));
   const canCreate = createDivs().length > 0;
   return `
-    <div class="page-head"><div><div class="eyebrow">Operations</div><h1>Work Orders</h1><p>Log a contract in your crew, move it through its steps, complete it. Bounties, mercenary jobs, hauls, mining: pick the type, naming it is up to you.</p><p class="optional-note">${OPTIONAL_NOTE}</p></div>
-      ${canCreate ? '<div class="head-actions">' + (haulDivs().length ? '<button class="btn btn-ghost" type="button" data-act="haul-new">Log a haul</button>' : '') + '<button class="btn btn-solid" type="button" data-act="wo-new">New work order</button></div>' : ''}</div>
+    <div class="page-head"><div><div class="eyebrow">Operations</div><h1>Work Orders</h1><p>Bounties, mercenary jobs, mining, salvage, rescues: post the job, get crew on it, move it through its steps. Hauls live under Logistics.</p></div>
+      ${canCreate ? '<div class="head-actions"><button class="btn btn-solid" type="button" data-act="wo-new">New work order</button></div>' : ''}</div>
+    ${orgNote()}
     <div class="toolbar"><h2 class="sub" style="margin:0">My active work <span class="num" style="color:var(--dim)">${mine.length}</span></h2>
       <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">${m.isStaff ? 'All divisions' : 'All my crews'}</option><option value="org"${S.woDiv === 'org' ? ' selected' : ''}>Org-wide</option>${divChoices.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
-    ${mine.length ? `<div class="wo-grid">${mine.map(woCard).join('')}</div>` : `<p class="empty">Nothing in progress.${canCreate ? ' Start one with “New work order” or “Log a haul”.' : ''}</p>`}
+    ${mine.length ? `<div class="wo-grid">${mine.map(woCard).join('')}</div>` : `<p class="empty">Nothing in progress.${canCreate ? ' Start one with “New work order”.' : ''}</p>`}
     <h2 class="sub section">Open in your crews <span class="num" style="color:var(--dim)">${open.length}</span></h2>
     ${open.length ? `<div class="wo-grid">${open.map(woCard).join('')}</div>` : '<p class="empty">No open jobs right now.</p>'}
     ${others.length ? `<h2 class="sub section">Crewed by others <span class="num" style="color:var(--dim)">${others.length}</span></h2><div class="wo-grid">${others.map(woCard).join('')}</div>` : ''}
-    <details class="section done-list"${S.showDone ? ' open' : ''}><summary class="sub" data-toggle-done>Completed <span class="num" style="color:var(--dim)">${done.length}</span></summary>
-      ${done.length ? `<div class="panel rows">${done.slice(0, 30).map(w => `<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0">${patch(w.division, 26)}<div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${esc(w.type)} · completed ${esc(rel(w.completedAt || w.updated))} · ${w.assignees.map(id => esc(nameOf(id))).join(', ')}</span></div></div>
-        <div class="actions">${fundsFor(w) ? stagePill(fundsFor(w).status) : w.assignees.includes(m.id) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="funds-for-wo" data-id="${w.id}">Report aUEC</button>` : ''}${m.isManager && !w.paid && w.reward > 0 && w.assignees.length ? `<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" type="button">Pay ${auec(w.reward)}</button>` : ''}</div></div>`).join('')}</div>` : '<p class="empty">Nothing completed yet.</p>'}
-    </details>`;
+    ${doneList(done, 'Finished')}`;
 }
-function fundsFor(w) { return (D().funds || []).find(x => x.source === 'workorder' && x.refId === w.id && x.status !== 'rejected'); }
+
+function nextButtons(w, compact) {
+  const m = me(), st = w.stages || [], btns = [];
+  if (w.status !== 'active' || !(w.assignees.includes(m.id) || canLeadDiv(w.division))) return btns;
+  if (w.stage < st.length - 2) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage + 1}" type="button">${esc(st[w.stage + 1])} →</button>`);
+  else btns.push(`<button class="btn btn-ok btn-sm" data-act="wo-complete" data-id="${w.id}" type="button">${esc(st[st.length - 1])}${compact ? '' : ' · Complete'}</button>`);
+  if (!compact && w.stage > 0) btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage - 1}" type="button" title="Back a step">←</button>`);
+  return btns;
+}
 
 function woCard(w) {
   const m = me(), div = divOf(w.division) || (w.division === 'all' ? ORG_DIV : { name: 'Unknown', color: '' });
   const mine = w.assignees.includes(m.id);
   const manage = canLeadDiv(w.division) || w.createdBy === m.id;
-  const st = w.stages || [];
   const btns = [];
   if ((w.status === 'open' || w.status === 'active') && !mine && w.assignees.length < w.slots) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-claim" data-id="${w.id}" type="button">Join</button>`);
-  if (w.status === 'active' && (mine || canLeadDiv(w.division))) {
-    if (w.stage < st.length - 2) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage + 1}" type="button">${esc(st[w.stage + 1])} →</button>`);
-    else btns.push(`<button class="btn btn-ok btn-sm" data-act="wo-complete" data-id="${w.id}" type="button">${esc(st[st.length - 1])} · Complete</button>`);
-    if (w.stage > 0) btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage - 1}" type="button" title="Back a step">←</button>`);
-  }
+  btns.push(...nextButtons(w));
   if (w.status === 'active' && mine) btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-unclaim" data-id="${w.id}" type="button">Leave</button>`);
-  if (manage && w.status !== 'complete' && w.status !== 'cancelled') {
+  if ((w.status === 'active' || w.status === 'open') && (mine || manage)) btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-fail" data-id="${w.id}" type="button">Failed</button>`);
+  if (manage && (w.status === 'open' || w.status === 'active')) {
     btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-edit" data-id="${w.id}" type="button">Edit</button>`);
     btns.push(`<button class="btn btn-danger btn-sm" data-act="wo-cancel" data-id="${w.id}" data-confirm="Confirm cancel" type="button">Cancel</button>`);
   }
-  const haul = w.type === 'Hauling' && (w.cargo || w.scu);
+  const haul = isHaul(w) && (w.cargo || w.scu);
   const val = haul ? cargoValue(w.cargo, w.scu) : null;
+  const money = orgMoney(w);
   return `<article class="panel wo" style="--div:${esc(div.color)}">
     <div class="wo-top"><div class="wo-div">${patch(w.division, 26)}<span>${esc(div.name)}</span></div>
-      <div class="actions">${w.priority !== 'normal' ? pillFor(w.priority) : ''}<span class="pill">${esc(w.type)}</span></div></div>
+      <div class="actions">${w.priority !== 'normal' ? pillFor(w.priority) : ''}<span class="pill">${esc(w.type)}</span>${w.contracted ? '<span class="pill contract">Contract</span>' : ''}</div></div>
     <h3>${esc(w.title)}</h3>
     ${haul ? `<div class="route"><b>${esc(w.cargo || 'Cargo')}</b>${w.scu ? `<span class="num">${w.scu.toLocaleString('en-US')} SCU</span>` : ''}${w.origin || w.destination ? `<span>·</span><b>${esc(w.origin || '—')}</b><span aria-hidden="true">→</span><b>${esc(w.destination || '—')}</b>` : ''}</div>` : ''}
     ${w.status === 'active' ? stageTracker(w) : ''}
     <div class="wo-meta">${!haul && w.location ? `<span>${esc(w.location)}</span>` : ''}${w.due ? `<span>Due ${esc(fmtDateTime(w.due))}</span>` : ''}<span>By ${esc(nameOf(w.createdBy))}</span>${val ? `<span>Worth ~${auec(val.value)} aUEC</span>` : ''}</div>
     ${w.description ? `<p class="wo-desc">${esc(w.description)}</p>` : ''}
     <div class="wo-foot">
-      <span class="reward">${w.reward ? auec(w.reward) + '<small>aUEC reward</small>' : '<small>No reward</small>'}</span>
+      <span class="reward">${money ? `<small class="org-money">${esc(money)}</small>` : `<small>${w.contracted ? 'Payout split in-game by the crew' : 'Profit share up to the crew'}</small>`}</span>
       <div style="display:flex;align-items:center;gap:8px"><span class="av-stack">${w.assignees.map(id => avatar(id, true)).join('')}</span><span class="num" style="color:var(--muted);font-size:.86rem">${w.assignees.length}/${w.slots}</span></div>
     </div>
     ${btns.length ? `<div class="actions">${btns.join('')}</div>` : ''}
   </article>`;
 }
 
+/* One form for both: work orders (any type but Hauling) and hauls (Logistics). */
 function woForm(w, preset) {
   const d = D();
-  const haulOnly = !w && preset && preset.type === 'Hauling';
-  const divs = haulOnly ? haulDivs() : createDivs();
+  const haul = w ? isHaul(w) : !!(preset && preset.type === 'Hauling');
+  const divs = haul ? haulDivs() : createDivs();
   const pickDiv = [S.tab === 'divisions' ? S.divTab : '', S.woDiv].concat(me().divisions || []).find(id => id && divs.some(x => x.id === id)) || (divs[0] || {}).id || '';
-  w = w || Object.assign({ title: '', division: pickDiv, type: '', description: '', location: '', reward: 0, slots: 1, priority: 'normal', due: '', cargo: '', scu: '', origin: '', destination: '', requestId: '' }, preset || {});
-  if (!typesFor(w.division).includes(w.type)) w.type = typesFor(w.division)[0];
-  const haul = w.type === 'Hauling';
-  openDialog(w.id ? 'Edit work order' : haul ? 'Log a haul' : 'New work order', `
-    <form class="dlg-body" data-form="wo" novalidate>
+  w = w || Object.assign({ title: '', division: pickDiv, type: '', description: '', location: '', reward: 0, fee: 0, contracted: false, slots: 1, priority: 'normal', due: '', cargo: '', scu: '', origin: '', destination: '', requestId: '' }, preset || {});
+  if (!haul && !workTypes(w.division).includes(w.type)) w.type = workTypes(w.division)[0];
+  const fund = canFundDiv(w.division);
+  openDialog(w.id ? (haul ? 'Edit haul' : 'Edit work order') : haul ? 'Log a haul' : 'New work order', `
+    <form class="dlg-body" data-form="wo" data-mode="${haul ? 'haul' : 'work'}" novalidate>
       <input type="hidden" name="id" value="${esc(w.id || '')}"><input type="hidden" name="requestId" value="${esc(w.requestId || '')}">
       <div class="form-grid">
         <div class="field"><label for="woDiv">Crew</label><select id="woDiv" name="division" data-wo-crew>${divs.map(x => `<option value="${x.id}"${x.id === w.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
-        <div class="field"><label for="woType">Type</label><select id="woType" name="type" data-wo-type>${typeOptions(w.division, w.type)}</select></div>
-        <div class="field full"><label for="woTitle">Contract name <span class="opt">(optional)</span></label><input id="woTitle" name="title" maxlength="100" value="${esc(w.title)}" placeholder="${haul ? 'e.g. Laranite to Area18' : 'Leave blank to use the type, e.g. “Bounty”'}"></div>
-        <div class="field full haul-only"${haul ? '' : ' hidden'}><label for="woCargo">Cargo</label><input id="woCargo" name="cargo" maxlength="100" list="commodityList" autocomplete="off" value="${esc(w.cargo)}" placeholder="e.g. Laranite"><datalist id="commodityList">${MK.data ? MK.data.commodities.map(c => `<option value="${esc(c.name)}">`).join('') : ''}</datalist></div>
-        <div class="field haul-only"${haul ? '' : ' hidden'}><label for="woScu">SCU</label><input id="woScu" name="scu" inputmode="numeric" value="${esc(w.scu || '')}" placeholder="0"></div>
-        <div class="field haul-only"${haul ? '' : ' hidden'}><label for="woFrom">From</label><input id="woFrom" name="origin" maxlength="120" value="${esc(w.origin)}" placeholder="e.g. ArcCorp Mining 045"></div>
-        <div class="field full haul-only"${haul ? '' : ' hidden'}><label for="woTo">To</label><input id="woTo" name="destination" maxlength="120" value="${esc(w.destination)}" placeholder="e.g. Area18 TDD"></div>
-        <div class="field not-haul"${haul ? ' hidden' : ''}><label for="woLoc">Location</label><input id="woLoc" name="location" maxlength="120" value="${esc(w.location)}" placeholder="e.g. Aaron Halo, Stanton"></div>
+        ${haul ? '<input type="hidden" name="type" value="Hauling">' : `<div class="field"><label for="woType">Type</label><select id="woType" name="type">${typeOptions(w.division, w.type)}</select></div>`}
+        <div class="field full"><label for="woTitle">${haul ? 'Haul name' : 'Contract name'} <span class="opt">(optional)</span></label><input id="woTitle" name="title" maxlength="100" value="${esc(w.title)}" placeholder="${haul ? 'Leave blank to use the cargo and route' : 'Leave blank to use the type, e.g. “Bounty”'}"></div>
+        ${haul ? `
+        <div class="field full"><label for="woCargo">Cargo</label><input id="woCargo" name="cargo" maxlength="100" list="commodityList" autocomplete="off" value="${esc(w.cargo)}" placeholder="e.g. Laranite"><datalist id="commodityList">${MK.data ? MK.data.commodities.map(c => `<option value="${esc(c.name)}">`).join('') : ''}</datalist></div>
+        <div class="field"><label for="woScu">SCU</label><input id="woScu" name="scu" inputmode="numeric" value="${esc(w.scu || '')}" placeholder="0"></div>
+        <div class="field"><label for="woFrom">From</label><input id="woFrom" name="origin" maxlength="120" value="${esc(w.origin)}" placeholder="e.g. ArcCorp Mining 045"></div>
+        <div class="field full"><label for="woTo">To</label><input id="woTo" name="destination" maxlength="120" value="${esc(w.destination)}" placeholder="e.g. Area18 TDD"></div>`
+        : `<div class="field full"><label for="woLoc">Location</label><input id="woLoc" name="location" maxlength="120" value="${esc(w.location)}" placeholder="e.g. Aaron Halo, Stanton"></div>`}
         <div class="field"><label for="woSlots">Crew slots</label><input id="woSlots" name="slots" type="number" min="1" max="50" value="${esc(w.slots || 1)}"></div>
         <div class="field"><label for="woPrio">Priority</label><select id="woPrio" name="priority">${d.lists.priorities.map(p => `<option value="${p}"${p === w.priority ? ' selected' : ''}>${label(p)}</option>`).join('')}</select></div>
-        <div class="field"><label for="woDue">Due</label><input id="woDue" name="due" type="datetime-local" value="${esc(toLocalInput(w.due))}"></div>
-        ${me().isManager ? `<div class="field"><label for="woReward">Reward paid by the org (aUEC)</label><input id="woReward" name="reward" inputmode="numeric" value="${esc(w.reward || '')}" placeholder="0"></div>` : ''}
-        <div class="field full"><label for="woDesc">Details</label><textarea id="woDesc" name="description" maxlength="2000" placeholder="What needs doing, ships, meeting point…">${esc(w.description)}</textarea></div>
-        ${w.id ? '' : `<label class="check full" style="grid-column:1/-1"><input type="checkbox" name="join" checked> I’m doing this one (start it now)</label>`}
+        <div class="field full"><label for="woDue">Due</label><input id="woDue" name="due" type="datetime-local" value="${esc(toLocalInput(w.due))}"></div>
+        <div class="field full"><label for="woDesc">Details</label><textarea id="woDesc" name="description" maxlength="2000" placeholder="${haul ? 'Ship, escort needed, meeting point…' : 'What needs doing, ships, meeting point…'}">${esc(w.description)}</textarea></div>
       </div>
-      <p class="hint optional-note">${OPTIONAL_NOTE}</p>
+      <label class="choice"><input type="checkbox" name="contracted" data-wo-contract${w.contracted ? ' checked' : ''}><span><b>In-game contract</b><small>The crew shares the contract in-game and the game splits the payout. No rewards, nothing goes to the treasury.</small></span></label>
+      <p class="hint contract-off"${w.contracted ? ' hidden' : ''}>Not a contract (selling what you mined, salvaged, found or hauled yourself): when you finish, log what you made and give the org whatever share you choose.</p>
+      <fieldset class="org-fund" data-fund-only${fund ? '' : ' hidden'}><legend>Org-funded <span class="opt">(leads, managers, Command)</span></legend>
+        <div class="form-grid">
+          <div class="field contract-off"${w.contracted ? ' hidden' : ''}><label for="woReward">Org reward on success (aUEC)</label><input id="woReward" name="reward" inputmode="numeric" value="${esc(w.reward || '')}" placeholder="0"></div>
+          <div class="field"><label for="woFee">Contract fee the org covers if it fails</label><input id="woFee" name="fee" inputmode="numeric" value="${esc(w.fee || '')}" placeholder="0"></div>
+        </div>
+        <p class="hint">Only org-created work can take money from the treasury. The treasurer pays these out.</p>
+      </fieldset>
+      ${w.id ? '' : `<label class="check"><input type="checkbox" name="join" checked> I’m doing this one (start it now)</label>`}
+      <div class="org-note"><p>${esc(ORG_WORK_NOTE)}</p></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${w.id ? 'Save changes' : haul ? 'Log haul' : 'Create'}</button></div>
     </form>`);
 }
 
-function typeOptions(div, sel) { return typesFor(div).map(t => `<option${t === sel ? ' selected' : ''}>${esc(t)}</option>`).join(''); }
+function typeOptions(div, sel) { return workTypes(div).map(t => `<option${t === sel ? ' selected' : ''}>${esc(t)}</option>`).join(''); }
 function completeForm(id) {
   const w = D().workorders.find(x => x.id === id); if (!w) return;
-  openDialog('Complete work order', `
+  if (w.contracted) {
+    openDialog('Complete', `
     <form class="dlg-body" data-form="wo-complete" data-id="${esc(id)}" novalidate>
-      <p><b>${esc(w.title)}</b> moves to completed.</p>
-      <div class="field"><label for="cpNote">Notes (optional)</label><textarea id="cpNote" name="note" maxlength="1000" placeholder="What got done, amounts, screenshot links…"></textarea></div>
-      <div class="field"><label for="cpAmt">aUEC to give the org <span class="opt">(optional)</span></label><input id="cpAmt" name="amount" inputmode="numeric" placeholder="0"></div>
-      <p class="hint optional-note">${OPTIONAL_NOTE} Leave it blank to keep it all.</p>
-      <p class="hint">If you enter an amount, it goes to the supervisor pool. A supervisor claims it and you’ll see who to send it to in-game. You can also report it later under Treasury.</p>
+      <p><b>${esc(w.title)}</b> moves to finished.</p>
+      <p class="hint">In-game contract: the game splits the payout between the crew. Nothing goes to the treasury.</p>
+      <div class="field"><label for="cpNote">Notes (optional)</label><textarea id="cpNote" name="note" maxlength="1000"></textarea></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-ok" type="submit">Complete</button></div>
     </form>`);
+    return;
+  }
+  openDialog(isHaul(w) ? 'Delivered' : 'Complete', `
+    <form class="dlg-body" data-form="wo-complete" data-id="${esc(id)}" novalidate>
+      <p><b>${esc(w.title)}</b> moves to finished.</p>
+      <div class="form-grid">
+        <div class="field"><label for="cpTotal">Total you made <span class="opt">(optional)</span></label><input id="cpTotal" name="profit" inputmode="numeric" placeholder="0" data-share-total></div>
+        <div class="field"><label for="cpAmt">Give to the org <span class="opt">(optional)</span></label><input id="cpAmt" name="amount" inputmode="numeric" placeholder="0" data-share-amt></div>
+      </div>
+      <div class="share-chips" role="group" aria-label="Share of the total">${[0, 10, 20, 25, 50].map(p => `<button class="chip" type="button" data-share="${p}">${p ? p + '%' : 'Keep it all'}</button>`).join('')}</div>
+      <p class="share-sum" data-share-sum></p>
+      <div class="field"><label for="cpNote">Notes (optional)</label><textarea id="cpNote" name="note" maxlength="1000" placeholder="Where you sold, screenshots…"></textarea></div>
+      <p class="hint optional-note">${esc(OPTIONAL_NOTE)}</p>
+      <p class="hint">Anything you give goes to the supervisor pool. A supervisor claims it and you’ll see who to send it to in-game.</p>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-ok" type="submit">Complete</button></div>
+    </form>`);
+}
+const num = v => Number(String(v || '').replace(/[,\s]/g, '')) || 0;
+function shareSum(f) {
+  const t = num(f.elements.profit.value), a = num(f.elements.amount.value), out = f.querySelector('[data-share-sum]');
+  if (!out) return;
+  out.textContent = t ? (a > t ? 'That’s more than you made.' : `You keep ${auec(t - a)} aUEC · the org gets ${auec(a)} aUEC`) : a ? `The org gets ${auec(a)} aUEC` : '';
+  out.classList.toggle('bad', a > t && t > 0);
 }
 
 /* ---------- Logistics ---------- */
 function viewLogistics() {
   const d = D(), m = me();
-  const hauls = d.workorders.filter(w => w.type === 'Hauling');
+  const hauls = d.workorders.filter(isHaul);
   const lanes = [['Planned', w => w.status !== 'complete' && w.stage === 0], ['Cargo purchased', w => w.status !== 'complete' && w.stage === 1], ['In transit', w => w.status !== 'complete' && w.stage === 2],
     ['Delivered', w => w.status === 'complete' && Date.now() - Date.parse(w.completedAt || w.updated) < 3 * 864e5]];
+  const openHauls = hauls.filter(w => w.status === 'open' && w.assignees.length < w.slots);
+  const done = hauls.filter(w => w.status === 'complete' || w.status === 'failed').sort(byClosed);
   const openReqs = d.requests.filter(r => r.status === 'open');
   const doneReqs = d.requests.filter(r => r.status !== 'open');
   return `
-    <div class="page-head"><div><div class="eyebrow">Supply chain</div><h1>Logistics</h1><p>Every haul in your crews, live. Run as many as you like; each one is its own work order.</p></div>
+    <div class="page-head"><div><div class="eyebrow">Supply chain</div><h1>Logistics</h1><p>Every haul in your crews, live. Log each run you take and move it along as you buy, fly and deliver.</p></div>
       <div class="head-actions"><span class="pill" style="gap:8px"><span class="dot-live"></span>Live · ${esc(rel(d.synced))}</span>
         ${m.isLead ? '<button class="btn btn-ghost" type="button" data-act="req-new">New supply request</button>' : ''}
         ${haulDivs().length ? '<button class="btn btn-solid" type="button" data-act="haul-new">Log a haul</button>' : ''}</div></div>
+    ${orgNote()}
     <div class="board">${lanes.map(([name, fn]) => {
-      const list = hauls.filter(w => w.status !== 'cancelled' && w.status !== 'open' && fn(w));
+      const list = hauls.filter(w => w.status !== 'cancelled' && w.status !== 'failed' && w.status !== 'open' && fn(w));
       return `<section class="lane" aria-label="${esc(name)}"><div class="lane-head"><span>${esc(name)}</span><span class="num">${list.length}</span></div>
         ${list.length ? list.map(haulCard).join('') : '<p class="hint" style="padding:4px">Nothing here.</p>'}</section>`;
     }).join('')}</div>
+    ${openHauls.length ? `<h2 class="sub section">Hauls looking for crew <span class="num" style="color:var(--dim)">${openHauls.length}</span></h2><div class="wo-grid">${openHauls.map(woCard).join('')}</div>` : ''}
     <div class="section">
       <h2 class="sub">Supply requests</h2>
       ${openReqs.length ? `<div class="grid-3">${openReqs.map(reqCard).join('')}</div>` : '<p class="empty">No open supply requests.</p>'}
       ${doneReqs.length ? `<h2 class="sub section">Recently closed</h2><div class="panel rows">${doneReqs.map(r => `<div class="row"><div class="row-main"><span class="row-title">${esc(r.item)}</span><span class="row-sub">${r.quantity.toLocaleString('en-US')} SCU → ${esc(r.destination || '—')}</span></div>${pillFor(r.status)}</div>`).join('')}</div>` : ''}
     </div>
+    ${doneList(done, 'Finished hauls')}
     ${marketPanel()}`;
 }
 
 function haulCard(w) {
-  const m = me(), mine = w.assignees.includes(m.id), st = w.stages || [];
+  const m = me(), mine = w.assignees.includes(m.id);
   const val = cargoValue(w.cargo, w.scu);
-  const next = w.status === 'active' && (mine || canLeadDiv(w.division))
-    ? (w.stage < st.length - 2 ? `<button class="btn btn-solid btn-sm" type="button" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage + 1}">${esc(st[w.stage + 1])} →</button>` : `<button class="btn btn-ok btn-sm" type="button" data-act="wo-complete" data-id="${w.id}">Delivered</button>`) : '';
+  const btns = nextButtons(w, true);
+  if (w.status === 'active' && (mine || canLeadDiv(w.division) || w.createdBy === m.id)) btns.push(`<button class="btn btn-ghost btn-sm" type="button" data-act="wo-edit" data-id="${w.id}">Edit</button>`, `<button class="btn btn-ghost btn-sm" type="button" data-act="wo-fail" data-id="${w.id}">Failed</button>`);
   return `<article class="run" style="border-left:3px solid ${esc((divOf(w.division) || ORG_DIV).color)}">
-    <div class="run-cargo">${esc(w.cargo || w.title)}</div>
+    <div class="run-cargo">${esc(w.cargo || w.title)}${w.contracted ? ' <span class="pill contract">Contract</span>' : ''}</div>
     <div class="route"><b>${esc(w.origin || '—')}</b><span aria-hidden="true">→</span><b>${esc(w.destination || '—')}</b></div>
     <div class="run-foot"><span class="num">${(w.scu || 0).toLocaleString('en-US')} SCU</span>${val ? `<span>~${auec(val.value)} aUEC</span>` : ''}</div>
+    ${w.status === 'complete' && moneyLine(w) ? `<div class="hint">${esc(moneyLine(w))}</div>` : ''}
     <div class="run-foot"><span class="av-stack">${w.assignees.map(id => avatar(id, true)).join('')}</span><span>${esc(rel(w.updated))}</span></div>
-    ${next ? `<div class="actions">${next}</div>` : ''}
+    ${btns.length ? `<div class="actions">${btns.join('')}</div>` : ''}
   </article>`;
 }
 
 function reqCard(r) {
-  const hauls = D().workorders.filter(x => x.requestId === r.id && x.status !== 'cancelled');
+  const hauls = D().workorders.filter(x => x.requestId === r.id && x.status !== 'cancelled' && x.status !== 'failed');
   const done = hauls.filter(x => x.status === 'complete').reduce((a, x) => a + (x.scu || 0), 0);
   const moving = hauls.filter(x => x.status !== 'complete').reduce((a, x) => a + (x.scu || 0), 0);
   const q = Math.max(r.quantity, 1);
@@ -1461,7 +1557,7 @@ function profileForm() {
 function noteForm(title, actionName, id, required, cta) {
   openDialog(title, `
     <form class="dlg-body" data-form="note" data-action="${actionName}" data-id="${esc(id)}" novalidate>
-      <div class="field"><label for="nNote">${required ? 'Note *' : 'Note (optional)'}</label><textarea id="nNote" name="note" maxlength="1000" ${required ? 'required' : ''} placeholder="${actionName === 'wo.submit' ? 'What did the crew deliver? Include amounts, screenshots links, etc.' : 'What should the crew fix or add?'}"></textarea></div>
+      <div class="field"><label for="nNote">${required ? 'Note *' : 'Note (optional)'}</label><textarea id="nNote" name="note" maxlength="1000" ${required ? 'required' : ''} placeholder="${actionName === 'wo.fail' ? 'What happened? Any fee the org fronted can be covered by the treasurer.' : 'Why is it being rejected?'}"></textarea></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${cta}</button></div>
     </form>`);
 }
@@ -1845,9 +1941,10 @@ function subnav(group) {
 }
 function subCount(group, id) {
   const d = D(), m = me();
-  if (group === 'ops' && id === 'work') return d.workorders.filter(w => w.status === 'active' && w.assignees.includes(me().id)).length;
+  if (group === 'ops' && id === 'work') return d.workorders.filter(w => !isHaul(w) && w.status === 'active' && w.assignees.includes(me().id)).length;
+  if (group === 'ops' && id === 'logistics') return d.workorders.filter(w => isHaul(w) && w.status === 'active' && w.assignees.includes(me().id)).length;
   if (group === 'treasury' && id === 'approvals') return (d.funds || []).filter(x => x.status === 'pending' || (x.status === 'claimed' && x.supervisorId === m.id) || (x.status === 'received' && x.receivedBy === m.id)).length;
-  if (group === 'treasury' && id === 'treasurer') return (d.funds || []).filter(x => x.status === 'forwarded').length;
+  if (group === 'treasury' && id === 'treasurer') return (d.funds || []).filter(x => x.status === 'forwarded').length + d.workorders.filter(w => !w.paid && ((w.status === 'complete' && w.reward > 0 && w.assignees.length) || (w.status === 'failed' && w.fee > 0))).length;
   return 0;
 }
 function viewOps() {
@@ -1874,6 +1971,7 @@ function fundRow(x, actions) {
   return `<div class="row fund-row">
     <div class="row-main" style="gap:4px">
       <span class="row-title">${esc(x.title)}</span>
+      ${x.total > x.amount ? `<span class="hint">Made ${auec(x.total)} · gave ${auec(x.amount)} · kept ${auec(x.total - x.amount)}</span>` : ''}
       <span class="row-sub">${x.memberId ? nameTag(x.memberId) : ''}${x.supervisorId ? ` <span style="color:var(--dim)">→</span> ${nameTag(x.supervisorId)}` : ''}</span>
       ${sendTo}
       <span class="hint">${esc(fmtDateTime(x.created))}${x.claimedAt && x.status === 'claimed' ? ' · claimed ' + esc(rel(x.claimedAt)) : ''}${x.receivedAt ? ' · received ' + esc(fmtDate(x.receivedAt)) : ''}${x.forwardedAt ? ' · sent ' + esc(fmtDate(x.forwardedAt)) : ''}${x.confirmedAt ? ' · in treasury ' + esc(fmtDate(x.confirmedAt)) : ''}${x.status === 'rejected' && x.note ? ' · ' + esc(x.note) : ''}</span>
@@ -1886,7 +1984,7 @@ function fundSources() {
   const d = D(), m = me(), today = dayKey(new Date());
   const taken = new Set((d.funds || []).filter(x => x.memberId === m.id && x.status !== 'rejected').map(x => x.source + ':' + x.refId));
   const evs = eventsOn(today, calEvents()).filter(e => !taken.has('event:' + e.id));
-  const wos = d.workorders.filter(w => w.status === 'complete' && w.assignees.includes(m.id) && !taken.has('workorder:' + w.id))
+  const wos = d.workorders.filter(w => w.status === 'complete' && !w.contracted && w.assignees.includes(m.id) && !taken.has('workorder:' + w.id))
     .sort((a, b) => Date.parse(b.completedAt || b.updated) - Date.parse(a.completedAt || a.updated));
   return { evs, wos };
 }
@@ -1895,6 +1993,10 @@ function viewFundsMine() {
   const mine = (d.funds || []).filter(x => x.memberId === m.id);
   const open = mine.filter(x => x.status !== 'confirmed' && x.status !== 'rejected');
   const toSend = mine.filter(x => x.status === 'claimed');
+  const given = mine.filter(x => x.status !== 'rejected');
+  const reportedWo = new Set(given.filter(x => x.source === 'workorder').map(x => x.refId));
+  const kept = given.reduce((a, x) => a + (x.total > x.amount ? x.total - x.amount : 0), 0)
+    + d.workorders.filter(w => w.completedBy === m.id && w.profit && !reportedWo.has(w.id)).reduce((a, w) => a + w.profit, 0);
   const src = fundSources();
   const pick = S.fundRef || '';
   const opt = (v, t) => `<option value="${esc(v)}"${pick === v ? ' selected' : ''}>${esc(t)}</option>`;
@@ -1902,8 +2004,8 @@ function viewFundsMine() {
     <div class="page-head"><div><div class="eyebrow">Treasury</div><h1>My funds</h1><p>aUEC from org work goes to a supervisor in-game, then to the treasurer <b>${esc(d.treasurer)}</b>.</p><p class="optional-note">${OPTIONAL_NOTE}</p></div></div>
     <div class="stats">
       <div class="stat"><div class="stat-label">Org treasury</div><div class="stat-value">${auec(L.balance)}<small>aUEC</small></div></div>
-      <div class="stat"><div class="stat-label">I contributed</div><div class="stat-value" style="color:var(--ok)">${auec(L.myContributed)}<small>aUEC</small></div><div class="stat-note">Confirmed by the treasurer</div></div>
-      <div class="stat"><div class="stat-label">Paid to me</div><div class="stat-value">${auec(L.myEarnings)}<small>aUEC</small></div><div class="stat-note">Work order rewards</div></div>
+      <div class="stat"><div class="stat-label">I gave the org</div><div class="stat-value" style="color:var(--ok)">${auec(L.myContributed)}<small>aUEC</small></div><div class="stat-note">Confirmed by the treasurer</div></div>
+      <div class="stat"><div class="stat-label">Profit I kept</div><div class="stat-value">${auec(kept)}<small>aUEC</small></div><div class="stat-note">${L.myEarnings ? '+ ' + auec(L.myEarnings) + ' in org rewards' : 'Logged on work orders and reports'}</div></div>
       <div class="stat"><div class="stat-label">In progress</div><div class="stat-value">${auec(open.reduce((a, x) => a + x.amount, 0))}<small>aUEC</small></div><div class="stat-note">${open.length} transfer${open.length === 1 ? '' : 's'}</div></div>
     </div>
     ${toSend.length ? `<div class="panel panel-pad callout section"><b>Ready to send</b> ${toSend.map(x => `<span>${auec(x.amount)} aUEC → <b>${esc((member(x.supervisorId) || {}).rsiHandle || nameOf(x.supervisorId))}</b> (${esc(x.title)})</span>`).join('')}</div>` : ''}
@@ -1923,7 +2025,10 @@ function viewFundsMine() {
             ${opt('other:', 'Other org contribution')}
           </select></div>
           <div class="field"${pick === 'other:' ? '' : ' hidden'} data-other-title><label for="fTitle">What was it?</label><input id="fTitle" name="title" maxlength="100" placeholder="e.g. Salvage share from Friday op"></div>
-          <div class="field"><label for="fAmt">aUEC</label><input id="fAmt" name="amount" inputmode="numeric" placeholder="0"></div>
+          <div class="form-grid">
+            <div class="field"><label for="fTotal">Total you made <span class="opt">(optional)</span></label><input id="fTotal" name="total" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="fAmt">Give to the org</label><input id="fAmt" name="amount" inputmode="numeric" placeholder="0"></div>
+          </div>
           <div class="field"><label for="fNote">Note (optional)</label><input id="fNote" name="note" maxlength="300"></div>
           <button class="btn btn-solid" type="submit">Send to supervisors</button>
           ${!src.evs.length && !src.wos.length ? '<p class="hint">No events today and no completed work orders waiting. Finish a work order and it shows up here.</p>' : ''}
@@ -1963,6 +2068,7 @@ function viewTreasurer() {
       <div class="stat"><div class="stat-label">Sent to treasurer</div><div class="stat-value" style="color:var(--accent)">${auec(sum(by('forwarded')))}<small>aUEC</small></div><div class="stat-note">${by('forwarded').length} to confirm</div></div>
       <div class="stat"><div class="stat-label">In treasury</div><div class="stat-value" style="color:var(--ok)">${auec(sum(by('confirmed')))}<small>aUEC</small></div><div class="stat-note">Balance ${auec(d.ledger.balance)} aUEC</div></div>
     </div>
+    ${(due => due.length ? `<h2 class="sub section">Org payouts due <span class="num" style="color:var(--dim)">${due.length}</span></h2><p class="hint" style="margin-bottom:8px">Only org-created work can take from the treasury: rewards on success, covered fees on failure.</p><div class="panel rows">${due.map(closedRow).join('')}</div>` : '')(d.workorders.filter(w => !w.paid && ((w.status === 'complete' && w.reward > 0 && w.assignees.length) || (w.status === 'failed' && w.fee > 0))))}
     ${by('forwarded').length ? `<h2 class="sub section">Confirm receipt</h2><div class="panel rows">${by('forwarded').map(x => fundRow(x, `<button class="btn btn-ok btn-sm" type="button" data-act="funds-confirm" data-id="${esc(x.id)}" data-confirm="Treasurer has it?">Confirm received</button>`)).join('')}</div>` : ''}
     <div class="toolbar section"><h2 class="sub" style="margin:0">All transactions</h2>
       <div class="chips">${[['open', 'Open'], ['confirmed', 'In treasury'], ['rejected', 'Rejected'], ['all', 'All']].map(c => `<button class="chip${filt === c[0] ? ' on' : ''}" type="button" data-fund-filter="${c[0]}">${c[1]}</button>`).join('')}</div></div>
@@ -2050,7 +2156,8 @@ document.addEventListener('click', async e => {
     case 'funds-reject': noteForm('Reject transfer', 'funds.reject', id, true, 'Reject'); break;
     case 'funds-forward': act('funds.forward', { id }, 'Marked as sent to the treasurer.'); break;
     case 'funds-confirm': act('funds.confirm', { id }, 'Confirmed. Added to the ledger.'); break;
-    case 'wo-pay': act('wo.pay', { id }, 'Payout recorded in the ledger.'); break;
+    case 'wo-pay': act('wo.pay', { id }, 'Paid from the treasury.'); break;
+    case 'wo-fail': noteForm('Mark as failed', 'wo.fail', id, false, 'Mark failed'); break;
     case 'wo-cancel': act('wo.cancel', { id }, 'Work order cancelled.'); break;
     case 'req-new': reqForm(); break;
     case 'req-edit': reqForm(d.requests.find(r => r.id === id)); break;
@@ -2090,6 +2197,18 @@ document.addEventListener('click', async e => {
   }
 });
 
+document.addEventListener('input', e => {
+  if (e.target.matches('[data-share-total], [data-share-amt]')) shareSum(e.target.form);
+});
+document.addEventListener('click', e => {
+  const c = e.target.closest('[data-share]'); if (!c) return;
+  const f = c.closest('form'), t = num(f.elements.profit.value), p = Number(c.dataset.share);
+  if (!t && p) { toast('Enter the total you made first.', 'err'); f.elements.profit.focus(); return; }
+  f.elements.amount.value = p ? Math.round(t * p / 100) : '';
+  f.querySelectorAll('[data-share]').forEach(x => x.classList.toggle('on', x === c));
+  shareSum(f);
+});
+
 document.addEventListener('keydown', e => {
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-cal-day], [data-profile]')) { e.preventDefault(); e.target.click(); }
 });
@@ -2098,15 +2217,13 @@ document.addEventListener('change', e => {
   if (e.target.matches('tr[data-row] [name=type]')) { captureRoles(); render(); return; }
   if (e.target.matches('[data-wo-div]')) { S.woDiv = e.target.value; render(); return; }
   if (e.target.matches('[data-wo-crew]')) {
-    const t = e.target.form.elements.type, keep = t.value;
-    t.innerHTML = typeOptions(e.target.value, keep);
-    if (t.value !== keep || !typesFor(e.target.value).includes(keep)) t.dispatchEvent(new Event('change', { bubbles: true }));
+    const f = e.target.form, t = f.elements.type;
+    if (t && t.tagName === 'SELECT') { const keep = t.value; t.innerHTML = typeOptions(e.target.value, keep); }
+    const fs = f.querySelector('[data-fund-only]'); if (fs) fs.hidden = !canFundDiv(e.target.value);
     return;
   }
-  if (e.target.matches('[data-wo-type]')) {
-    const haul = e.target.value === 'Hauling', f = e.target.form;
-    f.querySelectorAll('.haul-only').forEach(x => { x.hidden = !haul; });
-    f.querySelectorAll('.not-haul').forEach(x => { x.hidden = haul; });
+  if (e.target.matches('[data-wo-contract]')) {
+    e.target.form.querySelectorAll('.contract-off').forEach(x => { x.hidden = e.target.checked; });
     return;
   }
   if (e.target.matches('[data-fund-ref]')) {
@@ -2131,16 +2248,17 @@ document.addEventListener('submit', async e => {
           const haul = v('type') === 'Hauling';
           const body = { id: v('id'), title: v('title'), division: v('division'), type: v('type'), slots: v('slots'), priority: v('priority'), due: fromLocalInput(v('due')), description: v('description'), requestId: v('requestId'),
             location: haul ? '' : v('location'), cargo: haul ? v('cargo') : '', scu: haul ? v('scu') : '', origin: haul ? v('origin') : '', destination: haul ? v('destination') : '' };
-          if (f.elements.reward) body.reward = v('reward');
+          body.contracted = f.elements.contracted.checked;
+          if (!f.querySelector('[data-fund-only]').hidden) { body.reward = body.contracted ? 0 : v('reward'); body.fee = v('fee'); }
           if (f.elements.join) body.join = f.elements.join.checked;
-          ok = await act('wo.save', body, v('id') ? 'Work order updated.' : body.join ? 'Started. It’s in your active work.' : 'Work order posted.');
+          ok = await act('wo.save', body, v('id') ? 'Saved.' : body.join ? (haul ? 'Haul logged. It’s on the board.' : 'Started. It’s in your active work.') : 'Posted.');
           if (ok && !v('id') && S.tab !== 'ops') { goTab(haul ? 'logistics' : 'work'); render(); }
         }
         break;
       case 'wo-complete': {
-        const amt = Number(v('amount').replace(/[,\s]/g, '')) || 0;
-        ok = await act('wo.complete', { id: f.dataset.id, note: v('note') }, amt ? null : 'Completed.');
-        if (ok && amt) await act('funds.report', { source: 'workorder', refId: f.dataset.id, amount: amt, note: v('note') }, 'Completed. Your aUEC is in the supervisor pool.');
+        const amt = num(v('amount')), total = num(v('profit'));
+        if (total && amt > total) { toast('You can’t give more than you made.', 'err'); break; }
+        ok = await act('wo.complete', { id: f.dataset.id, note: v('note'), profit: total, given: amt }, amt ? 'Done. Your share for the org is in the supervisor pool.' : 'Done.');
         break;
       }
       case 'req':
@@ -2213,13 +2331,14 @@ document.addEventListener('submit', async e => {
         if (!v('amount')) { toast('Add the amount.', 'err'); break; }
         const source = ref.slice(0, i), refId = ref.slice(i + 1);
         if (source === 'other' && !v('title').trim()) { toast('Say what the aUEC is from.', 'err'); break; }
-        ok = await act('funds.report', { source, refId, title: v('title'), amount: v('amount'), note: v('note') }, 'Sent to the supervisor pool. You’ll see who to pay once one claims it.');
+        if (num(v('total')) && num(v('amount')) > num(v('total'))) { toast('You can’t give more than you made.', 'err'); break; }
+        ok = await act('funds.report', { source, refId, title: v('title'), amount: v('amount'), total: v('total'), note: v('note') }, 'Sent to the supervisor pool. You’ll see who to pay once one claims it.');
         if (ok) { S.fundRef = ''; render(); }
         break;
       }
       case 'note':
         if (f.elements.note.required && !v('note').trim()) { toast('Add a note.', 'err'); break; }
-        ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, 'Transfer rejected.');
+        ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, f.dataset.action === 'wo.fail' ? 'Marked failed.' : 'Transfer rejected.');
         break;
     }
   } finally {
