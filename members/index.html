@@ -408,6 +408,16 @@ button.owner:hover { border-color: var(--accent); }
 .pill.review { color: var(--warn); border-color: rgba(224,180,90,.5); }
 .steps-mini { margin: 0 0 4px 18px; color: var(--muted); font-size: .88rem; display: grid; gap: 2px; }
 .amt.plus { color: var(--ok); } .amt.minus { color: var(--danger); }
+.builtin { margin-bottom: 16px; padding: 12px 16px; }
+.builtin summary { cursor: pointer; display: flex; flex-wrap: wrap; gap: 10px; align-items: baseline; list-style: none; }
+.builtin summary::-webkit-details-marker { display: none; }
+.builtin summary b { font-family: var(--f-label); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.builtin summary::after { content: '▾'; color: var(--dim); margin-left: auto; }
+.builtin[open] summary::after { content: '▴'; }
+.builtin-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 6px 18px; margin-top: 12px; }
+.builtin-row { display: flex; align-items: center; gap: 10px; font-size: .9rem; }
+.builtin-row .patch { width: 30px; height: auto; }
+.builtin-row .hint { margin-left: auto; }
 .role-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 16px; }
 .role-guide div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
 .role-guide b { font-family: var(--f-label); font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
@@ -538,7 +548,8 @@ function patchHexBadge(cx, cy, r, slot, color) {
   let out = `<circle cx="${cx}" cy="${cy}" r="${r + 4}" fill="${PATCH_FIELD}" stroke="${color}" stroke-width="2"/>`;
   for (let i = 0; i < 6; i++) {
     const j = (i + 1) % 6;
-    out += patchPoly([pt(i, r), pt(j, r), pt(j, r * .58), pt(i, r * .58)], i === slot ? color : PATCH_INK, i === slot ? '' : ' fill-opacity=".35"');
+    const lit = i === slot || slot >= 6;   // command lights the whole hexagon
+    out += patchPoly([pt(i, r), pt(j, r), pt(j, r * .58), pt(i, r * .58)], lit ? color : PATCH_INK, lit ? '' : ' fill-opacity=".35"');
   }
   return out;
 }
@@ -555,6 +566,38 @@ function patchGear(cx, cy, r, teeth) {
 }
 
 const PATCH_EMBLEMS = {
+  /* Command: orbital strike platform firing on the planet below */
+  hq(c) {
+    const R = '#e0484f', RL = '#ff8a7a', S = patchTone(c, -.35), D = patchTone(c, -.82), M = patchTone(c, -.6);
+    let spikes = '';
+    for (let i = 0; i < 12; i++) {
+      const a = i * Math.PI / 6, r1 = i % 2 ? 10 : 24, w = .22, cy = 142;
+      spikes += patchPoly([[100, cy], [+(100 + r1 * Math.cos(a - w)).toFixed(1), +(cy + r1 * Math.sin(a - w) * .5).toFixed(1)],
+        [+(100 + (r1 + 7) * Math.cos(a)).toFixed(1), +(cy + (r1 + 7) * Math.sin(a) * .5).toFixed(1)], [+(100 + r1 * Math.cos(a + w)).toFixed(1), +(cy + r1 * Math.sin(a + w) * .5).toFixed(1)]], i % 2 ? RL : PATCH_INK);
+    }
+    return `<circle cx="100" cy="236" r="96" fill="${D}"/>` +
+      `<path d="M8 236 A96 96 0 0 1 192 236" fill="none" stroke="${M}" stroke-width="6"/>` +
+      `<path d="M22 182 A96 96 0 0 1 178 182" fill="none" stroke="${c}" stroke-opacity=".35" stroke-width="2"/>` +
+      `<ellipse cx="100" cy="70" rx="66" ry="14" fill="none" stroke="${c}" stroke-opacity=".3" stroke-width="1.5" stroke-dasharray="5 4"/>` +
+      // beam
+      patchPoly([[95, 84], [105, 84], [118, 142], [82, 142]], R, ' fill-opacity=".28"') +
+      patchPoly([[97.5, 84], [102.5, 84], [108, 142], [92, 142]], R) +
+      patchPoly([[99.2, 86], [100.8, 86], [102.2, 142], [97.8, 142]], PATCH_INK) +
+      spikes +
+      // platform: swept blade wings, armoured core, emitter
+      patchPair([[82, 62], [30, 48], [26, 56], [40, 62], [30, 72], [82, 74]], S) +
+      patchPair([[82, 64], [38, 54], [36, 58], [82, 70]], c) +
+      patchPair([[50, 44], [56, 44], [44, 80], [38, 80]], c) +
+      patchPoly([[86, 50], [114, 50], [124, 66], [114, 82], [86, 82], [76, 66]], c) +
+      patchPoly([[89, 54], [111, 54], [118, 65], [100, 72], [82, 65]], PATCH_INK, ' fill-opacity=".85"') +
+      patchPoly([[94, 74], [106, 74], [111, 82], [89, 82]], S) +
+      patchPoly([[95, 80], [105, 80], [102, 90], [98, 90]], R) +
+      patchPair([[76, 66], [66, 60], [66, 72]], c) +
+      // targeting brackets around the impact
+      `<g fill="none" stroke="${PATCH_INK}" stroke-opacity=".8" stroke-width="2.4" stroke-linecap="square">
+        <path d="M72 130 V122 H80"/><path d="M128 130 V122 H120"/><path d="M72 156 V164 H80"/><path d="M128 156 V164 H120"/></g>`;
+  },
+
   /* Strike Group Hex: raptor in an attack dive over a sunburst */
   strike(c) {
     const L = patchTone(c, .38), S = patchTone(c, -.35);
@@ -890,7 +933,7 @@ function nameTag(id, opts) {
   return `<span class="tag-name"${o.noClick ? '' : ` data-profile="${esc(id)}" role="button" tabindex="0" title="View profile"`}>${rank ? `<span title="${esc(rank.label)}" style="display:inline-flex">${rankIcon(rank)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle ? `<span class="rank-tag" style="--c:${rank.c}">${esc(rank.label)}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
 }
 function who(id) { return nameTag(id); }
-const canLeadDiv = div => me().isStaff || (!!me().lead && me().lead === div);
+const canLeadDiv = div => div === 'hq' ? !!me().isCommand : (me().isStaff || (!!me().lead && me().lead === div));
 const pillFor = (k, extra) => `<span class="pill ${esc(k)} ${extra || ''}">${esc(label(k))}</span>`;
 function catalogInfo(model) { const c = (D().catalog || []).find(x => x[0].toLowerCase() === String(model).toLowerCase()); return c ? { maker: c[1], category: c[2] } : { maker: '', category: 'other' }; }
 
@@ -913,7 +956,7 @@ function render() {
   $('meName').innerHTML = nameTag(me().id, { noTitle: true });
   const reviewCount = D().workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
   const pendingCount = me().isManager && !D().rolesMode ? D().members.filter(m => m.status === 'pending').length : 0;
-  const staffOk = me().isAdmin || me().canEditRoles;
+  const staffOk = me().isAdmin || me().canEditRoles || me().isCommand;
   if (!TABS.some(t => t.id === S.tab && (!t.staff || staffOk))) S.tab = 'dashboard';
   $('tabs').innerHTML = TABS.filter(t => !t.staff || staffOk).map(t => {
     const n = t.id === 'ops' ? reviewCount : t.id === 'crew' ? pendingCount : t.id === 'treasury' ? subCount('treasury', 'approvals') * (me().isStaff ? 1 : 0) + subCount('treasury', 'treasurer') * (me().isManager ? 1 : 0) : 0;
@@ -1289,12 +1332,12 @@ function viewCrew() {
   const inDiv = (x, id) => (x.divisions || [x.division]).includes(id);
   const suspended = m.isStaff ? d.members.filter(x => x.status === 'suspended') : [];
   const active = d.members.filter(x => !x.status || x.status === 'active');
-  const groups = d.divisions.map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) }));
+  const groups = d.divisions.map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) })).filter(g => !g.div.command || g.people.length);
   const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)));
   const titleRank = t => ['director', 'manager', 'lead', 'admin', 'supervisor'].indexOf(t) + 1 || 9;
   const sortP = arr => arr.slice().sort((a, b) => titleRank(a.title) - titleRank(b.title) || (a.role === 'lead' ? 0 : 1) - (b.role === 'lead' ? 0 : 1) || (a.displayName || '').localeCompare(b.displayName || ''));
   const personRow = p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
-    <div class="actions">${m.isManager ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
+    <div class="actions">${m.isManager || m.isCommand ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
   return `
     <div class="page-head"><div><div class="eyebrow">Roster</div><h1>Crew</h1><p>${active.length} active member${active.length === 1 ? '' : 's'} across six divisions.</p></div></div>
     ${review.length ? `<h2 class="sub">Recruits in review <span class="pill review">${review.length}</span></h2>
@@ -1320,17 +1363,20 @@ function viewCrew() {
 
 function memberForm(id) {
   const p = D().members.find(x => x.id === id); if (!p) return;
-  const self = p.id === me().id;
+  const self = p.id === me().id, m = me(), rm = D().rolesMode;
+  const divs = D().divisions.filter(x => !x.command);
   openDialog('Manage member', `
     <form class="dlg-body" data-form="member" novalidate>
       <input type="hidden" name="id" value="${esc(p.id)}">
-      <div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
+      <div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id, { noClick: true })}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''} · ${esc(p.rank || p.tier || 'Member')}</span></div></div>
       <div class="form-grid">
-        <div class="field"><label for="mDiv">Division</label><select id="mDiv" name="division"><option value="">None</option>${D().divisions.map(x => `<option value="${x.id}"${x.id === p.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
-        <div class="field"><label for="mRole">Role</label><select id="mRole" name="role"${self || D().rolesMode ? ' disabled' : ''}>${['member', 'lead', 'admin'].map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${r === 'lead' ? 'Division lead' : r.charAt(0).toUpperCase() + r.slice(1)}</option>`).join('')}</select></div>
-        <div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status"${self ? ' disabled' : ''}>${['active', 'pending', 'suspended'].map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>
+        ${rm ? '' : `<div class="field"><label for="mDiv">Division</label><select id="mDiv" name="division"><option value="">None</option>${divs.map(x => `<option value="${x.id}"${x.id === p.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <div class="field"><label for="mRole">Role</label><select id="mRole" name="role"${self ? ' disabled' : ''}>${['member', 'lead', 'admin'].map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${r === 'lead' ? 'Division lead' : r.charAt(0).toUpperCase() + r.slice(1)}</option>`).join('')}</select></div>`}
+        ${m.isManager ? `<div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status"${self ? ' disabled' : ''}>${['active', 'suspended'].concat(p.status && !['active', 'suspended'].includes(p.status) ? [p.status] : []).map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>` : ''}
+        ${rm && m.isCommand ? `<div class="field"><label for="mLead">Division lead (portal)</label><select id="mLead" name="portalLead"><option value="">${p.lead && !p.portalLead ? 'From Discord: ' + esc((divOf(p.lead) || {}).name || '') : 'None'}</option>${divs.map(x => `<option value="${x.id}"${x.id === p.portalLead ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
+        ${rm && m.owner ? `<label class="check full" style="grid-column:1/-1"><input type="checkbox" name="command"${p.command ? ' checked' : ''}${p.tier !== 'director' ? ' disabled' : ''}> Command member${p.tier !== 'director' ? ' <span class="hint">(Directors only)</span>' : ''}</label>` : ''}
       </div>
-      <p class="hint">${D().rolesMode ? 'Access and divisions come from Discord roles; change them in Discord. Suspending blocks the portal even if they keep their roles, and signs them out everywhere.' : 'Leads can post and review work orders for their division and manage supply requests. Suspending signs the member out everywhere.'}</p>
+      <p class="hint">${rm ? 'Ranks and crews come from Discord roles. Suspending blocks the portal even if they keep their roles, and signs them out everywhere.' : 'Leads can post and review work orders for their division and manage supply requests. Suspending signs the member out everywhere.'}</p>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
 }
@@ -1396,11 +1442,14 @@ const keyDate = k => { const [y, m, d] = k.split('-').map(Number); return new Da
 const fmtTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
 const fmtLongDay = k => keyDate(k).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-function myDivIds() { return me().isStaff ? D().divisions.map(d => d.id) : (me().divisions || []).filter(id => divOf(id)); }
+function myDivIds() {
+  const all = D().divisions.filter(d => d.id !== 'hq' || me().isCommand).map(d => d.id);
+  return me().isStaff ? all : (me().divisions || []).filter(id => divOf(id));
+}
 function evColor(e) { return e.major ? MAJOR_COLOR : e.division === 'all' ? ORG_COLOR : ((divOf(e.division) || {}).color || ORG_COLOR); }
 function evGroup(e) { return e.major ? 'Major event' : e.division === 'all' ? 'Org-wide' : ((divOf(e.division) || {}).name || 'Event'); }
-function canPostCal(div) { return me().isStaff || (!!div && div !== 'all' && canLeadDiv(div)); }
-function canPostAnyCal() { return me().isStaff || !!me().lead; }
+function canPostCal(div) { return !div || div === 'all' ? !!me().isCommand : canLeadDiv(div); }
+function canPostAnyCal() { return me().isStaff || !!me().lead || !!me().isCommand; }
 function calEvents() { return D().calendar || []; }
 function evKeys(e) { const s = new Date(e.start); const en = e.end ? new Date(e.end) : s; return [dayKey(s), dayKey(en < s ? s : en)]; }
 function eventsOn(key, list) { return list.filter(e => { const [a, b] = evKeys(e); return key >= a && key <= b; }); }
@@ -1526,7 +1575,7 @@ function evDialog(id) {
 
 function calForm(e, day) {
   const d = D();
-  const opts = (me().isStaff ? [['all', 'Org-wide (all members)']] : []).concat(d.divisions.filter(x => canPostCal(x.id)).map(x => [x.id, x.name]));
+  const opts = (me().isCommand ? [['all', 'Org-wide (all members)']] : []).concat(d.divisions.filter(x => canPostCal(x.id)).map(x => [x.id, x.name]));
   const startDefault = day ? `${day}T20:00` : '';
   e = e || { title: '', division: S.tab === 'divisions' && canPostCal(S.divTab) ? S.divTab : opts[0] ? opts[0][0] : '', type: 'Operation', start: '', end: '', location: '', description: '' };
   openDialog(e.id ? 'Edit event' : 'New event', `
@@ -1541,7 +1590,7 @@ function calForm(e, day) {
         <div class="field full"><label for="cLoc">Location</label><input id="cLoc" name="location" maxlength="120" value="${esc(e.location)}" placeholder="e.g. Port Olisar, Stanton"></div>
         <div class="field full"><label for="cDesc">Details</label><textarea id="cDesc" name="description" maxlength="2000" placeholder="Meeting point, ships, roles needed…">${esc(e.description)}</textarea></div>
       </div>
-      <p class="hint">Division events only show for members of that division. For a big event everyone should see, including visitors to the website, staff can post a major event under Staff.</p>
+      <p class="hint">Division events only show for members of that division. Org-wide and major events (website + every calendar) are posted by Command.</p>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${e.id ? 'Save changes' : 'Add to calendar'}</button></div>
     </form>`);
 }
@@ -1584,12 +1633,29 @@ function viewDivisions() {
 /* ---------- Staff ---------- */
 function viewStaff() {
   const m = me();
-  if (!m.isAdmin && !m.canEditRoles) return '<p class="empty">Staff only.</p>';
-  const tabs = (m.isAdmin && D().staff ? [['overview', 'Overview'], ['events', 'Major events'], ['news', 'Newsletters']] : []).concat(m.canEditRoles ? [['roles', 'Discord roles']] : []);
+  if (!m.isAdmin && !m.canEditRoles && !m.isCommand) return '<p class="empty">Staff only.</p>';
+  const tabs = (D().staff ? [['overview', 'Overview']] : [])
+    .concat(m.isCommand && D().staff ? [['events', 'Major events']] : [])
+    .concat(m.isAdmin && D().staff ? [['news', 'Newsletters']] : [])
+    .concat(m.isCommand ? [['leads', 'Division leads']] : [])
+    .concat(m.canEditRoles ? [['roles', 'Discord roles']] : []);
   if (!tabs.some(t => t[0] === S.staffTab)) S.staffTab = tabs[0][0];
-  const body = { overview: staffOverview, events: staffEvents, news: staffNews, roles: staffRoles }[S.staffTab]();
+  const body = { overview: staffOverview, events: staffEvents, news: staffNews, leads: staffLeads, roles: staffRoles }[S.staffTab]();
   return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>${m.isAdmin ? 'Site content, Discord access and setup.' : 'Discord role permissions for the member portal.'}</p></div></div>
     <div class="subtabs chips">${tabs.map(t => `<button class="chip${S.staffTab === t[0] ? ' on' : ''}" type="button" data-staff-tab="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
+}
+
+function staffLeads() {
+  const d = D(), divs = d.divisions.filter(x => !x.command);
+  const active = d.members.filter(x => (x.status || 'active') === 'active');
+  return `<div class="toolbar"><p class="hint" style="max-width:720px">One lead per person. A lead set here wins over a Discord lead role; clear it to fall back to Discord. Leads run only their own division and are members everywhere else.</p></div>
+    <div class="grid-2">${divs.map(dv => {
+      const leads = active.filter(x => x.lead === dv.id);
+      return `<section class="panel div-block"><div class="div-head">${patchSVG(dv, divIndex(dv.id), 40)}<div><h3>${esc(dv.name)}</h3><p>${leads.length ? leads.length + ' lead' + (leads.length === 1 ? '' : 's') : 'No lead yet'}</p></div></div>
+        <div class="rows">${leads.map(p => `<div class="row"><span class="row-title">${nameTag(p.id)}</span><span class="hint">${p.portalLead ? 'Set in portal' : 'Discord role'}</span>${p.portalLead ? `<button class="btn btn-ghost btn-sm" type="button" data-act="lead-clear" data-id="${esc(p.id)}">Remove</button>` : ''}</div>`).join('')}
+        <form class="row" data-form="lead" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make lead"><option value="">Assign a lead…</option>${active.filter(x => x.lead !== dv.id).map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.lead ? ' (leads ' + esc((divOf(x.lead) || {}).name || x.lead) + ')' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit">Assign</button></form></div>
+      </section>`;
+    }).join('')}</div>`;
 }
 
 function staffOverview() {
@@ -1678,11 +1744,12 @@ function staffRoles() {
   const r = S.rolesData;
   if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
   const divs = D().divisions, owner = r.owner;
-  const types = [['rank', 'Rank'], ['division', 'Division'], ['lead', 'Division lead']].concat(owner ? [['sysadmin', 'Systems Admin']] : []);
+  const types = [['rank', 'Rank'], ['lead', 'Division lead']].concat(owner ? [['sysadmin', 'Systems Admin']] : []);
+  const crewDivs = divs.filter(d => !d.command);
   const tiers = [['recruit', 'Recruit · in review'], ['member', 'Member'], ['supervisor', 'Supervisor (Staff)'], ['admin', 'Admin'], ['manager', 'Manager'], ['director', 'Director']];
   const sel = (name, opts, v, label, ph) => `<select name="${name}" aria-label="${esc(label)}">${ph ? `<option value="">${ph}</option>` : ''}${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
   const setting = x => x.type === 'rank' ? sel('tier', tiers, x.tier, 'Permission level', 'Pick a level')
-    : x.type === 'division' || x.type === 'lead' ? sel('division', divs.map(d => [d.id, d.name]), x.division, 'Division', 'Pick a division')
+    : x.type === 'lead' ? sel('division', crewDivs.map(d => [d.id, d.name]), x.division, 'Division', 'Pick a division')
     : x.type === 'sysadmin' ? '<span class="hint">Can edit this page. Only you see this.</span>' : '<span class="hint">Pick a type first</span>';
   const row = (x, i) => `<tr data-row="${i}" class="type-${esc(x.type || 'none')}">
       <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="e.g. Specialist" aria-label="Portal role name"></td>
@@ -1694,10 +1761,11 @@ function staffRoles() {
   return `<form data-form="roles" novalidate>
     <div class="role-guide">
       <div><b>Rank</b><span>Their standing and what they can do: Recruit (in review, profile only), Member, Supervisor (staff: work orders, approvals, funds), Admin (+ site content), Manager (all divisions, treasury), Director (everything).</span></div>
-      <div><b>Division</b><span>A crew they belong to. Members can hold several; they pick a primary, the rest show as auxiliaries.</span></div>
-      <div><b>Division lead</b><span>Runs one division and shows as its lead. Member-level everywhere else. One lead spot per person.</span></div>
+      <div><b>Division lead</b><span>Runs one division and shows as its lead. Member-level everywhere else. One lead spot per person; Command can also set leads in the portal.</span></div>
       ${owner ? '<div><b>Systems Admin</b><span>Can edit this page only. Never visible to anyone but you.</span></div>' : ''}
     </div>
+    <details class="panel builtin"><summary><b>Division roles are built in</b><span class="hint">Crews are read from these Discord roles automatically. Nothing to set up.</span></summary>
+      <div class="builtin-list">${divs.map(d => `<div class="builtin-row">${patchSVG(d, divIndex(d.id), 30)}<span>${esc(d.name)}</span><span class="num hint">${d.portalOnly ? 'Assigned by the owner in the portal' : esc(d.roleId)}</span></div>`).join('')}</div></details>
     <div class="toolbar"><p class="hint" style="max-width:680px">Link each portal role to its Discord role ID. When someone gets or loses the role in Discord, the portal follows within a few minutes. Higher rows win when someone holds two ranks at the same level.</p>
       <div class="head-actions">${owner && r.roles.length ? '<button class="btn btn-danger btn-sm" type="button" data-act="roles-clear" data-confirm="Clear every row?">Clear all</button>' : ''}<button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Undo changes</button><button class="btn btn-solid" type="submit">Save permissions</button></div></div>
     <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Portal role</th><th>Discord role ID</th><th>Type</th><th>Setting</th><th></th></tr></thead><tbody>
@@ -1958,6 +2026,7 @@ document.addEventListener('click', async e => {
     case 'site-edit': { const list = b.dataset.kind === 'events' ? d.staff.events : d.staff.newsletters; siteForm(b.dataset.kind, list.find(x => x.id === id)); break; }
     case 'site-remove': if (await act('site.remove', { kind: b.dataset.kind, id }, 'Deleted.')) closeDialog(); break;
     case 'roles-reload': S.rolesData = null; render(); break;
+    case 'lead-clear': act('member.update', { id, portalLead: '' }, 'Lead removed.'); break;
     case 'role-add': {
       captureRoles();
       const rid = b.dataset.rid || '';
@@ -2016,7 +2085,16 @@ document.addEventListener('submit', async e => {
         ok = await act('ledger.add', { type: v('type'), amount: v('amount'), memberId: v('memberId'), note: v('note') }, 'Entry added.');
         break;
       case 'member':
-        ok = await act('member.update', { id: v('id'), division: v('division'), role: f.elements.role.disabled ? undefined : v('role'), status: f.elements.status.disabled ? undefined : v('status') }, 'Member updated.');
+        {
+          const el = n => f.elements[n];
+          const body = { id: v('id') };
+          if (el('division')) body.division = v('division');
+          if (el('role') && !el('role').disabled) body.role = v('role');
+          if (el('status') && !el('status').disabled) body.status = v('status');
+          if (el('portalLead')) body.portalLead = v('portalLead');
+          if (el('command') && !el('command').disabled) body.command = el('command').checked;
+          ok = await act('member.update', body, 'Member updated.');
+        }
         break;
       case 'profile':
         ok = await act('profile.update', { rsiHandle: v('rsiHandle'), division: f.elements.division.disabled ? me().division : v('division') }, 'Profile saved.');
@@ -2033,13 +2111,17 @@ document.addEventListener('submit', async e => {
         if (!v('title').trim() || !v('body').trim()) { toast('Add a title and body.', 'err'); break; }
         ok = await act('site.save', { kind: 'newsletters', item: { id: v('id'), title: v('title'), author: v('author'), status: v('status'), summary: v('summary'), body: v('body') } }, 'Newsletter saved.');
         break;
+      case 'lead':
+        if (!v('who')) { toast('Pick a member.', 'err'); break; }
+        ok = await act('member.update', { id: v('who'), portalLead: f.dataset.div }, 'Lead assigned.');
+        break;
       case 'roles': {
         captureRoles();
         const roles = S.rolesData.roles.filter(x => x.id || x.name);
         if (!roles.length && !r_owner()) { toast('Add at least one role.', 'err'); break; }
         const bad = roles.find(x => !/^\d{5,25}$/.test(x.id));
         if (bad) { toast(`“${bad.name || 'A role'}” needs its Discord role ID (a long number).`, 'err'); break; }
-        const noType = roles.find(x => !x.type || (x.type === 'rank' && !x.tier) || ((x.type === 'division' || x.type === 'lead') && !x.division));
+        const noType = roles.find(x => !x.type || (x.type === 'rank' && !x.tier) || (x.type === 'lead' && !x.division));
         if (noType) { toast(`Finish the setup for “${noType.name || noType.id}”.`, 'err'); break; }
         const ids = roles.map(x => x.id), dup = ids.find((x, i) => ids.indexOf(x) !== i);
         if (dup) { toast(`Role ID ${dup} is listed twice.`, 'err'); break; }
