@@ -388,6 +388,32 @@ button.owner:hover { border-color: var(--accent); }
 .prof-ship { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); font-size: .92rem; }
 .prof-ship:first-child { border-top: 0; }
 .prof-ship span { color: var(--muted); }
+/* Sub navigation */
+.subnav { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; margin-bottom: 18px; background: var(--bg-alt); border: 1px solid var(--line); border-radius: 8px; }
+.subnav-btn { padding: 7px 14px; border-radius: 6px; border: 0; background: none; cursor: pointer; color: var(--muted); font-family: var(--f-label); font-weight: 700; font-size: .84rem; letter-spacing: .12em; text-transform: uppercase; }
+.subnav-btn:hover { color: var(--text); }
+.subnav-btn.on { background: var(--surface-2); color: var(--accent); box-shadow: inset 0 0 0 1px var(--line-2); }
+.subnav-btn .count { margin-left: 6px; font-size: .72rem; padding: 1px 6px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); }
+/* Funds */
+.fund-row { align-items: flex-start; }
+.fund-side { display: grid; justify-items: end; gap: 6px; flex: none; }
+.track { display: flex; gap: 3px; }
+.track i { width: 18px; height: 4px; border-radius: 2px; background: var(--line-2); }
+.track i.done { background: var(--ok); }
+.pill.stage-pending { color: var(--warn); border-color: rgba(224,180,90,.5); }
+.pill.stage-received { color: var(--steel); border-color: rgba(147,161,168,.5); }
+.pill.stage-forwarded { color: var(--accent); border-color: rgba(201,181,142,.45); }
+.pill.stage-confirmed { color: var(--ok); border-color: rgba(95,207,126,.45); }
+.pill.stage-rejected { color: var(--danger); border-color: rgba(217,119,107,.45); }
+.pill.review { color: var(--warn); border-color: rgba(224,180,90,.5); }
+.steps-mini { margin: 0 0 4px 18px; color: var(--muted); font-size: .88rem; display: grid; gap: 2px; }
+.amt.plus { color: var(--ok); } .amt.minus { color: var(--danger); }
+.role-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 16px; }
+.role-guide div { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.role-guide b { font-family: var(--f-label); font-size: .95rem; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.role-guide span { color: var(--muted); font-size: .86rem; }
+.role-table select[name=tier], .role-table select[name=division] { min-width: 220px; }
+.role-table select[name=type] { min-width: 150px; }
 .subtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
 .grid-split { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 .ev-main small { display: block; }
@@ -693,7 +719,8 @@ function toast(msg, kind) {
 const S = {
   token: null, data: null, tab: 'dashboard', busy: false,
   woStatus: 'open', woDiv: 'all', fleetCat: 'all', fleetView: 'org', crewEdit: null,
-  calMonth: '', calDay: '', calFilter: 'all', divTab: '', staffTab: 'overview', rolesData: null, rolesLoading: false
+  calMonth: '', calDay: '', calFilter: 'all', divTab: '', staffTab: 'overview', rolesData: null, rolesLoading: false,
+  sub: { ops: 'work', treasury: 'mine' }, fundFilter: 'open'
 };
 const TOKEN_KEY = 'p6_member_session';
 const STATE_KEY = 'p6_oauth_state';
@@ -824,8 +851,19 @@ const RANKS = {
   director: { label: 'Director', c: '#dcc28a', d: '#9c8556' },
   manager: { label: 'Manager', c: '#d4d9e1', d: '#7d8592' },
   admin: { label: 'Admin', c: '#4f93e8', d: '#2b5b98' },
-  staff: { label: 'Staff', c: '#8fb0d0', d: '#4c6680' }
+  supervisor: { label: 'Staff', c: '#8fb0d0', d: '#4c6680' }
 };
+/* Headline shown next to a name: staff rank, or a division lead spot in that division's colour. */
+function headline(m) {
+  if (!m || !m.title) return null;
+  if (m.title === 'lead') {
+    const dv = divOf(m.lead); if (!dv) return null;
+    const c = dv.color;
+    return { key: 'lead', label: (dv.tabTop || dv.name) + ' Lead', c: c, d: c, div: dv };
+  }
+  const r = RANKS[m.title]; if (!r) return null;
+  return { key: m.title, label: m.rank || r.label, c: r.c, d: r.d };
+}
 let HEX_SEGS;
 function hexSegs() {
   if (HEX_SEGS) return HEX_SEGS;
@@ -840,7 +878,7 @@ function hexSegs() {
   return HEX_SEGS;
 }
 function rankIcon(title, size) {
-  const r = RANKS[title]; if (!r) return '';
+  const r = typeof title === 'object' ? title : RANKS[title]; if (!r) return '';
   const shade = [r.c, r.c, r.d, r.d, r.c, r.c];
   const op = [1, .85, .9, .75, .85, 1];
   return `<svg class="rank-ico" viewBox="0 0 24 24" width="${size || 16}" height="${size || 16}" aria-hidden="true">${hexSegs().map((pts, i) => `<polygon points="${pts}" fill="${shade[i]}" opacity="${op[i]}"/>`).join('')}</svg>`;
@@ -848,25 +886,23 @@ function rankIcon(title, size) {
 function primaryDiv(m) { return m ? ((m.divisions || [])[0] || m.division || '') : ''; }
 function nameTag(id, opts) {
   const m = member(id), o = opts || {};
-  const rank = m ? RANKS[m.title] : null, crew = divOf(primaryDiv(m));
-  return `<span class="tag-name"${o.noClick ? '' : ` data-profile="${esc(id)}" role="button" tabindex="0" title="View profile"`}>${rank ? `<span title="${rank.label}" style="display:inline-flex">${rankIcon(m.title)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle ? `<span class="rank-tag" style="--c:${rank.c}">${rank.label}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
+  const rank = headline(m), crew = divOf(primaryDiv(m));
+  return `<span class="tag-name"${o.noClick ? '' : ` data-profile="${esc(id)}" role="button" tabindex="0" title="View profile"`}>${rank ? `<span title="${esc(rank.label)}" style="display:inline-flex">${rankIcon(rank)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle ? `<span class="rank-tag" style="--c:${rank.c}">${esc(rank.label)}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
 }
 function who(id) { return nameTag(id); }
-const canLeadDiv = div => me().isAdmin || (me().role === 'lead' && (me().leads || [me().division]).includes(div));
+const canLeadDiv = div => me().isStaff || (!!me().lead && me().lead === div);
 const pillFor = (k, extra) => `<span class="pill ${esc(k)} ${extra || ''}">${esc(label(k))}</span>`;
 function catalogInfo(model) { const c = (D().catalog || []).find(x => x[0].toLowerCase() === String(model).toLowerCase()); return c ? { maker: c[1], category: c[2] } : { maker: '', category: 'other' }; }
 
 /* ---------- Render ---------- */
 const TABS = [
   { id: 'dashboard', label: 'Dashboard' },
-  { id: 'calendar', label: 'Calendar' },
+  { id: 'ops', label: 'Operations' },
   { id: 'divisions', label: 'Divisions' },
-  { id: 'work', label: 'Work Orders' },
-  { id: 'logistics', label: 'Logistics' },
   { id: 'fleet', label: 'Fleet' },
-  { id: 'ledger', label: 'Ledger' },
+  { id: 'treasury', label: 'Treasury' },
   { id: 'crew', label: 'Crew' },
-  { id: 'staff', label: 'Staff', staff: true }
+  { id: 'staff', label: 'Command', staff: true }
 ];
 
 function render() {
@@ -876,17 +912,17 @@ function render() {
   $('meAvatar').innerHTML = avatar(me().id);
   $('meName').innerHTML = nameTag(me().id, { noTitle: true });
   const reviewCount = D().workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
-  const pendingCount = me().isAdmin && !D().rolesMode ? D().members.filter(m => m.status === 'pending').length : 0;
+  const pendingCount = me().isManager && !D().rolesMode ? D().members.filter(m => m.status === 'pending').length : 0;
   const staffOk = me().isAdmin || me().canEditRoles;
   if (!TABS.some(t => t.id === S.tab && (!t.staff || staffOk))) S.tab = 'dashboard';
   $('tabs').innerHTML = TABS.filter(t => !t.staff || staffOk).map(t => {
-    const n = t.id === 'work' ? reviewCount : t.id === 'crew' ? pendingCount : 0;
+    const n = t.id === 'ops' ? reviewCount : t.id === 'crew' ? pendingCount : t.id === 'treasury' ? subCount('treasury', 'approvals') * (me().isStaff ? 1 : 0) + subCount('treasury', 'treasurer') * (me().isManager ? 1 : 0) : 0;
     return `<button class="tab${S.tab === t.id ? ' on' : ''}" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}" type="button">${t.label}${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
   const view = $('view');
-  const fn = { dashboard: viewDashboard, calendar: viewCalendar, divisions: viewDivisions, work: viewWork, logistics: viewLogistics, fleet: viewFleet, ledger: viewLedger, crew: viewCrew, staff: viewStaff }[S.tab];
+  const fn = { dashboard: viewDashboard, ops: viewOps, divisions: viewDivisions, fleet: viewFleet, treasury: viewTreasury, crew: viewCrew, staff: viewStaff }[S.tab];
   view.innerHTML = fn();
-  if (S.tab === 'logistics') loadMarket();
+  if (S.tab === 'ops' && S.sub.ops === 'logistics') loadMarket();
   const on = $('tabs').querySelector('.tab.on');
   if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -929,11 +965,11 @@ function viewDashboard() {
       <div style="display:flex;align-items:center;gap:16px">
         ${div ? patch(homeDiv, 54) : ''}
         <div><div class="eyebrow">${(m.divisions || []).length > 1 ? (m.divisions || []).map(x => esc((divOf(x) || {}).name || '')).join(' · ') : div ? esc(div.name) : 'No division yet'}</div><h1>Welcome back, ${esc(m.displayName || m.username)}</h1>
-        <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${RANKS[m.title] ? `${rankIcon(m.title)}<span class="rank-tag" style="--c:${RANKS[m.title].c}">${RANKS[m.title].label}</span>` : `<span>${m.role === 'lead' ? 'Division lead' : 'Member'}</span>`}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}${m.rsiHandle ? `<span style="color:var(--muted)">${esc(m.rsiHandle)}</span>` : ''}</p></div>
+        <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${headline(m) ? `${rankIcon(headline(m))}<span class="rank-tag" style="--c:${headline(m).c}">${esc(headline(m).label)}</span>` : ''}<span style="color:var(--muted)">${esc(m.rank || 'Member')}</span>${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}${m.rsiHandle ? `<span style="color:var(--muted)">${esc(m.rsiHandle)}</span>` : ''}</p></div>
       </div>
     </div>
     <div class="stats">
-      <div class="stat"><div class="stat-label">Org treasury</div><div class="stat-value">${auec(d.ledger.balance)}<small>aUEC</small></div><div class="stat-note">${d.ledger.entries.length} ledger entries</div></div>
+      <div class="stat"><div class="stat-label">Org treasury</div><div class="stat-value">${auec(d.ledger.balance)}<small>aUEC</small></div><div class="stat-note">Confirmed by the treasurer</div></div>
       <div class="stat"><div class="stat-label">My earnings</div><div class="stat-value">${auec(d.ledger.myEarnings)}<small>aUEC</small></div><div class="stat-note">From paid work orders</div></div>
       <div class="stat"><div class="stat-label">Open work</div><div class="stat-value">${openWork.length}</div><div class="stat-note">${toReview.length ? toReview.length + ' awaiting your review' : 'Jobs taking crew'}</div></div>
       <div class="stat"><div class="stat-label">Cargo moving</div><div class="stat-value">${moving.reduce((a, r) => a + r.scu, 0).toLocaleString('en-US')}<small>SCU</small></div><div class="stat-note">${moving.length} active run${moving.length === 1 ? '' : 's'}</div></div>
@@ -991,7 +1027,7 @@ function viewWork() {
       ${me().isLead ? '<div class="head-actions"><button class="btn btn-solid" type="button" data-act="wo-new">New work order</button></div>' : ''}</div>
     <div class="toolbar">
       <div class="chips">${statuses.map(s => `<button class="chip${S.woStatus === s ? ' on' : ''}" type="button" data-wo-status="${s}">${s === 'all' ? 'All' : label(s)} <span class="num">${counts[s]}</span></button>`).join('')}</div>
-      <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">${me().isAdmin ? 'All divisions' : 'All my work'}</option><option value="org"${S.woDiv === 'org' ? ' selected' : ''}>Org-wide</option>${divChoices.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">${me().isStaff ? 'All divisions' : 'All my work'}</option><option value="org"${S.woDiv === 'org' ? ' selected' : ''}>Org-wide</option>${divChoices.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
     </div>
     ${list.length ? `<div class="wo-grid">${list.map(woCard).join('')}</div>` : `<p class="empty">No work orders here.${me().isLead && S.woStatus === 'open' ? ' Post the first one with “New work order”.' : ''}</p>`}`;
 }
@@ -1007,11 +1043,11 @@ function woCard(w) {
     btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-submit" data-id="${w.id}" type="button">Submit for review</button>`);
     btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-unclaim" data-id="${w.id}" type="button">Leave</button>`);
   }
-  if (w.status === 'review' && review) {
-    btns.push(`<button class="btn btn-ok btn-sm" data-act="wo-approve" data-id="${w.id}" type="button">Approve</button>`);
+  if (w.status === 'review' && review && (!w.earnings || m.isStaff)) {
+    btns.push(`<button class="btn btn-ok btn-sm" data-act="wo-approve" data-id="${w.id}" type="button">${w.earnings ? 'Funds received · Approve' : 'Approve'}</button>`);
     btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-reject" data-id="${w.id}" type="button">Send back</button>`);
   }
-  if (w.status === 'complete' && m.isAdmin && !w.paid && w.reward > 0 && w.assignees.length) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" type="button">Pay ${auec(w.reward)} aUEC</button>`);
+  if (w.status === 'complete' && m.isManager && !w.paid && w.reward > 0 && w.assignees.length) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" type="button">Pay ${auec(w.reward)} aUEC</button>`);
   if (manage && w.status !== 'complete' && w.status !== 'cancelled') {
     btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-edit" data-id="${w.id}" type="button">Edit</button>`);
     btns.push(`<button class="btn btn-danger btn-sm" data-act="wo-cancel" data-id="${w.id}" data-confirm="Confirm cancel" type="button">Cancel</button>`);
@@ -1023,6 +1059,7 @@ function woCard(w) {
     <div class="wo-meta"><span>${esc(w.type)}</span>${w.location ? `<span>${esc(w.location)}</span>` : ''}${w.due ? `<span>Due ${esc(fmtDateTime(w.due))}</span>` : ''}<span>Posted by ${esc(nameOf(w.createdBy))}</span></div>
     ${w.description ? `<p class="wo-desc">${esc(w.description)}</p>` : ''}
     ${w.submitNote && (w.status === 'review' || w.status === 'complete') ? `<div class="note"><b>Crew report:</b> ${esc(w.submitNote)}</div>` : ''}
+    ${w.earnings && (w.status === 'review' || w.status === 'complete') ? `<div class="note"><b>${auec(w.earnings)} aUEC</b> sent to ${esc(nameOf(w.sentTo))}${w.status === 'review' ? ' · waiting for a supervisor to confirm' : ''}</div>` : ''}
     ${w.reviewNote ? `<div class="note"><b>${w.status === 'active' ? 'Sent back:' : 'Review:'}</b> ${esc(w.reviewNote)}</div>` : ''}
     <div class="wo-foot">
       <div style="display:flex;align-items:center;gap:10px">
@@ -1037,7 +1074,7 @@ function woCard(w) {
 
 function woForm(w) {
   const m = me(), d = D();
-  const divs = (m.isAdmin ? [ORG_DIV] : []).concat(d.divisions.filter(x => canLeadDiv(x.id)));
+  const divs = (m.isStaff ? [ORG_DIV] : []).concat(d.divisions.filter(x => canLeadDiv(x.id)));
   w = w || { title: '', division: divs[0] ? divs[0].id : '', type: 'Other', description: '', location: '', reward: 0, slots: 1, priority: 'normal', due: '' };
   openDialog(w.id ? 'Edit work order' : 'New work order', `
     <form class="dlg-body" data-form="wo" novalidate>
@@ -1097,7 +1134,7 @@ function runCard(r) {
     ${manage && r.status !== 'delivered' && r.status !== 'cancelled' ? `<div class="actions">
       ${next ? `<button class="btn btn-solid btn-sm" type="button" data-act="run-status" data-id="${r.id}" data-status="${next[0]}">${next[1]}</button>` : ''}
       <button class="btn btn-ghost btn-sm" type="button" data-act="run-edit" data-id="${r.id}">Edit</button>
-      ${mine || m.isAdmin ? `<button class="btn btn-danger btn-sm" type="button" data-act="run-remove" data-id="${r.id}" data-confirm="Confirm">Remove</button>` : ''}
+      ${mine || m.isManager ? `<button class="btn btn-danger btn-sm" type="button" data-act="run-remove" data-id="${r.id}" data-confirm="Confirm">Remove</button>` : ''}
     </div>` : ''}
   </article>`;
 }
@@ -1223,7 +1260,7 @@ function viewLedger() {
       <div class="stat"><div class="stat-label">Total out</div><div class="stat-value" style="color:var(--danger)">${auec(totalOut)}<small>aUEC</small></div></div>
       <div class="stat"><div class="stat-label">My earnings</div><div class="stat-value">${auec(L.myEarnings)}<small>aUEC</small></div></div>
     </div>
-    ${m.isAdmin ? `<form class="panel panel-pad section" data-form="ledger" novalidate>
+    ${m.isManager ? `<form class="panel panel-pad section" data-form="ledger" novalidate>
       <div class="form-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
         <div class="field"><label for="lType">Type</label><select id="lType" name="type">${d.lists.ledgerTypes.map(t => `<option value="${t}">${label(t)}</option>`).join('')}</select></div>
         <div class="field"><label for="lAmt">Amount (aUEC)</label><input id="lAmt" name="amount" inputmode="numeric" required placeholder="0"></div>
@@ -1233,13 +1270,13 @@ function viewLedger() {
       <div class="dlg-foot" style="margin-top:12px"><button class="btn btn-solid" type="submit">Add entry</button></div>
     </form>` : ''}
     <div class="panel section table-scroll">
-      ${L.entries.length ? `<table class="ledger-table"><thead><tr><th>Date</th><th>Type</th><th>Member</th><th>Note</th><th class="amt">Amount</th>${m.isAdmin ? '<th></th>' : ''}</tr></thead><tbody>
+      ${L.entries.length ? `<table class="ledger-table"><thead><tr><th>Date</th><th>Type</th><th>Member</th><th>Note</th><th class="amt">Amount</th>${m.isManager ? '<th></th>' : ''}</tr></thead><tbody>
       ${L.entries.map(e => `<tr><td style="white-space:nowrap;color:var(--muted)">${esc(fmtDate(e.date))}</td>
         <td><span class="pill ${isIn(e.type) ? 'in' : 'out'}">${esc(label(e.type))}</span></td>
         <td>${e.memberId ? who(e.memberId) : '<span style="color:var(--dim)">—</span>'}</td>
         <td style="color:var(--muted);overflow-wrap:anywhere">${esc(e.note)}</td>
         <td class="amt ${isIn(e.type) ? 'plus' : 'minus'}">${isIn(e.type) ? '+' : '−'}${auec(e.amount)}</td>
-        ${m.isAdmin ? `<td style="text-align:right"><button class="btn btn-danger btn-sm" type="button" data-act="ledger-remove" data-id="${e.id}" data-confirm="${e.workOrderId ? 'Remove all shares' : 'Confirm'}">Remove</button></td>` : ''}</tr>`).join('')}
+        ${m.isManager ? `<td style="text-align:right"><button class="btn btn-danger btn-sm" type="button" data-act="ledger-remove" data-id="${e.id}" data-confirm="${e.workOrderId ? 'Remove all shares' : 'Confirm'}">Remove</button></td>` : ''}</tr>`).join('')}
       </tbody></table>` : '<p class="empty panel-pad">No ledger entries yet.</p>'}
     </div>`;
 }
@@ -1247,17 +1284,17 @@ function viewLedger() {
 /* ---------- Crew ---------- */
 function viewCrew() {
   const d = D(), m = me();
-  const pending = m.isAdmin ? d.members.filter(x => x.status === 'pending') : [];
-  const review = m.isAdmin ? d.members.filter(x => x.status === 'review') : [];
+  const pending = m.isStaff ? d.members.filter(x => x.status === 'pending') : [];
+  const review = m.isStaff ? d.members.filter(x => x.status === 'review') : [];
   const inDiv = (x, id) => (x.divisions || [x.division]).includes(id);
-  const suspended = m.isAdmin ? d.members.filter(x => x.status === 'suspended') : [];
+  const suspended = m.isStaff ? d.members.filter(x => x.status === 'suspended') : [];
   const active = d.members.filter(x => !x.status || x.status === 'active');
   const groups = d.divisions.map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) }));
   const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)));
-  const titleRank = t => ['director', 'manager', 'admin', 'staff'].indexOf(t) + 1 || 9;
+  const titleRank = t => ['director', 'manager', 'lead', 'admin', 'supervisor'].indexOf(t) + 1 || 9;
   const sortP = arr => arr.slice().sort((a, b) => titleRank(a.title) - titleRank(b.title) || (a.role === 'lead' ? 0 : 1) - (b.role === 'lead' ? 0 : 1) || (a.displayName || '').localeCompare(b.displayName || ''));
   const personRow = p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
-    <div class="actions">${p.role === 'lead' ? '<span class="pill role-lead">Lead</span>' : ''}${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
+    <div class="actions">${m.isManager ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
   return `
     <div class="page-head"><div><div class="eyebrow">Roster</div><h1>Crew</h1><p>${active.length} active member${active.length === 1 ? '' : 's'} across six divisions.</p></div></div>
     ${review.length ? `<h2 class="sub">Recruits in review <span class="pill review">${review.length}</span></h2>
@@ -1304,15 +1341,16 @@ function profileView(id) {
   const divs = (m.divisions && m.divisions.length ? m.divisions : (m.division ? [m.division] : [])).filter(x => divOf(x));
   const primary = divOf(divs[0]), aux = divs.slice(1).map(divOf);
   const ships = D().ships.filter(x => x.ownerId === id).sort((a, b) => a.model.localeCompare(b.model));
-  const rank = RANKS[m.title];
+  const rank = headline(m);
   const crewChip = d => `<span class="crew-chip" style="border-color:color-mix(in srgb, ${esc(d.color)} 45%, transparent)">${patchSVG(d, divIndex(d.id), 22)}${esc(d.name)}</span>`;
   openDialog(self ? 'My profile' : 'Member profile', `
     <div class="dlg-body">
       <div class="prof-head">${avatar(id).replace('class="av"', 'class="av av-lg"')}<div style="min-width:0">
-        <h3>${esc(m.displayName || m.username)}${rank ? `<span class="rank-tag" style="--c:${rank.c}">${rank.label}</span>` : ''}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</h3>
+        <h3>${esc(m.displayName || m.username)}${rank ? `<span class="rank-tag" style="--c:${rank.c}">${esc(rank.label)}</span>` : ''}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</h3>
         <div class="prof-sub">@${esc(m.username)}${m.rsiHandle ? ` · RSI: <a href="https://robertsspaceindustries.com/citizens/${encodeURIComponent(m.rsiHandle)}" target="_blank" rel="noopener">${esc(m.rsiHandle)}</a>` : ''}</div></div></div>
       <div class="prof-facts">
-        <div class="prof-fact"><span class="lbl">Rank</span><b>${rank ? rankIcon(m.title, 18) : ''}${esc(m.rank || (m.role === 'admin' ? 'Staff' : 'Member'))}</b></div>
+        <div class="prof-fact"><span class="lbl">Rank</span><b>${rank ? rankIcon(rank, 18) : ''}${esc(m.rank || 'Member')}</b></div>
+        ${m.lead && divOf(m.lead) ? `<div class="prof-fact"><span class="lbl">Division lead</span><b>${patchSVG(divOf(m.lead), divIndex(m.lead), 24)}${esc(divOf(m.lead).name)}</b></div>` : ''}
         <div class="prof-fact"><span class="lbl">Primary crew</span><b>${primary ? `${patchSVG(primary, divIndex(primary.id), 24)}${esc(primary.name)}` : '<span style="color:var(--dim)">None yet</span>'}</b></div>
         <div class="prof-fact"><span class="lbl">Hangar</span><b class="num">${ships.length} ship${ships.length === 1 ? '' : 's'}</b></div>
       </div>
@@ -1335,7 +1373,7 @@ function profileForm() {
     <form class="dlg-body" data-form="profile" novalidate>
       <div class="who">${avatar(m.id)}<div class="row-main"><span class="row-title">${esc(m.displayName || m.username)}</span><span class="row-sub">@${esc(m.username)}</span></div></div>
       <div class="field"><label for="prRsi">RSI handle</label><input id="prRsi" name="rsiHandle" maxlength="40" value="${esc(m.rsiHandle)}" autocomplete="off"></div>
-      <div class="field"><label for="prDiv">Primary crew</label><select id="prDiv" name="division"${m.role === 'lead' && !D().rolesMode ? ' disabled' : ''}><option value="">None</option>${crewOptions(m).map(x => `<option value="${x.id}"${x.id === ((m.divisions || [])[0] || m.division) ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
+      <div class="field"><label for="prDiv">Primary crew</label><select id="prDiv" name="division"><option value="">None</option>${crewOptions(m).map(x => `<option value="${x.id}"${x.id === ((m.divisions || [])[0] || m.division) ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
         <span class="hint">${D().rolesMode ? 'Crews come from your Discord roles. Your primary crew shows next to your name; the rest are listed as auxiliaries on your profile.' : 'Shown next to your name across the portal.'}</span></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
@@ -1358,11 +1396,11 @@ const keyDate = k => { const [y, m, d] = k.split('-').map(Number); return new Da
 const fmtTime = iso => { const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }); };
 const fmtLongDay = k => keyDate(k).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-function myDivIds() { return me().isAdmin ? D().divisions.map(d => d.id) : (me().divisions || []).filter(id => divOf(id)); }
+function myDivIds() { return me().isStaff ? D().divisions.map(d => d.id) : (me().divisions || []).filter(id => divOf(id)); }
 function evColor(e) { return e.major ? MAJOR_COLOR : e.division === 'all' ? ORG_COLOR : ((divOf(e.division) || {}).color || ORG_COLOR); }
 function evGroup(e) { return e.major ? 'Major event' : e.division === 'all' ? 'Org-wide' : ((divOf(e.division) || {}).name || 'Event'); }
-function canPostCal(div) { return me().isAdmin || (!!div && div !== 'all' && canLeadDiv(div)); }
-function canPostAnyCal() { return me().isAdmin || myDivIds().some(canLeadDiv); }
+function canPostCal(div) { return me().isStaff || (!!div && div !== 'all' && canLeadDiv(div)); }
+function canPostAnyCal() { return me().isStaff || !!me().lead; }
 function calEvents() { return D().calendar || []; }
 function evKeys(e) { const s = new Date(e.start); const en = e.end ? new Date(e.end) : s; return [dayKey(s), dayKey(en < s ? s : en)]; }
 function eventsOn(key, list) { return list.filter(e => { const [a, b] = evKeys(e); return key >= a && key <= b; }); }
@@ -1434,7 +1472,7 @@ function viewCalendar() {
     ? `<div class="toolbar" style="margin-bottom:10px"><h2 class="sub" style="margin:0">${esc(fmtLongDay(sel))}</h2>${canPostAnyCal() ? `<button class="btn btn-ghost btn-sm" type="button" data-act="cal-new" data-day="${sel}">Add event</button>` : ''}</div>${agendaList(eventsOn(sel, list), 'Nothing scheduled this day.')}`
     : `<h2 class="sub">Coming up</h2>${agendaList(upcoming(list, 45).slice(0, 12), 'Nothing scheduled in the next few weeks.')}`;
   return `
-    <div class="page-head"><div><div class="eyebrow">Schedule</div><h1>Calendar</h1><p>Major events for everyone, org-wide events, and events for ${me().isAdmin ? 'every division' : 'your divisions'}.</p></div>
+    <div class="page-head"><div><div class="eyebrow">Schedule</div><h1>Calendar</h1><p>Major events for everyone, org-wide events, and events for ${me().isStaff ? 'every division' : 'your crews'}.</p></div>
       ${canPostAnyCal() ? '<div class="head-actions"><button class="btn btn-solid" type="button" data-act="cal-new">New event</button></div>' : ''}</div>
     <div class="toolbar"><div class="chips legend">${filters.map(f => `<button class="chip${S.calFilter === f[0] ? ' on' : ''}" type="button" data-cal-filter="${f[0]}">${f[2] ? `<span class="sw" style="--c:${esc(f[2])}"></span>` : ''}${esc(f[1])}</button>`).join('')}</div></div>
     <div class="cal-layout">
@@ -1488,7 +1526,7 @@ function evDialog(id) {
 
 function calForm(e, day) {
   const d = D();
-  const opts = (me().isAdmin ? [['all', 'Org-wide (all members)']] : []).concat(d.divisions.filter(x => canPostCal(x.id)).map(x => [x.id, x.name]));
+  const opts = (me().isStaff ? [['all', 'Org-wide (all members)']] : []).concat(d.divisions.filter(x => canPostCal(x.id)).map(x => [x.id, x.name]));
   const startDefault = day ? `${day}T20:00` : '';
   e = e || { title: '', division: S.tab === 'divisions' && canPostCal(S.divTab) ? S.divTab : opts[0] ? opts[0][0] : '', type: 'Operation', start: '', end: '', location: '', description: '' };
   openDialog(e.id ? 'Edit event' : 'New event', `
@@ -1511,14 +1549,14 @@ function calForm(e, day) {
 /* ---------- Divisions ---------- */
 function viewDivisions() {
   const ids = myDivIds();
-  const head = `<div class="page-head"><div><div class="eyebrow">Your units</div><h1>Divisions</h1><p>${me().isAdmin ? 'Every division, with its schedule, work and roster.' : 'The divisions you belong to through your Discord roles.'}</p></div></div>`;
+  const head = `<div class="page-head"><div><div class="eyebrow">Your units</div><h1>Divisions</h1><p>${me().isStaff ? 'Every division, with its schedule, work and roster.' : 'Your crews, from your Discord roles.'}</p></div></div>`;
   if (!ids.length) return head + `<div class="panel panel-pad"><p class="empty" style="padding:0">You’re not in a division yet. ${D().rolesMode ? 'Ask staff in Discord for a division role, then refresh this page.' : 'Pick a home division in your profile.'}</p></div>`;
   if (!ids.includes(S.divTab)) S.divTab = ids[0];
   const div = divOf(S.divTab);
   const people = D().members.filter(x => (!x.status || x.status === 'active') && (x.divisions || [x.division]).includes(div.id));
   const evs = upcoming(calEvents().filter(e => e.division === div.id), 60);
   const wos = D().workorders.filter(w => w.division === div.id && (w.status === 'open' || w.status === 'active' || w.status === 'review'));
-  const leads = people.filter(p => p.role === 'admin' || (p.leads || []).includes(div.id));
+  const leads = people.filter(p => p.lead === div.id);
   return head + `
     ${ids.length > 1 ? `<div class="chips div-chips" style="margin-bottom:16px">${ids.map(id => `<button class="chip${id === div.id ? ' on' : ''}" type="button" data-div-tab="${id}">${esc(divOf(id).name)}</button>`).join('')}</div>` : ''}
     <section class="panel div-hero" style="--div:${esc(div.color)}">
@@ -1538,7 +1576,7 @@ function viewDivisions() {
         <h2 class="sub section">Roster <span class="num" style="color:var(--dim)">${people.length}</span></h2>
         <div class="panel rows">${people.length ? people.sort((a, b) => leads.includes(b) - leads.includes(a) || (a.displayName || '').localeCompare(b.displayName || '')).map(p => `
           <div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">${p.rsiHandle ? 'RSI: ' + esc(p.rsiHandle) : '@' + esc(p.username)}</span></div></div>
-          ${leads.includes(p) && p.role !== 'admin' ? '<span class="pill role-lead">Lead</span>' : ''}</div>`).join('') : '<div class="row"><span class="hint">No members yet.</span></div>'}</div>
+          ${leads.includes(p) && p.title !== 'lead' ? '<span class="pill role-lead">Lead</span>' : ''}</div>`).join('') : '<div class="row"><span class="hint">No members yet.</span></div>'}</div>
       </div>
     </div>`;
 }
@@ -1640,25 +1678,31 @@ function staffRoles() {
   const r = S.rolesData;
   if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
   const divs = D().divisions, owner = r.owner;
-  const titleOpts = [['', '—'], ['director', 'Director'], ['manager', 'Manager'], ['admin', 'Admin'], ['staff', 'Staff']];
-  const accessOpts = [['', 'No access'], ['recruit', 'Recruit (in review)'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']];
-  const sel = (name, opts, v, label) => `<select name="${name}" aria-label="${esc(label)}">${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
-  const row = (x, i) => `<tr data-row="${i}">
-      <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="e.g. Recruit" aria-label="Portal role name"></td>
+  const types = [['rank', 'Rank'], ['division', 'Division'], ['lead', 'Division lead']].concat(owner ? [['sysadmin', 'Systems Admin']] : []);
+  const tiers = [['recruit', 'Recruit · in review'], ['member', 'Member'], ['supervisor', 'Supervisor (Staff)'], ['admin', 'Admin'], ['manager', 'Manager'], ['director', 'Director']];
+  const sel = (name, opts, v, label, ph) => `<select name="${name}" aria-label="${esc(label)}">${ph ? `<option value="">${ph}</option>` : ''}${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
+  const setting = x => x.type === 'rank' ? sel('tier', tiers, x.tier, 'Permission level', 'Pick a level')
+    : x.type === 'division' || x.type === 'lead' ? sel('division', divs.map(d => [d.id, d.name]), x.division, 'Division', 'Pick a division')
+    : x.type === 'sysadmin' ? '<span class="hint">Can edit this page. Only you see this.</span>' : '<span class="hint">Pick a type first</span>';
+  const row = (x, i) => `<tr data-row="${i}" class="type-${esc(x.type || 'none')}">
+      <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="e.g. Specialist" aria-label="Portal role name"></td>
       <td><input name="rid" inputmode="numeric" maxlength="25" value="${esc(x.id)}" placeholder="Discord role ID" aria-label="Discord role ID" class="num"></td>
-      <td>${sel('access', accessOpts, x.access, 'Access')}</td>
-      <td>${sel('title', titleOpts, x.title, 'Title')}</td>
-      <td>${sel('division', [['', '—']].concat(divs.map(d => [d.id, d.name])), x.division, 'Division')}</td>
-      ${owner ? `<td class="sys-col"><input type="checkbox" name="sysadmin" style="width:18px;height:18px;accent-color:var(--accent)"${x.sysadmin ? ' checked' : ''} aria-label="Systems Admin"></td>` : ''}
-      <td style="white-space:nowrap"><button class="x" type="button" data-act="role-up" data-id="${i}" aria-label="Move up"${i === 0 ? ' disabled' : ''}>&#8593;</button><button class="x" type="button" data-act="role-down" data-id="${i}" aria-label="Move down"${i === r.roles.length - 1 ? ' disabled' : ''}>&#8595;</button><button class="x" type="button" data-act="role-remove" data-id="${i}" aria-label="Remove role">&times;</button></td>
+      <td>${sel('type', types, x.type, 'Type', 'Type…')}</td>
+      <td>${setting(x)}</td>
+      <td style="white-space:nowrap;text-align:right"><button class="x" type="button" data-act="role-up" data-id="${i}" aria-label="Move up"${i === 0 ? ' disabled' : ''}>&#8593;</button><button class="x" type="button" data-act="role-down" data-id="${i}" aria-label="Move down"${i === r.roles.length - 1 ? ' disabled' : ''}>&#8595;</button><button class="x" type="button" data-act="role-remove" data-id="${i}" aria-label="Remove role">&times;</button></td>
     </tr>`;
   return `<form data-form="roles" novalidate>
-    <div class="toolbar"><p class="hint" style="max-width:740px">Each row links a portal role to a Discord role by its ID. When someone gets or loses that role in Discord, the portal follows within a few minutes.
-      <b>Access</b>: Recruit sees only their profile while in review; Division lead runs the division set on that row and is a member everywhere else. <b>Title</b> sets the staff icon and tag. <b>Division</b> adds that crew. Rows higher up outrank lower ones for the rank shown on profiles.${owner ? ' Only you can see the <b>Systems Admin</b> column.' : ''}</p>
+    <div class="role-guide">
+      <div><b>Rank</b><span>Their standing and what they can do: Recruit (in review, profile only), Member, Supervisor (staff: work orders, approvals, funds), Admin (+ site content), Manager (all divisions, treasury), Director (everything).</span></div>
+      <div><b>Division</b><span>A crew they belong to. Members can hold several; they pick a primary, the rest show as auxiliaries.</span></div>
+      <div><b>Division lead</b><span>Runs one division and shows as its lead. Member-level everywhere else. One lead spot per person.</span></div>
+      ${owner ? '<div><b>Systems Admin</b><span>Can edit this page only. Never visible to anyone but you.</span></div>' : ''}
+    </div>
+    <div class="toolbar"><p class="hint" style="max-width:680px">Link each portal role to its Discord role ID. When someone gets or loses the role in Discord, the portal follows within a few minutes. Higher rows win when someone holds two ranks at the same level.</p>
       <div class="head-actions">${owner && r.roles.length ? '<button class="btn btn-danger btn-sm" type="button" data-act="roles-clear" data-confirm="Clear every row?">Clear all</button>' : ''}<button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Undo changes</button><button class="btn btn-solid" type="submit">Save permissions</button></div></div>
-    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Portal role</th><th>Discord role ID</th><th>Access</th><th>Title</th><th>Division</th>${owner ? '<th class="sys-col">Systems Admin</th>' : ''}<th></th></tr></thead><tbody>
-      ${r.roles.length ? r.roles.map(row).join('') : `<tr><td colspan="${owner ? 7 : 6}" class="hint" style="padding:18px 14px">No roles yet. Add one below.</td></tr>`}
-      <tr class="add"><td colspan="${owner ? 7 : 6}"><button class="btn btn-ghost btn-sm" type="button" data-act="role-add">+ Add role</button>
+    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Portal role</th><th>Discord role ID</th><th>Type</th><th>Setting</th><th></th></tr></thead><tbody>
+      ${r.roles.length ? r.roles.map(row).join('') : '<tr><td colspan="5" class="hint" style="padding:18px 14px">No roles yet. Add your first one below.</td></tr>'}
+      <tr class="add"><td colspan="5"><button class="btn btn-ghost btn-sm" type="button" data-act="role-add">+ Add role</button>
         <span class="hint" style="margin-left:10px">Role ID: Discord → Server Settings → Roles → right-click a role → Copy Role ID (Developer Mode on).</span></td></tr>
     </tbody></table></div>
   </form>`;
@@ -1669,10 +1713,156 @@ function captureRoles() {
   if (!S.rolesData || !S.rolesData.roles) return;
   document.querySelectorAll('tr[data-row]').forEach(tr => {
     const x = S.rolesData.roles[Number(tr.dataset.row)]; if (!x) return;
-    x.name = tr.querySelector('[name=rname]').value; x.id = tr.querySelector('[name=rid]').value.trim();
-    x.access = tr.querySelector('[name=access]').value; x.title = tr.querySelector('[name=title]').value; x.division = tr.querySelector('[name=division]').value;
-    const c = tr.querySelector('[name=sysadmin]'); if (c) x.sysadmin = c.checked;
+    const q = n => tr.querySelector(`[name=${n}]`);
+    x.name = q('rname').value; x.id = q('rid').value.trim(); x.type = q('type').value;
+    if (q('tier')) x.tier = q('tier').value;
+    if (q('division')) x.division = q('division').value;
   });
+}
+
+/* ---------- Navigation groups ---------- */
+const GROUPS = {
+  ops: () => [['work', 'Work orders'], ['calendar', 'Calendar'], ['logistics', 'Logistics']],
+  treasury: () => [['mine', 'My funds']].concat(me().isStaff ? [['approvals', 'Approvals']] : []).concat(me().isManager ? [['treasurer', 'Treasurer'], ['ledger', 'Ledger']] : [])
+};
+const SUB_OF = { work: 'ops', calendar: 'ops', logistics: 'ops' };
+function goTab(t) {
+  if (SUB_OF[t]) { S.tab = SUB_OF[t]; S.sub[SUB_OF[t]] = t; } else S.tab = t;
+  store.set('p6_member_tab', S.tab);
+}
+function subnav(group) {
+  const items = GROUPS[group]();
+  if (!items.some(i => i[0] === S.sub[group])) S.sub[group] = items[0][0];
+  if (items.length < 2) return '';
+  return `<div class="subnav" role="tablist">${items.map(i => `<button class="subnav-btn${S.sub[group] === i[0] ? ' on' : ''}" type="button" role="tab" aria-selected="${S.sub[group] === i[0]}" data-sub="${group}:${i[0]}">${esc(i[1])}${subCount(group, i[0]) ? `<span class="count">${subCount(group, i[0])}</span>` : ''}</button>`).join('')}</div>`;
+}
+function subCount(group, id) {
+  const d = D(), m = me();
+  if (group === 'ops' && id === 'work') return d.workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
+  if (group === 'treasury' && id === 'approvals') return (d.funds || []).filter(x => x.status === 'pending' || (x.status === 'received' && x.receivedBy === m.id)).length;
+  if (group === 'treasury' && id === 'treasurer') return (d.funds || []).filter(x => x.status === 'forwarded').length;
+  return 0;
+}
+function viewOps() {
+  const sub = (subnav('ops'), S.sub.ops);
+  return subnav('ops') + ({ work: viewWork, calendar: viewCalendar, logistics: viewLogistics }[sub])();
+}
+function viewTreasury() {
+  const nav = subnav('treasury');
+  return nav + ({ mine: viewFundsMine, approvals: viewApprovals, treasurer: viewTreasurer, ledger: viewLedger }[S.sub.treasury])();
+}
+
+/* ---------- Treasury ---------- */
+const STAGES = { pending: 'Waiting for supervisor', received: 'With supervisor', forwarded: 'Sent to treasurer', confirmed: 'In treasury', rejected: 'Rejected' };
+function supervisors() { return (D().members || []).filter(x => (x.status || 'active') === 'active' && ['supervisor', 'admin', 'manager', 'director'].includes(x.tier)); }
+function stagePill(st) { return `<span class="pill stage-${esc(st)}">${esc(STAGES[st] || st)}</span>`; }
+function stageTrack(st) {
+  const steps = ['pending', 'received', 'forwarded', 'confirmed'];
+  if (st === 'rejected') return '';
+  const at = steps.indexOf(st);
+  return `<div class="track" aria-hidden="true">${steps.map((x, i) => `<i class="${i <= at ? 'done' : ''}"></i>`).join('')}</div>`;
+}
+function fundRow(x, actions) {
+  return `<div class="row fund-row">
+    <div class="row-main" style="gap:4px">
+      <span class="row-title">${esc(x.title)}</span>
+      <span class="row-sub">${x.memberId ? nameTag(x.memberId) : ''}${x.supervisorId ? ` <span style="color:var(--dim)">→</span> ${nameTag(x.supervisorId)}` : ''}</span>
+      <span class="hint">${esc(fmtDateTime(x.created))}${x.receivedAt ? ' · received ' + esc(fmtDate(x.receivedAt)) : ''}${x.forwardedAt ? ' · sent ' + esc(fmtDate(x.forwardedAt)) : ''}${x.confirmedAt ? ' · in treasury ' + esc(fmtDate(x.confirmedAt)) : ''}${x.status === 'rejected' && x.note ? ' · ' + esc(x.note) : ''}</span>
+    </div>
+    <div class="fund-side"><span class="reward">${auec(x.amount)}<small>aUEC</small></span>${stagePill(x.status)}${stageTrack(x.status)}${actions ? `<div class="actions">${actions}</div>` : ''}</div>
+  </div>`;
+}
+function viewFundsMine() {
+  const d = D(), m = me(), L = d.ledger;
+  const mine = (d.funds || []).filter(x => x.memberId === m.id);
+  const open = mine.filter(x => x.status !== 'confirmed' && x.status !== 'rejected');
+  const reported = new Set((d.funds || []).filter(x => x.source === 'run' && x.status !== 'rejected').map(x => x.refId));
+  const runs = d.runs.filter(r => r.ownerId === m.id && r.status === 'delivered' && !reported.has(r.id));
+  const sups = supervisors();
+  return `
+    <div class="page-head"><div><div class="eyebrow">Treasury</div><h1>My funds</h1><p>aUEC from org work goes to a supervisor in-game, then to the treasurer <b>${esc(d.treasurer)}</b>. Solo play outside work orders and events doesn’t go through here.</p></div></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Org treasury</div><div class="stat-value">${auec(L.balance)}<small>aUEC</small></div></div>
+      <div class="stat"><div class="stat-label">I contributed</div><div class="stat-value" style="color:var(--ok)">${auec(L.myContributed)}<small>aUEC</small></div><div class="stat-note">Confirmed by the treasurer</div></div>
+      <div class="stat"><div class="stat-label">Paid to me</div><div class="stat-value">${auec(L.myEarnings)}<small>aUEC</small></div><div class="stat-note">Work order rewards</div></div>
+      <div class="stat"><div class="stat-label">In progress</div><div class="stat-value">${auec(open.reduce((a, x) => a + x.amount, 0))}<small>aUEC</small></div><div class="stat-note">${open.length} transfer${open.length === 1 ? '' : 's'}</div></div>
+    </div>
+    <div class="grid-2 grid-split section">
+      <div>
+        <h2 class="sub">My transfers</h2>
+        <div class="panel rows">${mine.length ? mine.map(x => fundRow(x)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing yet. Work order earnings show up here once you submit them.</span></div>'}</div>
+      </div>
+      <div>
+        <h2 class="sub">Report aUEC sent</h2>
+        <form class="panel panel-pad stack" data-form="funds" novalidate>
+          <ol class="steps-mini"><li>Send the aUEC to a supervisor in-game</li><li>Report it here</li><li>The supervisor accepts it and passes it to the treasurer</li></ol>
+          <div class="field"><label for="fFor">What it’s from</label><select id="fFor" name="ref"><option value="">Other org work (event, op…)</option>${runs.map(r => `<option value="${esc(r.id)}">Cargo run: ${esc(r.cargo)} → ${esc(r.destination)}</option>`).join('')}</select></div>
+          <div class="field"><label for="fTitle">Description</label><input id="fTitle" name="title" maxlength="100" placeholder="e.g. Salvage share from Friday op"></div>
+          <div class="form-grid">
+            <div class="field"><label for="fAmt">aUEC sent</label><input id="fAmt" name="amount" inputmode="numeric" placeholder="0"></div>
+            <div class="field"><label for="fSup">Sent to</label><select id="fSup" name="supervisorId"><option value="">Pick a supervisor</option>${sups.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}</option>`).join('')}</select></div>
+          </div>
+          <div class="field"><label for="fNote">Note (optional)</label><input id="fNote" name="note" maxlength="300"></div>
+          <button class="btn btn-solid" type="submit">Report transfer</button>
+        </form>
+        ${L.entries.length ? `<h2 class="sub section">My ledger lines</h2><div class="panel rows">${L.entries.slice(0, 8).map(e => `<div class="row"><div class="row-main"><span class="row-title">${esc(e.note || label(e.type))}</span><span class="row-sub">${esc(fmtDate(e.date))} · ${esc(label(e.type))}</span></div><span class="amt ${d.lists.ledgerIn.includes(e.type) ? 'plus' : 'minus'} num" style="font-weight:600">${d.lists.ledgerIn.includes(e.type) ? '+' : '−'}${auec(e.amount)}</span></div>`).join('')}</div>` : ''}
+      </div>
+    </div>`;
+}
+function viewApprovals() {
+  const d = D(), m = me();
+  const f = d.funds || [];
+  const waiting = f.filter(x => x.status === 'pending').sort((a, b) => (b.supervisorId === m.id) - (a.supervisorId === m.id));
+  const holding = f.filter(x => x.status === 'received' && (x.receivedBy === m.id || m.isManager));
+  const reviewWos = d.workorders.filter(w => w.status === 'review' && canLeadDiv(w.division));
+  return `
+    <div class="page-head"><div><div class="eyebrow">Supervisors</div><h1>Approvals</h1><p>Accept the aUEC in-game first, then mark it received. Once you’ve sent it on to <b>${esc(d.treasurer)}</b>, mark it sent.</p></div></div>
+    ${reviewWos.length ? `<h2 class="sub">Work orders to review <span class="pill review">${reviewWos.length}</span></h2><div class="panel rows">${reviewWos.map(w => `<div class="row"><div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${w.earnings ? `${auec(w.earnings)} aUEC sent to ${esc(nameOf(w.sentTo))}` : 'No aUEC involved'} · ${w.assignees.map(id => esc(nameOf(id))).join(', ')}</span></div><div class="actions"><button class="btn btn-ok btn-sm" type="button" data-act="wo-approve" data-id="${w.id}">${w.earnings ? 'Funds received · Approve' : 'Approve'}</button><button class="btn btn-ghost btn-sm" type="button" data-act="wo-reject" data-id="${w.id}">Send back</button></div></div>`).join('')}</div>` : ''}
+    <h2 class="sub section">Waiting for a supervisor <span class="num" style="color:var(--dim)">${waiting.length}</span></h2>
+    <div class="panel rows">${waiting.length ? waiting.map(x => fundRow(x, `<button class="btn btn-ok btn-sm" type="button" data-act="funds-receive" data-id="${esc(x.id)}">Funds received</button><button class="btn btn-ghost btn-sm" type="button" data-act="funds-reject" data-id="${esc(x.id)}">Reject</button>`)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">No reports waiting.</span></div>'}</div>
+    <h2 class="sub section">To send to the treasurer <span class="num" style="color:var(--dim)">${holding.length}</span></h2>
+    <div class="panel rows">${holding.length ? holding.map(x => fundRow(x, `<button class="btn btn-solid btn-sm" type="button" data-act="funds-forward" data-id="${esc(x.id)}" data-confirm="Sent to ${esc(d.treasurer)}?">Sent to treasurer</button>`)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing to forward.</span></div>'}</div>`;
+}
+function viewTreasurer() {
+  const d = D(), f = d.funds || [];
+  const by = st => f.filter(x => x.status === st);
+  const sum = arr => arr.reduce((a, x) => a + x.amount, 0);
+  const filt = S.fundFilter || 'open';
+  const list = filt === 'open' ? f.filter(x => ['pending', 'received', 'forwarded'].includes(x.status)) : filt === 'all' ? f : by(filt);
+  return `
+    <div class="page-head"><div><div class="eyebrow">Treasurer</div><h1>Transactions</h1><p>Every transfer from report to treasury. Confirm once <b>${esc(d.treasurer)}</b> has accepted the aUEC; only then does it hit the ledger.</p></div></div>
+    <div class="stats">
+      <div class="stat"><div class="stat-label">Waiting for supervisor</div><div class="stat-value">${auec(sum(by('pending')))}<small>aUEC</small></div><div class="stat-note">${by('pending').length} report${by('pending').length === 1 ? '' : 's'}</div></div>
+      <div class="stat"><div class="stat-label">With supervisors</div><div class="stat-value">${auec(sum(by('received')))}<small>aUEC</small></div><div class="stat-note">${by('received').length} to forward</div></div>
+      <div class="stat"><div class="stat-label">Sent to treasurer</div><div class="stat-value" style="color:var(--accent)">${auec(sum(by('forwarded')))}<small>aUEC</small></div><div class="stat-note">${by('forwarded').length} to confirm</div></div>
+      <div class="stat"><div class="stat-label">In treasury</div><div class="stat-value" style="color:var(--ok)">${auec(sum(by('confirmed')))}<small>aUEC</small></div><div class="stat-note">Balance ${auec(d.ledger.balance)} aUEC</div></div>
+    </div>
+    ${by('forwarded').length ? `<h2 class="sub section">Confirm receipt</h2><div class="panel rows">${by('forwarded').map(x => fundRow(x, `<button class="btn btn-ok btn-sm" type="button" data-act="funds-confirm" data-id="${esc(x.id)}" data-confirm="Treasurer has it?">Confirm received</button>`)).join('')}</div>` : ''}
+    <div class="toolbar section"><h2 class="sub" style="margin:0">All transactions</h2>
+      <div class="chips">${[['open', 'Open'], ['confirmed', 'In treasury'], ['rejected', 'Rejected'], ['all', 'All']].map(c => `<button class="chip${filt === c[0] ? ' on' : ''}" type="button" data-fund-filter="${c[0]}">${c[1]}</button>`).join('')}</div></div>
+    <div class="panel rows">${list.length ? list.map(x => fundRow(x, x.status === 'received' ? `<button class="btn btn-ghost btn-sm" type="button" data-act="funds-confirm" data-id="${esc(x.id)}" data-confirm="Treasurer has it?">Confirm received</button>` : '')).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing here.</span></div>'}</div>`;
+}
+function amountForm(title, action, id, amount, cta, hint) {
+  openDialog(title, `
+    <form class="dlg-body" data-form="amount" data-action="${esc(action)}" data-id="${esc(id)}" novalidate>
+      <div class="field"><label for="amAmt">aUEC received</label><input id="amAmt" name="amount" inputmode="numeric" value="${esc(amount || '')}"></div>
+      ${hint ? `<p class="hint">${hint}</p>` : ''}
+      <div class="field"><label for="amNote">Note (optional)</label><input id="amNote" name="note" maxlength="300"></div>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-ok" type="submit">${esc(cta)}</button></div>
+    </form>`);
+}
+function submitForm(id) {
+  const sups = supervisors();
+  openDialog('Submit for review', `
+    <form class="dlg-body" data-form="wo-submit" data-id="${esc(id)}" novalidate>
+      <div class="field"><label for="sbNote">What did the crew deliver?</label><textarea id="sbNote" name="note" maxlength="1000" placeholder="Amounts, locations, screenshot links…"></textarea></div>
+      <div class="form-grid">
+        <div class="field"><label for="sbAmt">aUEC sent (if any)</label><input id="sbAmt" name="earnings" inputmode="numeric" placeholder="0"></div>
+        <div class="field"><label for="sbSup">Sent to supervisor</label><select id="sbSup" name="sentTo"><option value="">—</option>${sups.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}</option>`).join('')}</select></div>
+      </div>
+      <p class="hint">If this job made aUEC for the org, send it to a supervisor in-game first. They approve the work once they’ve accepted the funds.</p>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Submit</button></div>
+    </form>`);
 }
 
 /* ---------- Dialog ---------- */
@@ -1699,8 +1889,7 @@ function confirmed(btn) {
 document.addEventListener('click', async e => {
   const tabBtn = e.target.closest('[data-tab]');
   if (tabBtn && !e.target.closest('dialog')) {
-    S.tab = tabBtn.dataset.tab; render(); window.scrollTo({ top: 0 });
-    store.set('p6_member_tab', S.tab);
+    goTab(tabBtn.dataset.tab); render(); window.scrollTo({ top: 0 });
     return;
   }
   const chip = e.target.closest('[data-wo-status]');
@@ -1713,9 +1902,13 @@ document.addEventListener('click', async e => {
   const cf = e.target.closest('[data-cal-filter]');
   if (cf) { S.calFilter = cf.dataset.calFilter; render(); return; }
   const cj = e.target.closest('[data-cal-jump]');
-  if (cj) { S.tab = 'calendar'; S.calDay = cj.dataset.calJump; S.calMonth = cj.dataset.calJump.slice(0, 7); store.set('p6_member_tab', S.tab); render(); window.scrollTo({ top: 0 }); return; }
+  if (cj) { goTab('calendar'); S.calDay = cj.dataset.calJump; S.calMonth = cj.dataset.calJump.slice(0, 7); store.set('p6_member_tab', S.tab); render(); window.scrollTo({ top: 0 }); return; }
   const dt = e.target.closest('[data-div-tab]');
   if (dt) { S.divTab = dt.dataset.divTab; render(); return; }
+  const sb = e.target.closest('[data-sub]');
+  if (sb) { const [g, id] = sb.dataset.sub.split(':'); S.sub[g] = id; render(); return; }
+  const ff = e.target.closest('[data-fund-filter]');
+  if (ff) { S.fundFilter = ff.dataset.fundFilter; render(); return; }
   const stb = e.target.closest('[data-staff-tab]');
   if (stb) { S.staffTab = stb.dataset.staffTab; render(); return; }
   const cd = e.target.closest('[data-cal-day]');
@@ -1732,8 +1925,12 @@ document.addEventListener('click', async e => {
     case 'wo-edit': woForm(d.workorders.find(w => w.id === id)); break;
     case 'wo-claim': act('wo.claim', { id }, 'You’re on the crew.'); break;
     case 'wo-unclaim': act('wo.unclaim', { id }, 'You left the work order.'); break;
-    case 'wo-submit': noteForm('Submit for review', 'wo.submit', id, false, 'Submit'); break;
-    case 'wo-approve': act('wo.approve', { id }, 'Approved.'); break;
+    case 'wo-submit': submitForm(id); break;
+    case 'wo-approve': { const w = d.workorders.find(x => x.id === id); if (w && w.earnings) amountForm('Funds received · approve', 'wo.approve', id, w.earnings, 'Funds received · Approve', `Only approve once you’ve accepted the aUEC from ${esc(nameOf(w.sentTo || ''))} in-game. It then waits for you to send it to ${esc(d.treasurer)}.`); else act('wo.approve', { id }, 'Approved.'); break; }
+    case 'funds-receive': { const x = d.funds.find(y => y.id === id); amountForm('Funds received', 'funds.receive', id, x ? x.amount : '', 'Mark received', 'Accept the aUEC in-game first. Adjust the amount if it differs.'); break; }
+    case 'funds-reject': noteForm('Reject transfer', 'funds.reject', id, true, 'Reject'); break;
+    case 'funds-forward': act('funds.forward', { id }, 'Marked as sent to the treasurer.'); break;
+    case 'funds-confirm': act('funds.confirm', { id }, 'Confirmed. Added to the ledger.'); break;
     case 'wo-reject': noteForm('Send back to crew', 'wo.reject', id, true, 'Send back'); break;
     case 'wo-pay': act('wo.pay', { id }, 'Payout recorded in the ledger.'); break;
     case 'wo-cancel': act('wo.cancel', { id }, 'Work order cancelled.'); break;
@@ -1755,7 +1952,7 @@ document.addEventListener('click', async e => {
     case 'cal-edit': calForm(calEvents().find(x => x.id === id)); break;
     case 'cal-remove': if (await act('cal.remove', { id }, 'Event deleted.')) closeDialog(); break;
     case 'cal-rsvp': if (await act('cal.rsvp', { id, status: b.dataset.status }, b.dataset.status ? 'RSVP saved.' : 'RSVP cleared.')) evDialog(id); break;
-    case 'div-work': S.tab = 'work'; S.woDiv = id; S.woStatus = 'open'; render(); window.scrollTo({ top: 0 }); break;
+    case 'div-work': goTab('work'); S.woDiv = id; S.woStatus = 'open'; render(); window.scrollTo({ top: 0 }); break;
     case 'news-open': { const n = (d.news || [])[0]; if (n) openDialog('Newsletter', `<div class="dlg-body"><span class="hint">${esc(n.author || 'Project Six')} · ${esc(fmtDate(n.published))}</span><h3 style="font-family:var(--f-label);font-size:1.4rem">${esc(n.title)}</h3><div class="news-body">${esc(n.body).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div></div>`); break; }
     case 'site-new': siteForm(b.dataset.kind); break;
     case 'site-edit': { const list = b.dataset.kind === 'events' ? d.staff.events : d.staff.newsletters; siteForm(b.dataset.kind, list.find(x => x.id === id)); break; }
@@ -1764,7 +1961,7 @@ document.addEventListener('click', async e => {
     case 'role-add': {
       captureRoles();
       const rid = b.dataset.rid || '';
-      S.rolesData.roles.push({ id: rid, name: '', access: '', title: '', division: '', sysadmin: false });
+      S.rolesData.roles.push({ id: rid, name: '', type: '', tier: '', division: '' });
       render();
       const rows = document.querySelectorAll('tr[data-row]');
       const last = rows[rows.length - 1]; if (last) last.querySelector('[name=rname]').focus();
@@ -1782,6 +1979,7 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('change', e => {
+  if (e.target.matches('tr[data-row] [name=type]')) { captureRoles(); render(); return; }
   if (e.target.matches('[data-wo-div]')) { S.woDiv = e.target.value; render(); }
 });
 
@@ -1799,7 +1997,7 @@ document.addEventListener('submit', async e => {
       case 'wo':
         if (!v('title').trim()) { toast('Add a title.', 'err'); break; }
         ok = await act('wo.save', { id: v('id'), title: v('title'), division: v('division'), type: v('type'), reward: v('reward'), slots: v('slots'), priority: v('priority'), due: fromLocalInput(v('due')), location: v('location'), description: v('description') }, v('id') ? 'Work order updated.' : 'Work order posted.');
-        if (ok) { S.tab = 'work'; S.woStatus = v('id') ? S.woStatus : 'open'; render(); }
+        if (ok) { goTab('work'); S.woStatus = v('id') ? S.woStatus : 'open'; render(); }
         break;
       case 'run':
         if (!v('cargo').trim() || !v('destination').trim()) { toast('Add the cargo and destination.', 'err'); break; }
@@ -1841,15 +2039,31 @@ document.addEventListener('submit', async e => {
         if (!roles.length && !r_owner()) { toast('Add at least one role.', 'err'); break; }
         const bad = roles.find(x => !/^\d{5,25}$/.test(x.id));
         if (bad) { toast(`“${bad.name || 'A role'}” needs its Discord role ID (a long number).`, 'err'); break; }
+        const noType = roles.find(x => !x.type || (x.type === 'rank' && !x.tier) || ((x.type === 'division' || x.type === 'lead') && !x.division));
+        if (noType) { toast(`Finish the setup for “${noType.name || noType.id}”.`, 'err'); break; }
         const ids = roles.map(x => x.id), dup = ids.find((x, i) => ids.indexOf(x) !== i);
         if (dup) { toast(`Role ID ${dup} is listed twice.`, 'err'); break; }
-        ok = await act('roles.save', { roles: roles.map(x => ({ id: x.id, name: x.name, access: x.access, title: x.title, division: x.division, sysadmin: r_owner() ? !!x.sysadmin : undefined })) }, 'Permissions saved.');
+        ok = await act('roles.save', { roles: roles.map(x => ({ id: x.id, name: x.name, type: x.type, tier: x.tier, division: x.division })) }, 'Permissions saved.');
         if (ok) { S.rolesData = null; render(); }
+        break;
+      }
+      case 'wo-submit':
+        if (v('earnings') && Number(v('earnings').replace(/[,\s]/g, '')) > 0 && !v('sentTo')) { toast('Pick the supervisor you sent the aUEC to.', 'err'); break; }
+        ok = await act('wo.submit', { id: f.dataset.id, note: v('note'), earnings: v('earnings'), sentTo: v('sentTo') }, 'Submitted for review.');
+        break;
+      case 'amount':
+        ok = await act(f.dataset.action, { id: f.dataset.id, amount: v('amount'), note: v('note') }, f.dataset.action === 'wo.approve' ? 'Approved. Funds are with you until you send them on.' : 'Marked received.');
+        break;
+      case 'funds': {
+        const ref = v('ref');
+        if (!v('amount') || !v('supervisorId')) { toast('Add the amount and who you sent it to.', 'err'); break; }
+        if (!ref && !v('title').trim()) { toast('Describe what the aUEC is from.', 'err'); break; }
+        ok = await act('funds.report', { source: ref ? 'run' : 'other', refId: ref, title: v('title'), amount: v('amount'), supervisorId: v('supervisorId'), note: v('note') }, 'Reported. Your supervisor will confirm it.');
         break;
       }
       case 'note':
         if (f.elements.note.required && !v('note').trim()) { toast('Add a note.', 'err'); break; }
-        ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, f.dataset.action === 'wo.submit' ? 'Submitted for review.' : 'Sent back to the crew.');
+        ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, f.dataset.action === 'funds.reject' ? 'Transfer rejected.' : 'Sent back to the crew.');
         break;
     }
   } finally {
@@ -1879,7 +2093,7 @@ async function loadMarket() {
     const json = await res.json();
     if (json.ok) {
       MK.data = json;
-      if (S.tab === 'logistics' && !dlg.open) render();
+      if (S.tab === 'ops' && S.sub.ops === 'logistics' && !dlg.open) render();
     }
   } catch (_) { /* market is optional */ } finally { MK.loading = false; MK.at = Date.now(); }
 }
@@ -1907,17 +2121,17 @@ function marketPanel() {
 /* ---------- Live refresh ---------- */
 setInterval(() => {
   if (!S.token || !S.data || S.busy || document.hidden || dlg.open) return;
-  const fast = S.tab === 'logistics' || S.tab === 'dashboard';
+  const fast = S.tab === 'ops' || S.tab === 'dashboard' || S.tab === 'treasury';
   const age = Date.now() - Date.parse(S.data.synced || 0);
   if (age > (fast ? 30000 : 90000)) loadAll(true);
-  if (S.tab === 'logistics') loadMarket();
+  if (S.tab === 'ops' && S.sub.ops === 'logistics') loadMarket();
 }, 10000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden && S.token && S.data && !dlg.open) loadAll(true); });
 
 /* ---------- Boot ---------- */
 (function boot() {
   const saved = store.get('p6_member_tab');
-  if (saved && TABS.some(t => t.id === saved)) S.tab = saved;
+  if (saved && (TABS.some(t => t.id === saved) || SUB_OF[saved])) goTab(saved);
   const params = new URLSearchParams(location.search);
   if (params.has('code') || params.has('error')) { finishLogin(params); return; }
   S.token = store.get(TOKEN_KEY);
