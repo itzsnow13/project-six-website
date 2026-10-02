@@ -401,6 +401,30 @@ button.owner:hover { border-color: var(--accent); }
 .track i { width: 18px; height: 4px; border-radius: 2px; background: var(--line-2); }
 .track i.done { background: var(--ok); }
 .pill.stage-pending { color: var(--warn); border-color: rgba(224,180,90,.5); }
+.pill.stage-claimed { color: #8fb0d0; border-color: rgba(143,176,208,.5); }
+.send-to { display: inline-block; margin-top: 2px; padding: 4px 9px; border-radius: 6px; background: var(--accent-soft); color: var(--text); font-size: .86rem; }
+.callout { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; border-color: rgba(201,181,142,.45); }
+.callout > b { color: var(--accent); font-family: var(--f-label); letter-spacing: .04em; }
+/* Work order steps */
+.stepper { list-style: none; margin: 10px 0 4px; padding: 0; display: flex; gap: 4px; counter-reset: st; }
+.stepper li { flex: 1; min-width: 0; position: relative; padding-top: 10px; font-size: .74rem; color: var(--dim); counter-increment: st; }
+.stepper li::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 2px; background: var(--line-2); }
+.stepper li.done::before { background: var(--ok); }
+.stepper li.now::before { background: var(--accent); }
+.stepper li.now { color: var(--text); font-weight: 600; }
+.stepper li.done { color: var(--muted); }
+.stepper span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.done-list > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.done-list > summary::-webkit-details-marker { display: none; }
+.done-list > summary::before { content: '▸'; color: var(--dim); transition: transform .15s; }
+.done-list[open] > summary::before { transform: rotate(90deg); }
+.done-list > .panel { margin-top: 10px; }
+.div-head + .mgmt-label { border-top: 0; }
+[hidden] { display: none !important; }
+.optional-note { color: var(--accent); font-size: .88rem; }
+.page-head .optional-note { margin-top: 6px; }
+.opt { text-transform: none; letter-spacing: 0; font-weight: 500; color: var(--dim); }
+.mgmt-label { padding: 12px 16px 4px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); border-top: 1px solid var(--line); }
 .pill.stage-received { color: var(--steel); border-color: rgba(147,161,168,.5); }
 .pill.stage-forwarded { color: var(--accent); border-color: rgba(201,181,142,.45); }
 .pill.stage-confirmed { color: var(--ok); border-color: rgba(95,207,126,.45); }
@@ -894,7 +918,7 @@ const RANKS = {
   director: { label: 'Director', c: '#dcc28a', d: '#9c8556' },
   manager: { label: 'Manager', c: '#d4d9e1', d: '#7d8592' },
   admin: { label: 'Admin', c: '#4f93e8', d: '#2b5b98' },
-  supervisor: { label: 'Staff', c: '#8fb0d0', d: '#4c6680' }
+  supervisor: { label: 'Supervisor', c: '#8fb0d0', d: '#4c6680' }
 };
 /* Headline shown next to a name: staff rank, or a division lead spot in that division's colour. */
 function headline(m) {
@@ -905,6 +929,7 @@ function headline(m) {
     return { key: 'lead', label: (dv.tabTop || dv.name) + ' Lead', c: c, d: c, div: dv };
   }
   const r = RANKS[m.title]; if (!r) return null;
+  if (m.title === 'supervisor') { const dv = divOf(m.supervisor); return { key: 'supervisor', label: (dv ? (dv.tabTop || dv.name) + ' ' : '') + r.label, c: r.c, d: r.d }; }
   return { key: m.title, label: m.rank || r.label, c: r.c, d: r.d };
 }
 let HEX_SEGS;
@@ -954,12 +979,11 @@ function render() {
   show('screenApp');
   $('meAvatar').innerHTML = avatar(me().id);
   $('meName').innerHTML = nameTag(me().id, { noTitle: true });
-  const reviewCount = D().workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
   const pendingCount = me().isManager && !D().rolesMode ? D().members.filter(m => m.status === 'pending').length : 0;
-  const staffOk = me().isAdmin || me().canEditRoles || me().isCommand;
+  const staffOk = me().isAdmin || me().canEditRoles || me().isCommand || !!me().lead;
   if (!TABS.some(t => t.id === S.tab && (!t.staff || staffOk))) S.tab = 'dashboard';
   $('tabs').innerHTML = TABS.filter(t => !t.staff || staffOk).map(t => {
-    const n = t.id === 'ops' ? reviewCount : t.id === 'crew' ? pendingCount : t.id === 'treasury' ? subCount('treasury', 'approvals') * (me().isStaff ? 1 : 0) + subCount('treasury', 'treasurer') * (me().isManager ? 1 : 0) : 0;
+    const n = t.id === 'crew' ? pendingCount : t.id === 'treasury' ? subCount('treasury', 'approvals') * (me().canTreasury ? 1 : 0) + subCount('treasury', 'treasurer') * (me().isManager ? 1 : 0) : 0;
     return `<button class="tab${S.tab === t.id ? ' on' : ''}" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}" type="button">${t.label}${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
   const view = $('view');
@@ -992,10 +1016,9 @@ function renderPending() {
 /* ---------- Dashboard ---------- */
 function viewDashboard() {
   const m = me(), d = D();
-  const myWork = d.workorders.filter(w => w.assignees.includes(m.id) && (w.status === 'active' || w.status === 'review'));
-  const toReview = d.workorders.filter(w => w.status === 'review' && canLeadDiv(w.division));
-  const openWork = d.workorders.filter(w => w.status === 'open' || (w.status === 'active' && w.assignees.length < w.slots));
-  const moving = d.runs.filter(r => r.status === 'loading' || r.status === 'in-transit');
+  const myWork = d.workorders.filter(w => w.assignees.includes(m.id) && w.status === 'active');
+  const openWork = d.workorders.filter(w => (w.status === 'open' || w.status === 'active') && !w.assignees.includes(m.id) && w.assignees.length < w.slots);
+  const moving = d.workorders.filter(w => w.type === 'Hauling' && w.status === 'active' && w.stage >= 1);
   const myShips = d.ships.filter(s => s.ownerId === m.id);
   const homeDiv = (m.divisions || [])[0] || m.division;
   const div = divOf(homeDiv);
@@ -1014,8 +1037,8 @@ function viewDashboard() {
     <div class="stats">
       <div class="stat"><div class="stat-label">Org treasury</div><div class="stat-value">${auec(d.ledger.balance)}<small>aUEC</small></div><div class="stat-note">Confirmed by the treasurer</div></div>
       <div class="stat"><div class="stat-label">My earnings</div><div class="stat-value">${auec(d.ledger.myEarnings)}<small>aUEC</small></div><div class="stat-note">From paid work orders</div></div>
-      <div class="stat"><div class="stat-label">Open work</div><div class="stat-value">${openWork.length}</div><div class="stat-note">${toReview.length ? toReview.length + ' awaiting your review' : 'Jobs taking crew'}</div></div>
-      <div class="stat"><div class="stat-label">Cargo moving</div><div class="stat-value">${moving.reduce((a, r) => a + r.scu, 0).toLocaleString('en-US')}<small>SCU</small></div><div class="stat-note">${moving.length} active run${moving.length === 1 ? '' : 's'}</div></div>
+      <div class="stat"><div class="stat-label">Open work</div><div class="stat-value">${openWork.length}</div><div class="stat-note">Jobs in your crews taking crew</div></div>
+      <div class="stat"><div class="stat-label">Cargo moving</div><div class="stat-value">${moving.reduce((a, w) => a + (w.scu || 0), 0).toLocaleString('en-US')}<small>SCU</small></div><div class="stat-note">${moving.length} haul${moving.length === 1 ? '' : 's'} underway</div></div>
     </div>
     ${majors.length ? `<h2 class="sub section">★ Major events</h2><div class="majors">${majors.map(e => `<button class="major-card" type="button" data-act="cal-open" data-id="${esc(e.id)}"><span class="when">${esc(fmtDateTime(e.start))} · ${esc(rel(e.start))}</span><strong>${esc(e.title)}</strong>${e.location ? `<small>${esc(e.location)}</small>` : ''}</button>`).join('')}</div>` : ''}
     <div class="grid-2 grid-split section">
@@ -1031,13 +1054,12 @@ function viewDashboard() {
       <div>
         <h2 class="sub">My work</h2>
         <div class="panel rows">${myWork.length ? myWork.map(w => woRow(w)).join('') : `<div class="row"><span class="empty" style="padding:6px 0">You’re not on any jobs. <button class="btn btn-ghost btn-sm" data-tab="work" type="button">Browse work orders</button></span></div>`}</div>
-        ${toReview.length ? `<h2 class="sub section">Awaiting your review</h2><div class="panel rows">${toReview.map(w => woRow(w)).join('')}</div>` : ''}
       </div>
       <div>
         <h2 class="sub"><span class="dot-live"></span>Live logistics</h2>
-        <div class="panel rows">${moving.length ? moving.slice(0, 6).map(r => `
-          <div class="row"><div class="row-main"><span class="row-title">${esc(r.cargo)} · ${r.scu.toLocaleString('en-US')} SCU</span>
-          <span class="row-sub">${esc(r.origin || '—')} → ${esc(r.destination)}${r.eta ? ' · ETA ' + esc(rel(r.eta)) : ''}</span></div>${pillFor(r.status)}</div>`).join('')
+        <div class="panel rows">${moving.length ? moving.slice(0, 6).map(w => `
+          <div class="row"><div class="row-main"><span class="row-title">${esc(w.cargo || w.title)}${w.scu ? ' · ' + w.scu.toLocaleString('en-US') + ' SCU' : ''}</span>
+          <span class="row-sub">${esc(w.origin || '—')} → ${esc(w.destination || '—')} · ${w.assignees.map(id => esc(nameOf(id))).join(', ')}</span></div><span class="pill active">${esc((w.stages || [])[w.stage] || '')}</span></div>`).join('')
           : '<div class="row"><span class="empty" style="padding:6px 0">No cargo moving right now.</span></div>'}</div>
         <h2 class="sub section">My hangar</h2>
         <div class="panel panel-pad">${myShips.length ? `<div class="owners">${myShips.map(s => `<span class="owner"><span>${esc(s.model)}${s.nickname ? ' “' + esc(s.nickname) + '”' : ''}</span></span>`).join('')}</div>`
@@ -1050,109 +1072,150 @@ function woRow(w) {
   return `<div class="row" style="--div:${esc((divOf(w.division) || ORG_DIV).color || '')}">
     <div style="display:flex;gap:12px;align-items:center;min-width:0">${patch(w.division, 28)}
       <div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${w.reward ? auec(w.reward) + ' aUEC · ' : ''}${w.assignees.length}/${w.slots} crew${w.due ? ' · due ' + esc(rel(w.due)) : ''}</span></div></div>
-    ${pillFor(w.status)}</div>`;
+    ${w.status === 'active' && w.stages ? `<span class="pill active">${esc(w.stages[w.stage] || '')}</span>` : pillFor(w.status)}</div>`;
 }
 
 /* ---------- Work orders ---------- */
+function canCreateIn(div) { return canLeadDiv(div) || (me().divisions || []).includes(div); }
+const OPTIONAL_NOTE = 'Sharing earnings is optional. Only report aUEC you want to give the org; the rest is yours.';
+function typesFor(div) { const by = D().lists.woTypesByDiv || {}; return by[div] || D().lists.woTypes; }
+function haulDivs() { return createDivs().filter(x => typesFor(x.id).includes('Hauling')); }
+function createDivs() {
+  const m = me();
+  return ((m.isStaff || m.isCommand) ? [ORG_DIV] : []).concat(D().divisions.filter(x => canCreateIn(x.id) && (x.id !== 'hq' || m.isCommand)));
+}
+function stageTracker(w) {
+  const st = w.stages || ['Planned', 'Underway', 'Done'];
+  const at = w.status === 'complete' ? st.length - 1 : w.stage;
+  return `<ol class="stepper">${st.map((x, i) => `<li class="${i < at ? 'done' : i === at ? 'now' : ''}"><span>${esc(x)}</span></li>`).join('')}</ol>`;
+}
 function viewWork() {
-  const d = D();
-  const statuses = ['open', 'active', 'review', 'complete', 'all'];
+  const d = D(), m = me();
   const divChoices = d.divisions.filter(x => myDivIds().includes(x.id));
   if (S.woDiv !== 'all' && S.woDiv !== 'org' && !divChoices.some(x => x.id === S.woDiv)) S.woDiv = 'all';
-  let list = d.workorders.filter(w => S.woDiv === 'all' || (S.woDiv === 'org' ? w.division === 'all' : w.division === S.woDiv));
-  const counts = {};
-  statuses.forEach(s => { counts[s] = s === 'all' ? list.length : list.filter(w => w.status === s).length; });
-  if (S.woStatus !== 'all') list = list.filter(w => w.status === S.woStatus);
+  const inFilter = w => S.woDiv === 'all' || (S.woDiv === 'org' ? w.division === 'all' : w.division === S.woDiv);
+  const all = d.workorders.filter(inFilter);
+  const mine = all.filter(w => w.status === 'active' && w.assignees.includes(m.id));
+  const open = all.filter(w => (w.status === 'open' || w.status === 'active') && !w.assignees.includes(m.id) && w.assignees.length < w.slots);
+  const others = all.filter(w => w.status === 'active' && !w.assignees.includes(m.id) && w.assignees.length >= w.slots);
+  const done = all.filter(w => w.status === 'complete').sort((a, b) => Date.parse(b.completedAt || b.updated) - Date.parse(a.completedAt || a.updated));
   const order = { urgent: 0, high: 1, normal: 2, low: 3 };
-  if (S.woStatus === 'open' || S.woStatus === 'active') list.sort((a, b) => order[a.priority] - order[b.priority] || Date.parse(b.created) - Date.parse(a.created));
+  open.sort((a, b) => order[a.priority] - order[b.priority] || Date.parse(b.created) - Date.parse(a.created));
+  const canCreate = createDivs().length > 0;
   return `
-    <div class="page-head"><div><div class="eyebrow">Operations</div><h1>Work Orders</h1><p>Claim a job, do the work, submit it for review, get paid.</p></div>
-      ${me().isLead ? '<div class="head-actions"><button class="btn btn-solid" type="button" data-act="wo-new">New work order</button></div>' : ''}</div>
-    <div class="toolbar">
-      <div class="chips">${statuses.map(s => `<button class="chip${S.woStatus === s ? ' on' : ''}" type="button" data-wo-status="${s}">${s === 'all' ? 'All' : label(s)} <span class="num">${counts[s]}</span></button>`).join('')}</div>
-      <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">${me().isStaff ? 'All divisions' : 'All my work'}</option><option value="org"${S.woDiv === 'org' ? ' selected' : ''}>Org-wide</option>${divChoices.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-    </div>
-    ${list.length ? `<div class="wo-grid">${list.map(woCard).join('')}</div>` : `<p class="empty">No work orders here.${me().isLead && S.woStatus === 'open' ? ' Post the first one with “New work order”.' : ''}</p>`}`;
+    <div class="page-head"><div><div class="eyebrow">Operations</div><h1>Work Orders</h1><p>Log a contract in your crew, move it through its steps, complete it. Bounties, mercenary jobs, hauls, mining: pick the type, naming it is up to you.</p><p class="optional-note">${OPTIONAL_NOTE}</p></div>
+      ${canCreate ? '<div class="head-actions">' + (haulDivs().length ? '<button class="btn btn-ghost" type="button" data-act="haul-new">Log a haul</button>' : '') + '<button class="btn btn-solid" type="button" data-act="wo-new">New work order</button></div>' : ''}</div>
+    <div class="toolbar"><h2 class="sub" style="margin:0">My active work <span class="num" style="color:var(--dim)">${mine.length}</span></h2>
+      <select class="mini" data-wo-div aria-label="Filter by division"><option value="all">${m.isStaff ? 'All divisions' : 'All my crews'}</option><option value="org"${S.woDiv === 'org' ? ' selected' : ''}>Org-wide</option>${divChoices.map(x => `<option value="${x.id}"${S.woDiv === x.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+    ${mine.length ? `<div class="wo-grid">${mine.map(woCard).join('')}</div>` : `<p class="empty">Nothing in progress.${canCreate ? ' Start one with “New work order” or “Log a haul”.' : ''}</p>`}
+    <h2 class="sub section">Open in your crews <span class="num" style="color:var(--dim)">${open.length}</span></h2>
+    ${open.length ? `<div class="wo-grid">${open.map(woCard).join('')}</div>` : '<p class="empty">No open jobs right now.</p>'}
+    ${others.length ? `<h2 class="sub section">Crewed by others <span class="num" style="color:var(--dim)">${others.length}</span></h2><div class="wo-grid">${others.map(woCard).join('')}</div>` : ''}
+    <details class="section done-list"${S.showDone ? ' open' : ''}><summary class="sub" data-toggle-done>Completed <span class="num" style="color:var(--dim)">${done.length}</span></summary>
+      ${done.length ? `<div class="panel rows">${done.slice(0, 30).map(w => `<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0">${patch(w.division, 26)}<div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${esc(w.type)} · completed ${esc(rel(w.completedAt || w.updated))} · ${w.assignees.map(id => esc(nameOf(id))).join(', ')}</span></div></div>
+        <div class="actions">${fundsFor(w) ? stagePill(fundsFor(w).status) : w.assignees.includes(m.id) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="funds-for-wo" data-id="${w.id}">Report aUEC</button>` : ''}${m.isManager && !w.paid && w.reward > 0 && w.assignees.length ? `<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" type="button">Pay ${auec(w.reward)}</button>` : ''}</div></div>`).join('')}</div>` : '<p class="empty">Nothing completed yet.</p>'}
+    </details>`;
 }
+function fundsFor(w) { return (D().funds || []).find(x => x.source === 'workorder' && x.refId === w.id && x.status !== 'rejected'); }
 
 function woCard(w) {
   const m = me(), div = divOf(w.division) || (w.division === 'all' ? ORG_DIV : { name: 'Unknown', color: '' });
   const mine = w.assignees.includes(m.id);
   const manage = canLeadDiv(w.division) || w.createdBy === m.id;
-  const review = canLeadDiv(w.division);
+  const st = w.stages || [];
   const btns = [];
-  if ((w.status === 'open' || w.status === 'active') && !mine && w.assignees.length < w.slots) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-claim" data-id="${w.id}" type="button">Claim</button>`);
-  if (w.status === 'active' && mine) {
-    btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-submit" data-id="${w.id}" type="button">Submit for review</button>`);
-    btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-unclaim" data-id="${w.id}" type="button">Leave</button>`);
+  if ((w.status === 'open' || w.status === 'active') && !mine && w.assignees.length < w.slots) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-claim" data-id="${w.id}" type="button">Join</button>`);
+  if (w.status === 'active' && (mine || canLeadDiv(w.division))) {
+    if (w.stage < st.length - 2) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage + 1}" type="button">${esc(st[w.stage + 1])} →</button>`);
+    else btns.push(`<button class="btn btn-ok btn-sm" data-act="wo-complete" data-id="${w.id}" type="button">${esc(st[st.length - 1])} · Complete</button>`);
+    if (w.stage > 0) btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage - 1}" type="button" title="Back a step">←</button>`);
   }
-  if (w.status === 'review' && review && (!w.earnings || m.isStaff)) {
-    btns.push(`<button class="btn btn-ok btn-sm" data-act="wo-approve" data-id="${w.id}" type="button">${w.earnings ? 'Funds received · Approve' : 'Approve'}</button>`);
-    btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-reject" data-id="${w.id}" type="button">Send back</button>`);
-  }
-  if (w.status === 'complete' && m.isManager && !w.paid && w.reward > 0 && w.assignees.length) btns.push(`<button class="btn btn-solid btn-sm" data-act="wo-pay" data-id="${w.id}" type="button">Pay ${auec(w.reward)} aUEC</button>`);
+  if (w.status === 'active' && mine) btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-unclaim" data-id="${w.id}" type="button">Leave</button>`);
   if (manage && w.status !== 'complete' && w.status !== 'cancelled') {
     btns.push(`<button class="btn btn-ghost btn-sm" data-act="wo-edit" data-id="${w.id}" type="button">Edit</button>`);
     btns.push(`<button class="btn btn-danger btn-sm" data-act="wo-cancel" data-id="${w.id}" data-confirm="Confirm cancel" type="button">Cancel</button>`);
   }
+  const haul = w.type === 'Hauling' && (w.cargo || w.scu);
+  const val = haul ? cargoValue(w.cargo, w.scu) : null;
   return `<article class="panel wo" style="--div:${esc(div.color)}">
     <div class="wo-top"><div class="wo-div">${patch(w.division, 26)}<span>${esc(div.name)}</span></div>
-      <div class="actions">${w.priority !== 'normal' ? pillFor(w.priority) : ''}${pillFor(w.status)}</div></div>
+      <div class="actions">${w.priority !== 'normal' ? pillFor(w.priority) : ''}<span class="pill">${esc(w.type)}</span></div></div>
     <h3>${esc(w.title)}</h3>
-    <div class="wo-meta"><span>${esc(w.type)}</span>${w.location ? `<span>${esc(w.location)}</span>` : ''}${w.due ? `<span>Due ${esc(fmtDateTime(w.due))}</span>` : ''}<span>Posted by ${esc(nameOf(w.createdBy))}</span></div>
+    ${haul ? `<div class="route"><b>${esc(w.cargo || 'Cargo')}</b>${w.scu ? `<span class="num">${w.scu.toLocaleString('en-US')} SCU</span>` : ''}${w.origin || w.destination ? `<span>·</span><b>${esc(w.origin || '—')}</b><span aria-hidden="true">→</span><b>${esc(w.destination || '—')}</b>` : ''}</div>` : ''}
+    ${w.status === 'active' ? stageTracker(w) : ''}
+    <div class="wo-meta">${!haul && w.location ? `<span>${esc(w.location)}</span>` : ''}${w.due ? `<span>Due ${esc(fmtDateTime(w.due))}</span>` : ''}<span>By ${esc(nameOf(w.createdBy))}</span>${val ? `<span>Worth ~${auec(val.value)} aUEC</span>` : ''}</div>
     ${w.description ? `<p class="wo-desc">${esc(w.description)}</p>` : ''}
-    ${w.submitNote && (w.status === 'review' || w.status === 'complete') ? `<div class="note"><b>Crew report:</b> ${esc(w.submitNote)}</div>` : ''}
-    ${w.earnings && (w.status === 'review' || w.status === 'complete') ? `<div class="note"><b>${auec(w.earnings)} aUEC</b> sent to ${esc(nameOf(w.sentTo))}${w.status === 'review' ? ' · waiting for a supervisor to confirm' : ''}</div>` : ''}
-    ${w.reviewNote ? `<div class="note"><b>${w.status === 'active' ? 'Sent back:' : 'Review:'}</b> ${esc(w.reviewNote)}</div>` : ''}
     <div class="wo-foot">
-      <div style="display:flex;align-items:center;gap:10px">
-        <span class="reward">${w.reward ? auec(w.reward) + '<small>aUEC</small>' : '<small>No reward</small>'}</span>
-        ${w.paid ? '<span class="pill complete">Paid</span>' : ''}
-      </div>
+      <span class="reward">${w.reward ? auec(w.reward) + '<small>aUEC reward</small>' : '<small>No reward</small>'}</span>
       <div style="display:flex;align-items:center;gap:8px"><span class="av-stack">${w.assignees.map(id => avatar(id, true)).join('')}</span><span class="num" style="color:var(--muted);font-size:.86rem">${w.assignees.length}/${w.slots}</span></div>
     </div>
     ${btns.length ? `<div class="actions">${btns.join('')}</div>` : ''}
   </article>`;
 }
 
-function woForm(w) {
-  const m = me(), d = D();
-  const divs = (m.isStaff ? [ORG_DIV] : []).concat(d.divisions.filter(x => canLeadDiv(x.id)));
-  w = w || { title: '', division: divs[0] ? divs[0].id : '', type: 'Other', description: '', location: '', reward: 0, slots: 1, priority: 'normal', due: '' };
-  openDialog(w.id ? 'Edit work order' : 'New work order', `
+function woForm(w, preset) {
+  const d = D();
+  const haulOnly = !w && preset && preset.type === 'Hauling';
+  const divs = haulOnly ? haulDivs() : createDivs();
+  const pickDiv = [S.tab === 'divisions' ? S.divTab : '', S.woDiv].concat(me().divisions || []).find(id => id && divs.some(x => x.id === id)) || (divs[0] || {}).id || '';
+  w = w || Object.assign({ title: '', division: pickDiv, type: '', description: '', location: '', reward: 0, slots: 1, priority: 'normal', due: '', cargo: '', scu: '', origin: '', destination: '', requestId: '' }, preset || {});
+  if (!typesFor(w.division).includes(w.type)) w.type = typesFor(w.division)[0];
+  const haul = w.type === 'Hauling';
+  openDialog(w.id ? 'Edit work order' : haul ? 'Log a haul' : 'New work order', `
     <form class="dlg-body" data-form="wo" novalidate>
-      <input type="hidden" name="id" value="${esc(w.id || '')}">
-      <div class="field"><label for="woTitle">Title *</label><input id="woTitle" name="title" maxlength="100" required value="${esc(w.title)}" placeholder="e.g. Quantanium run, Aaron Halo"></div>
+      <input type="hidden" name="id" value="${esc(w.id || '')}"><input type="hidden" name="requestId" value="${esc(w.requestId || '')}">
       <div class="form-grid">
-        <div class="field"><label for="woDiv">Division</label><select id="woDiv" name="division">${divs.map(x => `<option value="${x.id}"${x.id === w.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
-        <div class="field"><label for="woType">Type</label><select id="woType" name="type">${d.lists.woTypes.map(t => `<option${t === w.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
-        <div class="field"><label for="woReward">Reward (aUEC)</label><input id="woReward" name="reward" inputmode="numeric" value="${esc(w.reward || '')}" placeholder="0"></div>
+        <div class="field"><label for="woDiv">Crew</label><select id="woDiv" name="division" data-wo-crew>${divs.map(x => `<option value="${x.id}"${x.id === w.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <div class="field"><label for="woType">Type</label><select id="woType" name="type" data-wo-type>${typeOptions(w.division, w.type)}</select></div>
+        <div class="field full"><label for="woTitle">Contract name <span class="opt">(optional)</span></label><input id="woTitle" name="title" maxlength="100" value="${esc(w.title)}" placeholder="${haul ? 'e.g. Laranite to Area18' : 'Leave blank to use the type, e.g. “Bounty”'}"></div>
+        <div class="field full haul-only"${haul ? '' : ' hidden'}><label for="woCargo">Cargo</label><input id="woCargo" name="cargo" maxlength="100" list="commodityList" autocomplete="off" value="${esc(w.cargo)}" placeholder="e.g. Laranite"><datalist id="commodityList">${MK.data ? MK.data.commodities.map(c => `<option value="${esc(c.name)}">`).join('') : ''}</datalist></div>
+        <div class="field haul-only"${haul ? '' : ' hidden'}><label for="woScu">SCU</label><input id="woScu" name="scu" inputmode="numeric" value="${esc(w.scu || '')}" placeholder="0"></div>
+        <div class="field haul-only"${haul ? '' : ' hidden'}><label for="woFrom">From</label><input id="woFrom" name="origin" maxlength="120" value="${esc(w.origin)}" placeholder="e.g. ArcCorp Mining 045"></div>
+        <div class="field full haul-only"${haul ? '' : ' hidden'}><label for="woTo">To</label><input id="woTo" name="destination" maxlength="120" value="${esc(w.destination)}" placeholder="e.g. Area18 TDD"></div>
+        <div class="field not-haul"${haul ? ' hidden' : ''}><label for="woLoc">Location</label><input id="woLoc" name="location" maxlength="120" value="${esc(w.location)}" placeholder="e.g. Aaron Halo, Stanton"></div>
         <div class="field"><label for="woSlots">Crew slots</label><input id="woSlots" name="slots" type="number" min="1" max="50" value="${esc(w.slots || 1)}"></div>
         <div class="field"><label for="woPrio">Priority</label><select id="woPrio" name="priority">${d.lists.priorities.map(p => `<option value="${p}"${p === w.priority ? ' selected' : ''}>${label(p)}</option>`).join('')}</select></div>
         <div class="field"><label for="woDue">Due</label><input id="woDue" name="due" type="datetime-local" value="${esc(toLocalInput(w.due))}"></div>
-        <div class="field full"><label for="woLoc">Location</label><input id="woLoc" name="location" maxlength="120" value="${esc(w.location)}" placeholder="e.g. Aaron Halo, Stanton"></div>
-        <div class="field full"><label for="woDesc">Details</label><textarea id="woDesc" name="description" maxlength="2000" placeholder="What needs doing, ships needed, meeting point…">${esc(w.description)}</textarea></div>
+        ${me().isManager ? `<div class="field"><label for="woReward">Reward paid by the org (aUEC)</label><input id="woReward" name="reward" inputmode="numeric" value="${esc(w.reward || '')}" placeholder="0"></div>` : ''}
+        <div class="field full"><label for="woDesc">Details</label><textarea id="woDesc" name="description" maxlength="2000" placeholder="What needs doing, ships, meeting point…">${esc(w.description)}</textarea></div>
+        ${w.id ? '' : `<label class="check full" style="grid-column:1/-1"><input type="checkbox" name="join" checked> I’m doing this one (start it now)</label>`}
       </div>
-      <p class="hint">Rewards are paid from the org treasury when an admin pays out an approved job, split evenly across the crew.</p>
-      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${w.id ? 'Save changes' : 'Post work order'}</button></div>
+      <p class="hint optional-note">${OPTIONAL_NOTE}</p>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${w.id ? 'Save changes' : haul ? 'Log haul' : 'Create'}</button></div>
+    </form>`);
+}
+
+function typeOptions(div, sel) { return typesFor(div).map(t => `<option${t === sel ? ' selected' : ''}>${esc(t)}</option>`).join(''); }
+function completeForm(id) {
+  const w = D().workorders.find(x => x.id === id); if (!w) return;
+  openDialog('Complete work order', `
+    <form class="dlg-body" data-form="wo-complete" data-id="${esc(id)}" novalidate>
+      <p><b>${esc(w.title)}</b> moves to completed.</p>
+      <div class="field"><label for="cpNote">Notes (optional)</label><textarea id="cpNote" name="note" maxlength="1000" placeholder="What got done, amounts, screenshot links…"></textarea></div>
+      <div class="field"><label for="cpAmt">aUEC to give the org <span class="opt">(optional)</span></label><input id="cpAmt" name="amount" inputmode="numeric" placeholder="0"></div>
+      <p class="hint optional-note">${OPTIONAL_NOTE} Leave it blank to keep it all.</p>
+      <p class="hint">If you enter an amount, it goes to the supervisor pool. A supervisor claims it and you’ll see who to send it to in-game. You can also report it later under Treasury.</p>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-ok" type="submit">Complete</button></div>
     </form>`);
 }
 
 /* ---------- Logistics ---------- */
 function viewLogistics() {
   const d = D(), m = me();
-  const lanes = ['planned', 'loading', 'in-transit', 'delivered'];
+  const hauls = d.workorders.filter(w => w.type === 'Hauling');
+  const lanes = [['Planned', w => w.status !== 'complete' && w.stage === 0], ['Cargo purchased', w => w.status !== 'complete' && w.stage === 1], ['In transit', w => w.status !== 'complete' && w.stage === 2],
+    ['Delivered', w => w.status === 'complete' && Date.now() - Date.parse(w.completedAt || w.updated) < 3 * 864e5]];
   const openReqs = d.requests.filter(r => r.status === 'open');
   const doneReqs = d.requests.filter(r => r.status !== 'open');
   return `
-    <div class="page-head"><div><div class="eyebrow">Supply chain</div><h1>Logistics</h1><p>Every cargo run in the org, updated live. Log your runs so the fleet knows what’s moving.</p></div>
+    <div class="page-head"><div><div class="eyebrow">Supply chain</div><h1>Logistics</h1><p>Every haul in your crews, live. Run as many as you like; each one is its own work order.</p></div>
       <div class="head-actions"><span class="pill" style="gap:8px"><span class="dot-live"></span>Live · ${esc(rel(d.synced))}</span>
         ${m.isLead ? '<button class="btn btn-ghost" type="button" data-act="req-new">New supply request</button>' : ''}
-        <button class="btn btn-solid" type="button" data-act="run-new">Log a run</button></div></div>
-    <div class="board">${lanes.map(l => {
-      const runs = d.runs.filter(r => r.status === l);
-      return `<section class="lane" aria-label="${label(l)}"><div class="lane-head"><span>${label(l)}</span><span class="num">${runs.length}</span></div>
-        ${runs.length ? runs.map(runCard).join('') : '<p class="hint" style="padding:4px">Nothing here.</p>'}</section>`;
+        ${haulDivs().length ? '<button class="btn btn-solid" type="button" data-act="haul-new">Log a haul</button>' : ''}</div></div>
+    <div class="board">${lanes.map(([name, fn]) => {
+      const list = hauls.filter(w => w.status !== 'cancelled' && w.status !== 'open' && fn(w));
+      return `<section class="lane" aria-label="${esc(name)}"><div class="lane-head"><span>${esc(name)}</span><span class="num">${list.length}</span></div>
+        ${list.length ? list.map(haulCard).join('') : '<p class="hint" style="padding:4px">Nothing here.</p>'}</section>`;
     }).join('')}</div>
     <div class="section">
       <h2 class="sub">Supply requests</h2>
@@ -1162,30 +1225,24 @@ function viewLogistics() {
     ${marketPanel()}`;
 }
 
-function runCard(r) {
-  const m = me(), mine = r.ownerId === m.id, manage = mine || m.isLead;
-  const next = { planned: ['loading', 'Start loading'], loading: ['in-transit', 'Depart'], 'in-transit': ['delivered', 'Mark delivered'] }[r.status];
-  const req = r.requestId ? D().requests.find(x => x.id === r.requestId) : null;
-  return `<article class="run">
-    <div class="run-cargo">${esc(r.cargo)}</div>
-    <div class="route"><b>${esc(r.origin || '—')}</b><span aria-hidden="true">→</span><b>${esc(r.destination)}</b></div>
-    <div class="run-foot"><span class="num">${r.scu.toLocaleString('en-US')} SCU${r.ship ? ' · ' + esc(r.ship) : ''}</span>${r.eta && r.status !== 'delivered' ? `<span>ETA ${esc(rel(r.eta))}</span>` : ''}</div>
-    ${(v => v ? `<div class="hint">Worth about <b class="num" style="color:var(--text)">${Math.round(v.value).toLocaleString('en-US')} aUEC</b> at ${esc(v.at.terminal)}</div>` : '')(cargoValue(r.cargo, r.scu))}
-    ${req ? `<div class="hint">For: ${esc(req.item)}</div>` : ''}
-    ${r.note ? `<div class="hint">${esc(r.note)}</div>` : ''}
-    <div class="run-foot">${who(r.ownerId)}<span>${esc(rel(r.updated))}</span></div>
-    ${manage && r.status !== 'delivered' && r.status !== 'cancelled' ? `<div class="actions">
-      ${next ? `<button class="btn btn-solid btn-sm" type="button" data-act="run-status" data-id="${r.id}" data-status="${next[0]}">${next[1]}</button>` : ''}
-      <button class="btn btn-ghost btn-sm" type="button" data-act="run-edit" data-id="${r.id}">Edit</button>
-      ${mine || m.isManager ? `<button class="btn btn-danger btn-sm" type="button" data-act="run-remove" data-id="${r.id}" data-confirm="Confirm">Remove</button>` : ''}
-    </div>` : ''}
+function haulCard(w) {
+  const m = me(), mine = w.assignees.includes(m.id), st = w.stages || [];
+  const val = cargoValue(w.cargo, w.scu);
+  const next = w.status === 'active' && (mine || canLeadDiv(w.division))
+    ? (w.stage < st.length - 2 ? `<button class="btn btn-solid btn-sm" type="button" data-act="wo-stage" data-id="${w.id}" data-stage="${w.stage + 1}">${esc(st[w.stage + 1])} →</button>` : `<button class="btn btn-ok btn-sm" type="button" data-act="wo-complete" data-id="${w.id}">Delivered</button>`) : '';
+  return `<article class="run" style="border-left:3px solid ${esc((divOf(w.division) || ORG_DIV).color)}">
+    <div class="run-cargo">${esc(w.cargo || w.title)}</div>
+    <div class="route"><b>${esc(w.origin || '—')}</b><span aria-hidden="true">→</span><b>${esc(w.destination || '—')}</b></div>
+    <div class="run-foot"><span class="num">${(w.scu || 0).toLocaleString('en-US')} SCU</span>${val ? `<span>~${auec(val.value)} aUEC</span>` : ''}</div>
+    <div class="run-foot"><span class="av-stack">${w.assignees.map(id => avatar(id, true)).join('')}</span><span>${esc(rel(w.updated))}</span></div>
+    ${next ? `<div class="actions">${next}</div>` : ''}
   </article>`;
 }
 
 function reqCard(r) {
-  const runs = D().runs.filter(x => x.requestId === r.id && x.status !== 'cancelled');
-  const done = runs.filter(x => x.status === 'delivered').reduce((a, x) => a + x.scu, 0);
-  const moving = runs.filter(x => x.status !== 'delivered').reduce((a, x) => a + x.scu, 0);
+  const hauls = D().workorders.filter(x => x.requestId === r.id && x.status !== 'cancelled');
+  const done = hauls.filter(x => x.status === 'complete').reduce((a, x) => a + (x.scu || 0), 0);
+  const moving = hauls.filter(x => x.status !== 'complete').reduce((a, x) => a + (x.scu || 0), 0);
   const q = Math.max(r.quantity, 1);
   const pd = Math.min(100, done / q * 100), pm = Math.min(100 - pd, moving / q * 100);
   return `<article class="panel panel-pad stack">
@@ -1194,33 +1251,9 @@ function reqCard(r) {
     <div class="bar" aria-label="${done} of ${r.quantity} SCU delivered"><i class="done" style="width:${pd}%"></i><i class="moving" style="width:${pm}%"></i></div>
     <div class="run-foot"><span class="num">${done.toLocaleString('en-US')} / ${r.quantity.toLocaleString('en-US')} SCU delivered</span>${moving ? `<span class="num">${moving.toLocaleString('en-US')} en route</span>` : ''}</div>
     ${r.note ? `<p class="hint">${esc(r.note)}</p>` : ''}
-    <div class="actions"><button class="btn btn-solid btn-sm" type="button" data-act="run-new" data-req="${r.id}">Take a run</button>
+    <div class="actions">${haulDivs().length ? `<button class="btn btn-solid btn-sm" type="button" data-act="haul-new" data-req="${r.id}">Take a haul</button>` : ''}
       ${me().isLead || r.createdBy === me().id ? `<button class="btn btn-ghost btn-sm" type="button" data-act="req-status" data-id="${r.id}" data-status="fulfilled">Mark fulfilled</button><button class="btn btn-ghost btn-sm" type="button" data-act="req-edit" data-id="${r.id}">Edit</button>` : ''}</div>
   </article>`;
-}
-
-function runForm(r, requestId) {
-  const d = D();
-  const myShips = d.ships.filter(s => s.ownerId === me().id);
-  r = r || { cargo: '', scu: '', ship: myShips[0] ? myShips[0].model : '', origin: '', destination: '', eta: '', requestId: requestId || '', note: '', status: 'planned' };
-  const req = r.requestId ? d.requests.find(x => x.id === r.requestId) : null;
-  if (req && !r.id) { r.destination = r.destination || req.destination; r.cargo = r.cargo || req.item; }
-  openDialog(r.id ? 'Edit cargo run' : 'Log a cargo run', `
-    <form class="dlg-body" data-form="run" novalidate>
-      <input type="hidden" name="id" value="${esc(r.id || '')}">
-      <div class="form-grid">
-        <div class="field"><label for="rCargo">Cargo *</label><input id="rCargo" name="cargo" maxlength="100" required value="${esc(r.cargo)}" placeholder="e.g. Quantainium" list="commodityList" autocomplete="off"><datalist id="commodityList">${MK.data ? MK.data.commodities.map(c => `<option value="${esc(c.name)}">`).join('') : ''}</datalist></div>
-        <div class="field"><label for="rScu">SCU</label><input id="rScu" name="scu" inputmode="numeric" value="${esc(r.scu)}" placeholder="0"></div>
-        <div class="field"><label for="rOrigin">From</label><input id="rOrigin" name="origin" maxlength="120" value="${esc(r.origin)}" placeholder="e.g. CRU-L1"></div>
-        <div class="field"><label for="rDest">To *</label><input id="rDest" name="destination" maxlength="120" required value="${esc(r.destination)}" placeholder="e.g. Orison"></div>
-        <div class="field"><label for="rShip">Ship</label><input id="rShip" name="ship" maxlength="60" list="shipList" value="${esc(r.ship)}"></div>
-        <div class="field"><label for="rEta">ETA</label><input id="rEta" name="eta" type="datetime-local" value="${esc(toLocalInput(r.eta))}"></div>
-        <div class="field full"><label for="rReq">For supply request</label><select id="rReq" name="requestId"><option value="">None</option>${d.requests.filter(x => x.status === 'open' || x.id === r.requestId).map(x => `<option value="${x.id}"${x.id === r.requestId ? ' selected' : ''}>${esc(x.item)} → ${esc(x.destination || '—')}</option>`).join('')}</select></div>
-        <div class="field full"><label for="rNote">Note</label><input id="rNote" name="note" maxlength="300" value="${esc(r.note)}" placeholder="Escort needed, route, etc."></div>
-      </div>
-      <datalist id="shipList">${myShips.map(s => `<option value="${esc(s.model)}">`).join('')}${d.catalog.map(c => `<option value="${esc(c[0])}">`).join('')}</datalist>
-      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">${r.id ? 'Save' : 'Log run'}</button></div>
-    </form>`);
 }
 
 function reqForm(r) {
@@ -1303,7 +1336,7 @@ function viewLedger() {
       <div class="stat"><div class="stat-label">Total out</div><div class="stat-value" style="color:var(--danger)">${auec(totalOut)}<small>aUEC</small></div></div>
       <div class="stat"><div class="stat-label">My earnings</div><div class="stat-value">${auec(L.myEarnings)}<small>aUEC</small></div></div>
     </div>
-    ${m.isManager ? `<form class="panel panel-pad section" data-form="ledger" novalidate>
+    ${m.owner ? `<form class="panel panel-pad section" data-form="ledger" novalidate>
       <div class="form-grid" style="grid-template-columns:repeat(4,minmax(0,1fr))">
         <div class="field"><label for="lType">Type</label><select id="lType" name="type">${d.lists.ledgerTypes.map(t => `<option value="${t}">${label(t)}</option>`).join('')}</select></div>
         <div class="field"><label for="lAmt">Amount (aUEC)</label><input id="lAmt" name="amount" inputmode="numeric" required placeholder="0"></div>
@@ -1313,13 +1346,13 @@ function viewLedger() {
       <div class="dlg-foot" style="margin-top:12px"><button class="btn btn-solid" type="submit">Add entry</button></div>
     </form>` : ''}
     <div class="panel section table-scroll">
-      ${L.entries.length ? `<table class="ledger-table"><thead><tr><th>Date</th><th>Type</th><th>Member</th><th>Note</th><th class="amt">Amount</th>${m.isManager ? '<th></th>' : ''}</tr></thead><tbody>
+      ${L.entries.length ? `<table class="ledger-table"><thead><tr><th>Date</th><th>Type</th><th>Member</th><th>Note</th><th class="amt">Amount</th>${m.owner ? '<th></th>' : ''}</tr></thead><tbody>
       ${L.entries.map(e => `<tr><td style="white-space:nowrap;color:var(--muted)">${esc(fmtDate(e.date))}</td>
         <td><span class="pill ${isIn(e.type) ? 'in' : 'out'}">${esc(label(e.type))}</span></td>
         <td>${e.memberId ? who(e.memberId) : '<span style="color:var(--dim)">—</span>'}</td>
         <td style="color:var(--muted);overflow-wrap:anywhere">${esc(e.note)}</td>
         <td class="amt ${isIn(e.type) ? 'plus' : 'minus'}">${isIn(e.type) ? '+' : '−'}${auec(e.amount)}</td>
-        ${m.isManager ? `<td style="text-align:right"><button class="btn btn-danger btn-sm" type="button" data-act="ledger-remove" data-id="${e.id}" data-confirm="${e.workOrderId ? 'Remove all shares' : 'Confirm'}">Remove</button></td>` : ''}</tr>`).join('')}
+        ${m.owner ? `<td style="text-align:right"><button class="btn btn-danger btn-sm" type="button" data-act="ledger-remove" data-id="${e.id}" data-confirm="${e.workOrderId ? 'Remove all shares' : 'Confirm'}">Remove</button></td>` : ''}</tr>`).join('')}
       </tbody></table>` : '<p class="empty panel-pad">No ledger entries yet.</p>'}
     </div>`;
 }
@@ -1373,7 +1406,7 @@ function memberForm(id) {
         ${rm ? '' : `<div class="field"><label for="mDiv">Division</label><select id="mDiv" name="division"><option value="">None</option>${divs.map(x => `<option value="${x.id}"${x.id === p.division ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
         <div class="field"><label for="mRole">Role</label><select id="mRole" name="role"${self ? ' disabled' : ''}>${['member', 'lead', 'admin'].map(r => `<option value="${r}"${r === p.role ? ' selected' : ''}>${r === 'lead' ? 'Division lead' : r.charAt(0).toUpperCase() + r.slice(1)}</option>`).join('')}</select></div>`}
         ${m.isManager ? `<div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status"${self ? ' disabled' : ''}>${['active', 'suspended'].concat(p.status && !['active', 'suspended'].includes(p.status) ? [p.status] : []).map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>` : ''}
-        ${rm && m.isCommand ? `<div class="field"><label for="mLead">Division lead (portal)</label><select id="mLead" name="portalLead"><option value="">${p.lead && !p.portalLead ? 'From Discord: ' + esc((divOf(p.lead) || {}).name || '') : 'None'}</option>${divs.map(x => `<option value="${x.id}"${x.id === p.portalLead ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
+        ${rm && m.isCommand ? `<div class="field"><label for="mLead">Division lead (portal)</label><select id="mLead" name="portalLead"><option value="">None</option>${divs.map(x => `<option value="${x.id}"${x.id === p.portalLead ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
         ${rm && m.owner ? `<label class="check full" style="grid-column:1/-1"><input type="checkbox" name="command"${p.command ? ' checked' : ''}${p.tier !== 'director' ? ' disabled' : ''}> Command member${p.tier !== 'director' ? ' <span class="hint">(Directors only)</span>' : ''}</label>` : ''}
       </div>
       <p class="hint">${rm ? 'Ranks and crews come from Discord roles. Suspending blocks the portal even if they keep their roles, and signs them out everywhere.' : 'Leads can post and review work orders for their division and manage supply requests. Suspending signs the member out everywhere.'}</p>
@@ -1604,7 +1637,7 @@ function viewDivisions() {
   const div = divOf(S.divTab);
   const people = D().members.filter(x => (!x.status || x.status === 'active') && (x.divisions || [x.division]).includes(div.id));
   const evs = upcoming(calEvents().filter(e => e.division === div.id), 60);
-  const wos = D().workorders.filter(w => w.division === div.id && (w.status === 'open' || w.status === 'active' || w.status === 'review'));
+  const wos = D().workorders.filter(w => w.division === div.id && (w.status === 'open' || w.status === 'active'));
   const leads = people.filter(p => p.lead === div.id);
   return head + `
     ${ids.length > 1 ? `<div class="chips div-chips" style="margin-bottom:16px">${ids.map(id => `<button class="chip${id === div.id ? ' on' : ''}" type="button" data-div-tab="${id}">${esc(divOf(id).name)}</button>`).join('')}</div>` : ''}
@@ -1633,29 +1666,37 @@ function viewDivisions() {
 /* ---------- Staff ---------- */
 function viewStaff() {
   const m = me();
-  if (!m.isAdmin && !m.canEditRoles && !m.isCommand) return '<p class="empty">Staff only.</p>';
+  if (!m.isAdmin && !m.canEditRoles && !m.isCommand && !m.lead) return '<p class="empty">Staff only.</p>';
   const tabs = (D().staff ? [['overview', 'Overview']] : [])
     .concat(m.isCommand && D().staff ? [['events', 'Major events']] : [])
     .concat(m.isAdmin && D().staff ? [['news', 'Newsletters']] : [])
-    .concat(m.isCommand ? [['leads', 'Division leads']] : [])
+    .concat(m.isCommand || m.lead ? [['leads', 'Division Management']] : [])
     .concat(m.canEditRoles ? [['roles', 'Discord roles']] : []);
   if (!tabs.some(t => t[0] === S.staffTab)) S.staffTab = tabs[0][0];
   const body = { overview: staffOverview, events: staffEvents, news: staffNews, leads: staffLeads, roles: staffRoles }[S.staffTab]();
-  return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>${m.isAdmin ? 'Site content, Discord access and setup.' : 'Discord role permissions for the member portal.'}</p></div></div>
+  return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>${m.isAdmin ? 'Site content, Discord access, leads and supervisors.' : m.canEditRoles ? 'Discord role permissions for the member portal.' : 'Your division’s supervisors.'}</p></div></div>
     <div class="subtabs chips">${tabs.map(t => `<button class="chip${S.staffTab === t[0] ? ' on' : ''}" type="button" data-staff-tab="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
 }
 
 function staffLeads() {
-  const d = D(), divs = d.divisions.filter(x => !x.command);
+  const d = D(), m = me();
+  const divs = d.divisions.filter(x => !x.command && (m.isCommand || m.lead === x.id));
   const active = d.members.filter(x => (x.status || 'active') === 'active');
-  return `<div class="toolbar"><p class="hint" style="max-width:720px">One lead per person. A lead set here wins over a Discord lead role; clear it to fall back to Discord. Leads run only their own division and are members everywhere else.</p></div>
+  const inCrew = (x, id) => (x.divisions || [x.division]).includes(id);
+  return `<div class="toolbar"><p class="hint" style="max-width:760px">${m.isCommand ? 'Command sets one lead per division. ' : ''}Leads pick their supervisors. Supervisors handle treasury submissions only; they get no extra division powers.</p></div>
     <div class="grid-2">${divs.map(dv => {
       const leads = active.filter(x => x.lead === dv.id);
-      return `<section class="panel div-block"><div class="div-head">${patchSVG(dv, divIndex(dv.id), 40)}<div><h3>${esc(dv.name)}</h3><p>${leads.length ? leads.length + ' lead' + (leads.length === 1 ? '' : 's') : 'No lead yet'}</p></div></div>
-        <div class="rows">${leads.map(p => `<div class="row"><span class="row-title">${nameTag(p.id)}</span><span class="hint">${p.portalLead ? 'Set in portal' : 'Discord role'}</span>${p.portalLead ? `<button class="btn btn-ghost btn-sm" type="button" data-act="lead-clear" data-id="${esc(p.id)}">Remove</button>` : ''}</div>`).join('')}
-        <form class="row" data-form="lead" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make lead"><option value="">Assign a lead…</option>${active.filter(x => x.lead !== dv.id).map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.lead ? ' (leads ' + esc((divOf(x.lead) || {}).name || x.lead) + ')' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit">Assign</button></form></div>
+      const sups = active.filter(x => x.supervisor === dv.id);
+      const supPick = active.filter(x => inCrew(x, dv.id) && x.supervisor !== dv.id && x.tier && x.tier !== 'recruit');
+      return `<section class="panel div-block" style="--div:${esc(dv.color)}"><div class="div-head">${patchSVG(dv, divIndex(dv.id), 40)}<div><h3>${esc(dv.name)}</h3><p>${leads.length ? 'Lead: ' + leads.map(p => esc(nameOf(p.id))).join(', ') : 'No lead yet'} · ${sups.length} supervisor${sups.length === 1 ? '' : 's'}</p></div></div>
+        <div class="mgmt-label">Division lead</div>
+        <div class="rows">${leads.map(p => `<div class="row"><span class="row-title">${nameTag(p.id)}</span>${m.isCommand ? `<button class="btn btn-ghost btn-sm" type="button" data-act="lead-clear" data-id="${esc(p.id)}" data-confirm="Remove lead?">Remove</button>` : ''}</div>`).join('') || '<div class="row"><span class="hint">Nobody yet.</span></div>'}
+        ${m.isCommand ? `<form class="row" data-form="lead" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make lead"><option value="">${leads.length ? 'Replace or add a lead…' : 'Assign a lead…'}</option>${active.filter(x => x.lead !== dv.id && x.tier && x.tier !== 'recruit').map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.lead ? ' (leads ' + esc((divOf(x.lead) || {}).name || x.lead) + ')' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit">Assign</button></form>` : ''}</div>
+        <div class="mgmt-label">Supervisors</div>
+        <div class="rows">${sups.map(p => `<div class="row"><span class="row-title">${nameTag(p.id)}</span><button class="btn btn-ghost btn-sm" type="button" data-act="sup-clear" data-id="${esc(p.id)}" data-confirm="Remove?">Remove</button></div>`).join('') || '<div class="row"><span class="hint">No supervisors yet.</span></div>'}
+        <form class="row" data-form="sup" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make supervisor"><option value="">${supPick.length ? 'Add a supervisor…' : 'No crew members to add'}</option>${supPick.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.supervisor ? ' (supervises ' + esc((divOf(x.supervisor) || {}).name || x.supervisor) + ')' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit"${supPick.length ? '' : ' disabled'}>Add</button></form></div>
       </section>`;
-    }).join('')}</div>`;
+    }).join('') || '<p class="empty">You don’t lead a division.</p>'}</div>`;
 }
 
 function staffOverview() {
@@ -1744,12 +1785,10 @@ function staffRoles() {
   const r = S.rolesData;
   if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
   const divs = D().divisions, owner = r.owner;
-  const types = [['rank', 'Rank'], ['lead', 'Division lead']].concat(owner ? [['sysadmin', 'Systems Admin']] : []);
-  const crewDivs = divs.filter(d => !d.command);
-  const tiers = [['recruit', 'Recruit · in review'], ['member', 'Member'], ['supervisor', 'Supervisor (Staff)'], ['admin', 'Admin'], ['manager', 'Manager'], ['director', 'Director']];
+  const types = [['rank', 'Rank']].concat(owner ? [['sysadmin', 'Systems Admin']] : []);
+  const tiers = [['recruit', 'Recruit · in review'], ['member', 'Member'], ['admin', 'Admin'], ['manager', 'Manager'], ['director', 'Director']];
   const sel = (name, opts, v, label, ph) => `<select name="${name}" aria-label="${esc(label)}">${ph ? `<option value="">${ph}</option>` : ''}${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
   const setting = x => x.type === 'rank' ? sel('tier', tiers, x.tier, 'Permission level', 'Pick a level')
-    : x.type === 'lead' ? sel('division', crewDivs.map(d => [d.id, d.name]), x.division, 'Division', 'Pick a division')
     : x.type === 'sysadmin' ? '<span class="hint">Can edit this page. Only you see this.</span>' : '<span class="hint">Pick a type first</span>';
   const row = (x, i) => `<tr data-row="${i}" class="type-${esc(x.type || 'none')}">
       <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="e.g. Specialist" aria-label="Portal role name"></td>
@@ -1760,8 +1799,8 @@ function staffRoles() {
     </tr>`;
   return `<form data-form="roles" novalidate>
     <div class="role-guide">
-      <div><b>Rank</b><span>Their standing and what they can do: Recruit (in review, profile only), Member, Supervisor (staff: work orders, approvals, funds), Admin (+ site content), Manager (all divisions, treasury), Director (everything).</span></div>
-      <div><b>Division lead</b><span>Runs one division and shows as its lead. Member-level everywhere else. One lead spot per person; Command can also set leads in the portal.</span></div>
+      <div><b>Rank</b><span>Their standing and what they can do: Recruit (in review, profile only), Member, Admin (+ site content), Manager (all divisions, treasury), Director (everything).</span></div>
+      <div><b>Leads &amp; supervisors</b><span>Not Discord roles. Command sets division leads and leads pick supervisors under Command → Division Management.</span></div>
       ${owner ? '<div><b>Systems Admin</b><span>Can edit this page only. Never visible to anyone but you.</span></div>' : ''}
     </div>
     <details class="panel builtin"><summary><b>Division roles are built in</b><span class="hint">Crews are read from these Discord roles automatically. Nothing to set up.</span></summary>
@@ -1791,7 +1830,7 @@ function captureRoles() {
 /* ---------- Navigation groups ---------- */
 const GROUPS = {
   ops: () => [['work', 'Work orders'], ['calendar', 'Calendar'], ['logistics', 'Logistics']],
-  treasury: () => [['mine', 'My funds']].concat(me().isStaff ? [['approvals', 'Approvals']] : []).concat(me().isManager ? [['treasurer', 'Treasurer'], ['ledger', 'Ledger']] : [])
+  treasury: () => [['mine', 'My funds']].concat(me().canTreasury ? [['approvals', 'Approvals']] : []).concat(me().isManager ? [['treasurer', 'Treasurer'], ['ledger', 'Ledger']] : [])
 };
 const SUB_OF = { work: 'ops', calendar: 'ops', logistics: 'ops' };
 function goTab(t) {
@@ -1806,8 +1845,8 @@ function subnav(group) {
 }
 function subCount(group, id) {
   const d = D(), m = me();
-  if (group === 'ops' && id === 'work') return d.workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
-  if (group === 'treasury' && id === 'approvals') return (d.funds || []).filter(x => x.status === 'pending' || (x.status === 'received' && x.receivedBy === m.id)).length;
+  if (group === 'ops' && id === 'work') return d.workorders.filter(w => w.status === 'active' && w.assignees.includes(me().id)).length;
+  if (group === 'treasury' && id === 'approvals') return (d.funds || []).filter(x => x.status === 'pending' || (x.status === 'claimed' && x.supervisorId === m.id) || (x.status === 'received' && x.receivedBy === m.id)).length;
   if (group === 'treasury' && id === 'treasurer') return (d.funds || []).filter(x => x.status === 'forwarded').length;
   return 0;
 }
@@ -1821,57 +1860,73 @@ function viewTreasury() {
 }
 
 /* ---------- Treasury ---------- */
-const STAGES = { pending: 'Waiting for supervisor', received: 'With supervisor', forwarded: 'Sent to treasurer', confirmed: 'In treasury', rejected: 'Rejected' };
-function supervisors() { return (D().members || []).filter(x => (x.status || 'active') === 'active' && ['supervisor', 'admin', 'manager', 'director'].includes(x.tier)); }
+const STAGES = { pending: 'In supervisor pool', claimed: 'Claimed by supervisor', received: 'With supervisor', forwarded: 'Sent to treasurer', confirmed: 'In treasury', rejected: 'Rejected' };
 function stagePill(st) { return `<span class="pill stage-${esc(st)}">${esc(STAGES[st] || st)}</span>`; }
 function stageTrack(st) {
-  const steps = ['pending', 'received', 'forwarded', 'confirmed'];
+  const steps = ['pending', 'claimed', 'received', 'forwarded', 'confirmed'];
   if (st === 'rejected') return '';
   const at = steps.indexOf(st);
   return `<div class="track" aria-hidden="true">${steps.map((x, i) => `<i class="${i <= at ? 'done' : ''}"></i>`).join('')}</div>`;
 }
 function fundRow(x, actions) {
+  const sendTo = x.status === 'claimed' && x.memberId === me().id && x.supervisorId
+    ? `<span class="send-to">Send <b>${auec(x.amount)} aUEC</b> to <b>${esc((member(x.supervisorId) || {}).rsiHandle || nameOf(x.supervisorId))}</b> in-game</span>` : '';
   return `<div class="row fund-row">
     <div class="row-main" style="gap:4px">
       <span class="row-title">${esc(x.title)}</span>
       <span class="row-sub">${x.memberId ? nameTag(x.memberId) : ''}${x.supervisorId ? ` <span style="color:var(--dim)">→</span> ${nameTag(x.supervisorId)}` : ''}</span>
-      <span class="hint">${esc(fmtDateTime(x.created))}${x.receivedAt ? ' · received ' + esc(fmtDate(x.receivedAt)) : ''}${x.forwardedAt ? ' · sent ' + esc(fmtDate(x.forwardedAt)) : ''}${x.confirmedAt ? ' · in treasury ' + esc(fmtDate(x.confirmedAt)) : ''}${x.status === 'rejected' && x.note ? ' · ' + esc(x.note) : ''}</span>
+      ${sendTo}
+      <span class="hint">${esc(fmtDateTime(x.created))}${x.claimedAt && x.status === 'claimed' ? ' · claimed ' + esc(rel(x.claimedAt)) : ''}${x.receivedAt ? ' · received ' + esc(fmtDate(x.receivedAt)) : ''}${x.forwardedAt ? ' · sent ' + esc(fmtDate(x.forwardedAt)) : ''}${x.confirmedAt ? ' · in treasury ' + esc(fmtDate(x.confirmedAt)) : ''}${x.status === 'rejected' && x.note ? ' · ' + esc(x.note) : ''}</span>
     </div>
     <div class="fund-side"><span class="reward">${auec(x.amount)}<small>aUEC</small></span>${stagePill(x.status)}${stageTrack(x.status)}${actions ? `<div class="actions">${actions}</div>` : ''}</div>
   </div>`;
+}
+/* What a member can report aUEC for: events running today, and their completed work orders not yet reported. */
+function fundSources() {
+  const d = D(), m = me(), today = dayKey(new Date());
+  const taken = new Set((d.funds || []).filter(x => x.memberId === m.id && x.status !== 'rejected').map(x => x.source + ':' + x.refId));
+  const evs = eventsOn(today, calEvents()).filter(e => !taken.has('event:' + e.id));
+  const wos = d.workorders.filter(w => w.status === 'complete' && w.assignees.includes(m.id) && !taken.has('workorder:' + w.id))
+    .sort((a, b) => Date.parse(b.completedAt || b.updated) - Date.parse(a.completedAt || a.updated));
+  return { evs, wos };
 }
 function viewFundsMine() {
   const d = D(), m = me(), L = d.ledger;
   const mine = (d.funds || []).filter(x => x.memberId === m.id);
   const open = mine.filter(x => x.status !== 'confirmed' && x.status !== 'rejected');
-  const reported = new Set((d.funds || []).filter(x => x.source === 'run' && x.status !== 'rejected').map(x => x.refId));
-  const runs = d.runs.filter(r => r.ownerId === m.id && r.status === 'delivered' && !reported.has(r.id));
-  const sups = supervisors();
+  const toSend = mine.filter(x => x.status === 'claimed');
+  const src = fundSources();
+  const pick = S.fundRef || '';
+  const opt = (v, t) => `<option value="${esc(v)}"${pick === v ? ' selected' : ''}>${esc(t)}</option>`;
   return `
-    <div class="page-head"><div><div class="eyebrow">Treasury</div><h1>My funds</h1><p>aUEC from org work goes to a supervisor in-game, then to the treasurer <b>${esc(d.treasurer)}</b>. Solo play outside work orders and events doesn’t go through here.</p></div></div>
+    <div class="page-head"><div><div class="eyebrow">Treasury</div><h1>My funds</h1><p>aUEC from org work goes to a supervisor in-game, then to the treasurer <b>${esc(d.treasurer)}</b>.</p><p class="optional-note">${OPTIONAL_NOTE}</p></div></div>
     <div class="stats">
       <div class="stat"><div class="stat-label">Org treasury</div><div class="stat-value">${auec(L.balance)}<small>aUEC</small></div></div>
       <div class="stat"><div class="stat-label">I contributed</div><div class="stat-value" style="color:var(--ok)">${auec(L.myContributed)}<small>aUEC</small></div><div class="stat-note">Confirmed by the treasurer</div></div>
       <div class="stat"><div class="stat-label">Paid to me</div><div class="stat-value">${auec(L.myEarnings)}<small>aUEC</small></div><div class="stat-note">Work order rewards</div></div>
       <div class="stat"><div class="stat-label">In progress</div><div class="stat-value">${auec(open.reduce((a, x) => a + x.amount, 0))}<small>aUEC</small></div><div class="stat-note">${open.length} transfer${open.length === 1 ? '' : 's'}</div></div>
     </div>
+    ${toSend.length ? `<div class="panel panel-pad callout section"><b>Ready to send</b> ${toSend.map(x => `<span>${auec(x.amount)} aUEC → <b>${esc((member(x.supervisorId) || {}).rsiHandle || nameOf(x.supervisorId))}</b> (${esc(x.title)})</span>`).join('')}</div>` : ''}
     <div class="grid-2 grid-split section">
       <div>
         <h2 class="sub">My transfers</h2>
-        <div class="panel rows">${mine.length ? mine.map(x => fundRow(x)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing yet. Work order earnings show up here once you submit them.</span></div>'}</div>
+        <div class="panel rows">${mine.length ? mine.map(x => fundRow(x)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing yet. Report aUEC from a completed work order or today’s event.</span></div>'}</div>
       </div>
       <div>
-        <h2 class="sub">Report aUEC sent</h2>
+        <h2 class="sub">Report aUEC</h2>
         <form class="panel panel-pad stack" data-form="funds" novalidate>
-          <ol class="steps-mini"><li>Send the aUEC to a supervisor in-game</li><li>Report it here</li><li>The supervisor accepts it and passes it to the treasurer</li></ol>
-          <div class="field"><label for="fFor">What it’s from</label><select id="fFor" name="ref"><option value="">Other org work (event, op…)</option>${runs.map(r => `<option value="${esc(r.id)}">Cargo run: ${esc(r.cargo)} → ${esc(r.destination)}</option>`).join('')}</select></div>
-          <div class="field"><label for="fTitle">Description</label><input id="fTitle" name="title" maxlength="100" placeholder="e.g. Salvage share from Friday op"></div>
-          <div class="form-grid">
-            <div class="field"><label for="fAmt">aUEC sent</label><input id="fAmt" name="amount" inputmode="numeric" placeholder="0"></div>
-            <div class="field"><label for="fSup">Sent to</label><select id="fSup" name="supervisorId"><option value="">Pick a supervisor</option>${sups.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}</option>`).join('')}</select></div>
-          </div>
+          <ol class="steps-mini"><li>Report what you made here</li><li>A supervisor claims it and you see who to send it to</li><li>Send it in-game; they pass it to the treasurer</li></ol>
+          <div class="field"><label for="fFor">What it’s from</label><select id="fFor" name="ref" data-fund-ref>
+            <option value="">Pick one…</option>
+            ${src.evs.length ? `<optgroup label="Happening today">${src.evs.map(e => opt('event:' + e.id, (e.major ? '★ ' : '') + e.title)).join('')}</optgroup>` : ''}
+            ${src.wos.length ? `<optgroup label="My completed work orders">${src.wos.map(w => opt('workorder:' + w.id, w.title + (w.scu ? ` · ${w.scu.toLocaleString('en-US')} SCU` : ''))).join('')}</optgroup>` : ''}
+            ${opt('other:', 'Other org contribution')}
+          </select></div>
+          <div class="field"${pick === 'other:' ? '' : ' hidden'} data-other-title><label for="fTitle">What was it?</label><input id="fTitle" name="title" maxlength="100" placeholder="e.g. Salvage share from Friday op"></div>
+          <div class="field"><label for="fAmt">aUEC</label><input id="fAmt" name="amount" inputmode="numeric" placeholder="0"></div>
           <div class="field"><label for="fNote">Note (optional)</label><input id="fNote" name="note" maxlength="300"></div>
-          <button class="btn btn-solid" type="submit">Report transfer</button>
+          <button class="btn btn-solid" type="submit">Send to supervisors</button>
+          ${!src.evs.length && !src.wos.length ? '<p class="hint">No events today and no completed work orders waiting. Finish a work order and it shows up here.</p>' : ''}
         </form>
         ${L.entries.length ? `<h2 class="sub section">My ledger lines</h2><div class="panel rows">${L.entries.slice(0, 8).map(e => `<div class="row"><div class="row-main"><span class="row-title">${esc(e.note || label(e.type))}</span><span class="row-sub">${esc(fmtDate(e.date))} · ${esc(label(e.type))}</span></div><span class="amt ${d.lists.ledgerIn.includes(e.type) ? 'plus' : 'minus'} num" style="font-weight:600">${d.lists.ledgerIn.includes(e.type) ? '+' : '−'}${auec(e.amount)}</span></div>`).join('')}</div>` : ''}
       </div>
@@ -1880,27 +1935,30 @@ function viewFundsMine() {
 function viewApprovals() {
   const d = D(), m = me();
   const f = d.funds || [];
-  const waiting = f.filter(x => x.status === 'pending').sort((a, b) => (b.supervisorId === m.id) - (a.supervisorId === m.id));
+  const pool = f.filter(x => x.status === 'pending');
+  const claimed = f.filter(x => x.status === 'claimed' && (x.supervisorId === m.id || m.isManager));
   const holding = f.filter(x => x.status === 'received' && (x.receivedBy === m.id || m.isManager));
-  const reviewWos = d.workorders.filter(w => w.status === 'review' && canLeadDiv(w.division));
+  const empty = t => `<div class="row"><span class="empty" style="padding:4px 0">${t}</span></div>`;
   return `
-    <div class="page-head"><div><div class="eyebrow">Supervisors</div><h1>Approvals</h1><p>Accept the aUEC in-game first, then mark it received. Once you’ve sent it on to <b>${esc(d.treasurer)}</b>, mark it sent.</p></div></div>
-    ${reviewWos.length ? `<h2 class="sub">Work orders to review <span class="pill review">${reviewWos.length}</span></h2><div class="panel rows">${reviewWos.map(w => `<div class="row"><div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${w.earnings ? `${auec(w.earnings)} aUEC sent to ${esc(nameOf(w.sentTo))}` : 'No aUEC involved'} · ${w.assignees.map(id => esc(nameOf(id))).join(', ')}</span></div><div class="actions"><button class="btn btn-ok btn-sm" type="button" data-act="wo-approve" data-id="${w.id}">${w.earnings ? 'Funds received · Approve' : 'Approve'}</button><button class="btn btn-ghost btn-sm" type="button" data-act="wo-reject" data-id="${w.id}">Send back</button></div></div>`).join('')}</div>` : ''}
-    <h2 class="sub section">Waiting for a supervisor <span class="num" style="color:var(--dim)">${waiting.length}</span></h2>
-    <div class="panel rows">${waiting.length ? waiting.map(x => fundRow(x, `<button class="btn btn-ok btn-sm" type="button" data-act="funds-receive" data-id="${esc(x.id)}">Funds received</button><button class="btn btn-ghost btn-sm" type="button" data-act="funds-reject" data-id="${esc(x.id)}">Reject</button>`)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">No reports waiting.</span></div>'}</div>
+    <div class="page-head"><div><div class="eyebrow">Supervisors</div><h1>Approvals</h1><p>Claim a submission so the member knows who to pay. Mark it received once the aUEC is in your wallet, then send it on to <b>${esc(d.treasurer)}</b>.</p></div></div>
+    <h2 class="sub">Open pool <span class="num" style="color:var(--dim)">${pool.length}</span></h2>
+    <div class="panel rows">${pool.length ? pool.map(x => fundRow(x, `<button class="btn btn-solid btn-sm" type="button" data-act="funds-claim" data-id="${esc(x.id)}">Claim</button><button class="btn btn-ghost btn-sm" type="button" data-act="funds-reject" data-id="${esc(x.id)}">Reject</button>`)).join('') : empty('Nothing waiting. New reports land here for every supervisor.')}</div>
+    <h2 class="sub section">Claimed${m.isManager ? '' : ' by me'} <span class="num" style="color:var(--dim)">${claimed.length}</span></h2>
+    <div class="panel rows">${claimed.length ? claimed.map(x => fundRow(x, `<button class="btn btn-ok btn-sm" type="button" data-act="funds-receive" data-id="${esc(x.id)}">Funds received</button><button class="btn btn-ghost btn-sm" type="button" data-act="funds-reject" data-id="${esc(x.id)}">Reject</button>`)).join('') : empty('Claim one from the pool. The member is told to send the aUEC to you.')}</div>
     <h2 class="sub section">To send to the treasurer <span class="num" style="color:var(--dim)">${holding.length}</span></h2>
-    <div class="panel rows">${holding.length ? holding.map(x => fundRow(x, `<button class="btn btn-solid btn-sm" type="button" data-act="funds-forward" data-id="${esc(x.id)}" data-confirm="Sent to ${esc(d.treasurer)}?">Sent to treasurer</button>`)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing to forward.</span></div>'}</div>`;
+    <div class="panel rows">${holding.length ? holding.map(x => fundRow(x, `<button class="btn btn-solid btn-sm" type="button" data-act="funds-forward" data-id="${esc(x.id)}" data-confirm="Sent to ${esc(d.treasurer)}?">Sent to treasurer</button>`)).join('') : empty('Nothing to forward.')}</div>`;
 }
 function viewTreasurer() {
   const d = D(), f = d.funds || [];
   const by = st => f.filter(x => x.status === st);
   const sum = arr => arr.reduce((a, x) => a + x.amount, 0);
   const filt = S.fundFilter || 'open';
-  const list = filt === 'open' ? f.filter(x => ['pending', 'received', 'forwarded'].includes(x.status)) : filt === 'all' ? f : by(filt);
+  const list = filt === 'open' ? f.filter(x => ['pending', 'claimed', 'received', 'forwarded'].includes(x.status)) : filt === 'all' ? f : by(filt);
+  const early = by('pending').concat(by('claimed'));
   return `
     <div class="page-head"><div><div class="eyebrow">Treasurer</div><h1>Transactions</h1><p>Every transfer from report to treasury. Confirm once <b>${esc(d.treasurer)}</b> has accepted the aUEC; only then does it hit the ledger.</p></div></div>
     <div class="stats">
-      <div class="stat"><div class="stat-label">Waiting for supervisor</div><div class="stat-value">${auec(sum(by('pending')))}<small>aUEC</small></div><div class="stat-note">${by('pending').length} report${by('pending').length === 1 ? '' : 's'}</div></div>
+      <div class="stat"><div class="stat-label">With members</div><div class="stat-value">${auec(sum(early))}<small>aUEC</small></div><div class="stat-note">${by('pending').length} in pool · ${by('claimed').length} claimed</div></div>
       <div class="stat"><div class="stat-label">With supervisors</div><div class="stat-value">${auec(sum(by('received')))}<small>aUEC</small></div><div class="stat-note">${by('received').length} to forward</div></div>
       <div class="stat"><div class="stat-label">Sent to treasurer</div><div class="stat-value" style="color:var(--accent)">${auec(sum(by('forwarded')))}<small>aUEC</small></div><div class="stat-note">${by('forwarded').length} to confirm</div></div>
       <div class="stat"><div class="stat-label">In treasury</div><div class="stat-value" style="color:var(--ok)">${auec(sum(by('confirmed')))}<small>aUEC</small></div><div class="stat-note">Balance ${auec(d.ledger.balance)} aUEC</div></div>
@@ -1917,19 +1975,6 @@ function amountForm(title, action, id, amount, cta, hint) {
       ${hint ? `<p class="hint">${hint}</p>` : ''}
       <div class="field"><label for="amNote">Note (optional)</label><input id="amNote" name="note" maxlength="300"></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-ok" type="submit">${esc(cta)}</button></div>
-    </form>`);
-}
-function submitForm(id) {
-  const sups = supervisors();
-  openDialog('Submit for review', `
-    <form class="dlg-body" data-form="wo-submit" data-id="${esc(id)}" novalidate>
-      <div class="field"><label for="sbNote">What did the crew deliver?</label><textarea id="sbNote" name="note" maxlength="1000" placeholder="Amounts, locations, screenshot links…"></textarea></div>
-      <div class="form-grid">
-        <div class="field"><label for="sbAmt">aUEC sent (if any)</label><input id="sbAmt" name="earnings" inputmode="numeric" placeholder="0"></div>
-        <div class="field"><label for="sbSup">Sent to supervisor</label><select id="sbSup" name="sentTo"><option value="">—</option>${sups.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}</option>`).join('')}</select></div>
-      </div>
-      <p class="hint">If this job made aUEC for the org, send it to a supervisor in-game first. They approve the work once they’ve accepted the funds.</p>
-      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Submit</button></div>
     </form>`);
 }
 
@@ -1960,8 +2005,7 @@ document.addEventListener('click', async e => {
     goTab(tabBtn.dataset.tab); render(); window.scrollTo({ top: 0 });
     return;
   }
-  const chip = e.target.closest('[data-wo-status]');
-  if (chip) { S.woStatus = chip.dataset.woStatus; render(); return; }
+  if (e.target.closest('[data-toggle-done]')) { e.preventDefault(); S.showDone = !S.showDone; render(); return; }
   const fc = e.target.closest('[data-fleet-cat]');
   if (fc) { S.fleetCat = fc.dataset.fleetCat; render(); return; }
   if (e.target.closest('[data-logout]')) { signOut(); return; }
@@ -1993,19 +2037,21 @@ document.addEventListener('click', async e => {
     case 'wo-edit': woForm(d.workorders.find(w => w.id === id)); break;
     case 'wo-claim': act('wo.claim', { id }, 'You’re on the crew.'); break;
     case 'wo-unclaim': act('wo.unclaim', { id }, 'You left the work order.'); break;
-    case 'wo-submit': submitForm(id); break;
-    case 'wo-approve': { const w = d.workorders.find(x => x.id === id); if (w && w.earnings) amountForm('Funds received · approve', 'wo.approve', id, w.earnings, 'Funds received · Approve', `Only approve once you’ve accepted the aUEC from ${esc(nameOf(w.sentTo || ''))} in-game. It then waits for you to send it to ${esc(d.treasurer)}.`); else act('wo.approve', { id }, 'Approved.'); break; }
+    case 'haul-new': {
+      const r = b.dataset.req ? d.requests.find(x => x.id === b.dataset.req) : null;
+      woForm(null, Object.assign({ type: 'Hauling' }, r ? { requestId: r.id, title: r.item + (r.destination ? ' to ' + r.destination : ''), cargo: r.item, destination: r.destination } : {}));
+      break;
+    }
+    case 'wo-stage': act('wo.stage', { id, stage: Number(b.dataset.stage) }); break;
+    case 'wo-complete': completeForm(id); break;
+    case 'funds-for-wo': goTab('treasury'); S.sub.treasury = 'mine'; S.fundRef = 'workorder:' + id; render(); window.scrollTo({ top: 0 }); { const a2 = $('fAmt'); if (a2) a2.focus(); } break;
+    case 'funds-claim': act('funds.claim', { id }, 'Claimed. The member now sees your name.'); break;
     case 'funds-receive': { const x = d.funds.find(y => y.id === id); amountForm('Funds received', 'funds.receive', id, x ? x.amount : '', 'Mark received', 'Accept the aUEC in-game first. Adjust the amount if it differs.'); break; }
     case 'funds-reject': noteForm('Reject transfer', 'funds.reject', id, true, 'Reject'); break;
     case 'funds-forward': act('funds.forward', { id }, 'Marked as sent to the treasurer.'); break;
     case 'funds-confirm': act('funds.confirm', { id }, 'Confirmed. Added to the ledger.'); break;
-    case 'wo-reject': noteForm('Send back to crew', 'wo.reject', id, true, 'Send back'); break;
     case 'wo-pay': act('wo.pay', { id }, 'Payout recorded in the ledger.'); break;
     case 'wo-cancel': act('wo.cancel', { id }, 'Work order cancelled.'); break;
-    case 'run-new': runForm(null, b.dataset.req); break;
-    case 'run-edit': runForm(d.runs.find(r => r.id === id)); break;
-    case 'run-status': act('run.status', { id, status: b.dataset.status }, 'Run updated.'); break;
-    case 'run-remove': act('run.remove', { id }, 'Run removed.'); break;
     case 'req-new': reqForm(); break;
     case 'req-edit': reqForm(d.requests.find(r => r.id === id)); break;
     case 'req-status': act('req.status', { id, status: b.dataset.status }, 'Request closed.'); break;
@@ -2020,13 +2066,14 @@ document.addEventListener('click', async e => {
     case 'cal-edit': calForm(calEvents().find(x => x.id === id)); break;
     case 'cal-remove': if (await act('cal.remove', { id }, 'Event deleted.')) closeDialog(); break;
     case 'cal-rsvp': if (await act('cal.rsvp', { id, status: b.dataset.status }, b.dataset.status ? 'RSVP saved.' : 'RSVP cleared.')) evDialog(id); break;
-    case 'div-work': goTab('work'); S.woDiv = id; S.woStatus = 'open'; render(); window.scrollTo({ top: 0 }); break;
+    case 'div-work': goTab('work'); S.woDiv = id; render(); window.scrollTo({ top: 0 }); break;
     case 'news-open': { const n = (d.news || [])[0]; if (n) openDialog('Newsletter', `<div class="dlg-body"><span class="hint">${esc(n.author || 'Project Six')} · ${esc(fmtDate(n.published))}</span><h3 style="font-family:var(--f-label);font-size:1.4rem">${esc(n.title)}</h3><div class="news-body">${esc(n.body).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div></div>`); break; }
     case 'site-new': siteForm(b.dataset.kind); break;
     case 'site-edit': { const list = b.dataset.kind === 'events' ? d.staff.events : d.staff.newsletters; siteForm(b.dataset.kind, list.find(x => x.id === id)); break; }
     case 'site-remove': if (await act('site.remove', { kind: b.dataset.kind, id }, 'Deleted.')) closeDialog(); break;
     case 'roles-reload': S.rolesData = null; render(); break;
     case 'lead-clear': act('member.update', { id, portalLead: '' }, 'Lead removed.'); break;
+    case 'sup-clear': act('div.supervisor', { id, division: '' }, 'Supervisor removed.'); break;
     case 'role-add': {
       captureRoles();
       const rid = b.dataset.rid || '';
@@ -2049,7 +2096,23 @@ document.addEventListener('keydown', e => {
 
 document.addEventListener('change', e => {
   if (e.target.matches('tr[data-row] [name=type]')) { captureRoles(); render(); return; }
-  if (e.target.matches('[data-wo-div]')) { S.woDiv = e.target.value; render(); }
+  if (e.target.matches('[data-wo-div]')) { S.woDiv = e.target.value; render(); return; }
+  if (e.target.matches('[data-wo-crew]')) {
+    const t = e.target.form.elements.type, keep = t.value;
+    t.innerHTML = typeOptions(e.target.value, keep);
+    if (t.value !== keep || !typesFor(e.target.value).includes(keep)) t.dispatchEvent(new Event('change', { bubbles: true }));
+    return;
+  }
+  if (e.target.matches('[data-wo-type]')) {
+    const haul = e.target.value === 'Hauling', f = e.target.form;
+    f.querySelectorAll('.haul-only').forEach(x => { x.hidden = !haul; });
+    f.querySelectorAll('.not-haul').forEach(x => { x.hidden = haul; });
+    return;
+  }
+  if (e.target.matches('[data-fund-ref]')) {
+    S.fundRef = e.target.value;
+    const t = e.target.form.querySelector('[data-other-title]'); if (t) t.hidden = S.fundRef !== 'other:';
+  }
 });
 
 document.addEventListener('submit', async e => {
@@ -2064,14 +2127,22 @@ document.addEventListener('submit', async e => {
   try {
     switch (kind) {
       case 'wo':
-        if (!v('title').trim()) { toast('Add a title.', 'err'); break; }
-        ok = await act('wo.save', { id: v('id'), title: v('title'), division: v('division'), type: v('type'), reward: v('reward'), slots: v('slots'), priority: v('priority'), due: fromLocalInput(v('due')), location: v('location'), description: v('description') }, v('id') ? 'Work order updated.' : 'Work order posted.');
-        if (ok) { goTab('work'); S.woStatus = v('id') ? S.woStatus : 'open'; render(); }
+        {
+          const haul = v('type') === 'Hauling';
+          const body = { id: v('id'), title: v('title'), division: v('division'), type: v('type'), slots: v('slots'), priority: v('priority'), due: fromLocalInput(v('due')), description: v('description'), requestId: v('requestId'),
+            location: haul ? '' : v('location'), cargo: haul ? v('cargo') : '', scu: haul ? v('scu') : '', origin: haul ? v('origin') : '', destination: haul ? v('destination') : '' };
+          if (f.elements.reward) body.reward = v('reward');
+          if (f.elements.join) body.join = f.elements.join.checked;
+          ok = await act('wo.save', body, v('id') ? 'Work order updated.' : body.join ? 'Started. It’s in your active work.' : 'Work order posted.');
+          if (ok && !v('id') && S.tab !== 'ops') { goTab(haul ? 'logistics' : 'work'); render(); }
+        }
         break;
-      case 'run':
-        if (!v('cargo').trim() || !v('destination').trim()) { toast('Add the cargo and destination.', 'err'); break; }
-        ok = await act('run.save', { id: v('id'), cargo: v('cargo'), scu: v('scu'), origin: v('origin'), destination: v('destination'), ship: v('ship'), eta: fromLocalInput(v('eta')), requestId: v('requestId'), note: v('note') }, v('id') ? 'Run updated.' : 'Run logged.');
+      case 'wo-complete': {
+        const amt = Number(v('amount').replace(/[,\s]/g, '')) || 0;
+        ok = await act('wo.complete', { id: f.dataset.id, note: v('note') }, amt ? null : 'Completed.');
+        if (ok && amt) await act('funds.report', { source: 'workorder', refId: f.dataset.id, amount: amt, note: v('note') }, 'Completed. Your aUEC is in the supervisor pool.');
         break;
+      }
       case 'req':
         if (!v('item').trim()) { toast('Say what’s needed.', 'err'); break; }
         ok = await act('req.save', { id: v('id'), item: v('item'), quantity: v('quantity'), destination: v('destination'), priority: v('priority'), note: v('note') }, 'Supply request saved.');
@@ -2115,13 +2186,17 @@ document.addEventListener('submit', async e => {
         if (!v('who')) { toast('Pick a member.', 'err'); break; }
         ok = await act('member.update', { id: v('who'), portalLead: f.dataset.div }, 'Lead assigned.');
         break;
+      case 'sup':
+        if (!v('who')) { toast('Pick a member.', 'err'); break; }
+        ok = await act('div.supervisor', { id: v('who'), division: f.dataset.div }, 'Supervisor added.');
+        break;
       case 'roles': {
         captureRoles();
         const roles = S.rolesData.roles.filter(x => x.id || x.name);
         if (!roles.length && !r_owner()) { toast('Add at least one role.', 'err'); break; }
         const bad = roles.find(x => !/^\d{5,25}$/.test(x.id));
         if (bad) { toast(`“${bad.name || 'A role'}” needs its Discord role ID (a long number).`, 'err'); break; }
-        const noType = roles.find(x => !x.type || (x.type === 'rank' && !x.tier) || (x.type === 'lead' && !x.division));
+        const noType = roles.find(x => !x.type || (x.type === 'rank' && !x.tier));
         if (noType) { toast(`Finish the setup for “${noType.name || noType.id}”.`, 'err'); break; }
         const ids = roles.map(x => x.id), dup = ids.find((x, i) => ids.indexOf(x) !== i);
         if (dup) { toast(`Role ID ${dup} is listed twice.`, 'err'); break; }
@@ -2129,23 +2204,22 @@ document.addEventListener('submit', async e => {
         if (ok) { S.rolesData = null; render(); }
         break;
       }
-      case 'wo-submit':
-        if (v('earnings') && Number(v('earnings').replace(/[,\s]/g, '')) > 0 && !v('sentTo')) { toast('Pick the supervisor you sent the aUEC to.', 'err'); break; }
-        ok = await act('wo.submit', { id: f.dataset.id, note: v('note'), earnings: v('earnings'), sentTo: v('sentTo') }, 'Submitted for review.');
-        break;
       case 'amount':
-        ok = await act(f.dataset.action, { id: f.dataset.id, amount: v('amount'), note: v('note') }, f.dataset.action === 'wo.approve' ? 'Approved. Funds are with you until you send them on.' : 'Marked received.');
+        ok = await act(f.dataset.action, { id: f.dataset.id, amount: v('amount'), note: v('note') }, 'Marked received. Send it on to the treasurer when you can.');
         break;
       case 'funds': {
-        const ref = v('ref');
-        if (!v('amount') || !v('supervisorId')) { toast('Add the amount and who you sent it to.', 'err'); break; }
-        if (!ref && !v('title').trim()) { toast('Describe what the aUEC is from.', 'err'); break; }
-        ok = await act('funds.report', { source: ref ? 'run' : 'other', refId: ref, title: v('title'), amount: v('amount'), supervisorId: v('supervisorId'), note: v('note') }, 'Reported. Your supervisor will confirm it.');
+        const ref = v('ref'), i = ref.indexOf(':');
+        if (!ref) { toast('Pick what the aUEC is from.', 'err'); break; }
+        if (!v('amount')) { toast('Add the amount.', 'err'); break; }
+        const source = ref.slice(0, i), refId = ref.slice(i + 1);
+        if (source === 'other' && !v('title').trim()) { toast('Say what the aUEC is from.', 'err'); break; }
+        ok = await act('funds.report', { source, refId, title: v('title'), amount: v('amount'), note: v('note') }, 'Sent to the supervisor pool. You’ll see who to pay once one claims it.');
+        if (ok) { S.fundRef = ''; render(); }
         break;
       }
       case 'note':
         if (f.elements.note.required && !v('note').trim()) { toast('Add a note.', 'err'); break; }
-        ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, f.dataset.action === 'funds.reject' ? 'Transfer rejected.' : 'Sent back to the crew.');
+        ok = await act(f.dataset.action, { id: f.dataset.id, note: v('note') }, 'Transfer rejected.');
         break;
     }
   } finally {
@@ -2203,6 +2277,8 @@ function marketPanel() {
 /* ---------- Live refresh ---------- */
 setInterval(() => {
   if (!S.token || !S.data || S.busy || document.hidden || dlg.open) return;
+  const ae = document.activeElement;
+  if (ae && ae.closest && ae.closest('#view form')) return;
   const fast = S.tab === 'ops' || S.tab === 'dashboard' || S.tab === 'treasury';
   const age = Date.now() - Date.parse(S.data.synced || 0);
   if (age > (fast ? 30000 : 90000)) loadAll(true);
