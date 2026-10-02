@@ -353,6 +353,18 @@ dialog::backdrop { background: rgba(8,9,10,.72); backdrop-filter: blur(3px); }
 .role-table select { width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line-2); }
 .role-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .role-name i { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--dim)); flex: none; }
+/* Names: rank icon, crew crest, name, title */
+.tag-name { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; vertical-align: middle; }
+.tag-name .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.tag-name .patch { width: 20px; height: auto; flex: none; }
+.rank-ico { width: 16px; height: 16px; flex: none; }
+.rank-tag { font-family: var(--f-label); font-weight: 700; font-size: .66rem; letter-spacing: .14em; text-transform: uppercase; color: var(--c); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 10%, transparent); border-radius: 4px; padding: 1px 6px; white-space: nowrap; flex: none; }
+.rank-tag.sys { --c: #c9786b; }
+.role-table input { width: 100%; padding: 8px 10px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line-2); }
+.role-table input:focus, .role-table select:focus { outline: none; border-color: var(--accent); }
+.role-table .rid { font-size: .74rem; color: var(--dim); margin-top: 3px; display: block; font-variant-numeric: tabular-nums; }
+.role-table .sys-col { text-align: center; }
+.role-table tr.add td { background: var(--bg-alt); }
 .subtabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
 .grid-split { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
 .ev-main small { display: block; }
@@ -784,7 +796,38 @@ function avatar(id, small) {
   const n = m ? (m.displayName || m.username || '?') : '?';
   return `<span class="${cls}" aria-hidden="true">${esc(n.trim().charAt(0).toUpperCase())}</span>`;
 }
-function who(id) { return `<span class="who">${avatar(id, true)}<span>${esc(nameOf(id))}</span></span>`; }
+const RANKS = {
+  director: { label: 'Director', c: '#dcc28a', d: '#9c8556' },
+  manager: { label: 'Manager', c: '#d4d9e1', d: '#7d8592' },
+  admin: { label: 'Admin', c: '#4f93e8', d: '#2b5b98' },
+  staff: { label: 'Staff', c: '#8fb0d0', d: '#4c6680' }
+};
+let HEX_SEGS;
+function hexSegs() {
+  if (HEX_SEGS) return HEX_SEGS;
+  const P = (r, i) => { const a = (60 * i - 90) * Math.PI / 180; return [12 + r * Math.cos(a), 12 + r * Math.sin(a)]; };
+  const R = 11, w = 3.4, gap = 1.3, r2 = R - w / Math.cos(Math.PI / 6);
+  HEX_SEGS = [0, 1, 2, 3, 4, 5].map(i => {
+    const o1 = P(R, i), o2 = P(R, i + 1), i1 = P(r2, i), i2 = P(r2, i + 1);
+    const ux = (o2[0] - o1[0]) / Math.hypot(o2[0] - o1[0], o2[1] - o1[1]), uy = (o2[1] - o1[1]) / Math.hypot(o2[0] - o1[0], o2[1] - o1[1]), d = gap / 2;
+    return [[o1[0] + ux * d, o1[1] + uy * d], [o2[0] - ux * d, o2[1] - uy * d], [i2[0] - ux * d, i2[1] - uy * d], [i1[0] + ux * d, i1[1] + uy * d]]
+      .map(p => p[0].toFixed(2) + ',' + p[1].toFixed(2)).join(' ');
+  });
+  return HEX_SEGS;
+}
+function rankIcon(title, size) {
+  const r = RANKS[title]; if (!r) return '';
+  const shade = [r.c, r.c, r.d, r.d, r.c, r.c];
+  const op = [1, .85, .9, .75, .85, 1];
+  return `<svg class="rank-ico" viewBox="0 0 24 24" width="${size || 16}" height="${size || 16}" aria-hidden="true">${hexSegs().map((pts, i) => `<polygon points="${pts}" fill="${shade[i]}" opacity="${op[i]}"/>`).join('')}</svg>`;
+}
+function primaryDiv(m) { return m ? ((m.divisions || [])[0] || m.division || '') : ''; }
+function nameTag(id, opts) {
+  const m = member(id), o = opts || {};
+  const rank = m ? RANKS[m.title] : null, crew = divOf(primaryDiv(m));
+  return `<span class="tag-name">${rank ? `<span title="${rank.label}" style="display:inline-flex">${rankIcon(m.title)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle ? `<span class="rank-tag" style="--c:${rank.c}">${rank.label}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
+}
+function who(id) { return nameTag(id); }
 const canLeadDiv = div => me().isAdmin || (me().role === 'lead' && (me().leads || [me().division]).includes(div));
 const pillFor = (k, extra) => `<span class="pill ${esc(k)} ${extra || ''}">${esc(label(k))}</span>`;
 function catalogInfo(model) { const c = (D().catalog || []).find(x => x[0].toLowerCase() === String(model).toLowerCase()); return c ? { maker: c[1], category: c[2] } : { maker: '', category: 'other' }; }
@@ -807,11 +850,12 @@ function render() {
   if (S.data.pending) { renderPending(); show('screenPending'); return; }
   show('screenApp');
   $('meAvatar').innerHTML = avatar(me().id);
-  $('meName').textContent = me().displayName || me().username;
+  $('meName').innerHTML = nameTag(me().id, { noTitle: true });
   const reviewCount = D().workorders.filter(w => w.status === 'review' && canLeadDiv(w.division)).length;
   const pendingCount = me().isAdmin && !D().rolesMode ? D().members.filter(m => m.status === 'pending').length : 0;
-  if (!TABS.some(t => t.id === S.tab && (!t.staff || me().isAdmin))) S.tab = 'dashboard';
-  $('tabs').innerHTML = TABS.filter(t => !t.staff || me().isAdmin).map(t => {
+  const staffOk = me().isAdmin || me().canEditRoles;
+  if (!TABS.some(t => t.id === S.tab && (!t.staff || staffOk))) S.tab = 'dashboard';
+  $('tabs').innerHTML = TABS.filter(t => !t.staff || staffOk).map(t => {
     const n = t.id === 'work' ? reviewCount : t.id === 'crew' ? pendingCount : 0;
     return `<button class="tab${S.tab === t.id ? ' on' : ''}" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}" type="button">${t.label}${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
@@ -853,7 +897,7 @@ function viewDashboard() {
       <div style="display:flex;align-items:center;gap:16px">
         ${div ? patch(homeDiv, 54) : ''}
         <div><div class="eyebrow">${(m.divisions || []).length > 1 ? (m.divisions || []).map(x => esc((divOf(x) || {}).name || '')).join(' · ') : div ? esc(div.name) : 'No division yet'}</div><h1>Welcome back, ${esc(m.displayName || m.username)}</h1>
-        <p>${m.role === 'admin' ? 'Staff' : m.role === 'lead' ? 'Division lead' : 'Member'}${m.rsiHandle ? ' · ' + esc(m.rsiHandle) : ''}</p></div>
+        <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${RANKS[m.title] ? `${rankIcon(m.title)}<span class="rank-tag" style="--c:${RANKS[m.title].c}">${RANKS[m.title].label}</span>` : `<span>${m.role === 'lead' ? 'Division lead' : 'Member'}</span>`}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}${m.rsiHandle ? `<span style="color:var(--muted)">${esc(m.rsiHandle)}</span>` : ''}</p></div>
       </div>
     </div>
     <div class="stats">
@@ -1175,10 +1219,10 @@ function viewCrew() {
   const active = d.members.filter(x => !x.status || x.status === 'active');
   const groups = d.divisions.map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) }));
   const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)));
-  const roleRank = { admin: 0, lead: 1, member: 2 };
-  const sortP = arr => arr.slice().sort((a, b) => roleRank[a.role] - roleRank[b.role] || (a.displayName || '').localeCompare(b.displayName || ''));
-  const personRow = p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
-    <div class="actions">${p.role !== 'member' ? `<span class="pill role-${p.role}">${p.role === 'lead' ? 'Lead' : 'Staff'}</span>` : ''}${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
+  const titleRank = t => ['director', 'manager', 'admin', 'staff'].indexOf(t) + 1 || 9;
+  const sortP = arr => arr.slice().sort((a, b) => titleRank(a.title) - titleRank(b.title) || (a.role === 'lead' ? 0 : 1) - (b.role === 'lead' ? 0 : 1) || (a.displayName || '').localeCompare(b.displayName || ''));
+  const personRow = p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}</span></div></div>
+    <div class="actions">${p.role === 'lead' ? '<span class="pill role-lead">Lead</span>' : ''}${m.isAdmin ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">Manage</button>` : ''}</div></div>`;
   return `
     <div class="page-head"><div><div class="eyebrow">Roster</div><h1>Crew</h1><p>${active.length} active member${active.length === 1 ? '' : 's'} across six divisions.</p></div></div>
     ${pending.length && d.rolesMode ? `<h2 class="sub">Signed in without a member role <span class="pill pending">${pending.length}</span></h2>
@@ -1366,8 +1410,8 @@ function evDialog(id) {
           <div class="rsvp"><span class="lbl">Your RSVP</span>
             <button class="btn btn-ghost btn-sm${mine === 'going' ? ' on' : ''}" type="button" data-act="cal-rsvp" data-id="${esc(e.id)}" data-status="${mine === 'going' ? '' : 'going'}">Going</button>
             <button class="btn btn-ghost btn-sm${mine === 'maybe' ? ' on' : ''}" type="button" data-act="cal-rsvp" data-id="${esc(e.id)}" data-status="${mine === 'maybe' ? '' : 'maybe'}">Maybe</button></div>
-          ${going.length ? `<div><span class="lbl">Going · ${going.length}</span><div class="owners" style="margin-top:6px">${going.map(k => `<span class="owner">${avatar(k, true)}<span>${esc(nameOf(k))}</span></span>`).join('')}</div></div>` : ''}
-          ${maybe.length ? `<div><span class="lbl">Maybe · ${maybe.length}</span><div class="owners" style="margin-top:6px">${maybe.map(k => `<span class="owner off">${avatar(k, true)}<span>${esc(nameOf(k))}</span></span>`).join('')}</div></div>` : ''}
+          ${going.length ? `<div><span class="lbl">Going · ${going.length}</span><div class="owners" style="margin-top:6px">${going.map(k => `<span class="owner" style="padding:3px 10px 3px 4px">${nameTag(k, { avatar: true })}</span>`).join('')}</div></div>` : ''}
+          ${maybe.length ? `<div><span class="lbl">Maybe · ${maybe.length}</span><div class="owners" style="margin-top:6px">${maybe.map(k => `<span class="owner off" style="padding:3px 10px 3px 4px">${nameTag(k, { avatar: true })}</span>`).join('')}</div></div>` : ''}
         </div>`}
       ${manage ? `<div class="dlg-foot"><button class="btn btn-danger btn-sm" type="button" data-act="cal-remove" data-id="${esc(e.id)}" data-confirm="Confirm delete">Delete</button><button class="btn btn-ghost btn-sm" type="button" data-act="cal-edit" data-id="${esc(e.id)}">Edit</button></div>` : ''}
     </div>`);
@@ -1424,19 +1468,20 @@ function viewDivisions() {
         ${miniCal(calEvents().filter(e => e.division === div.id || e.major), 'This month')}
         <h2 class="sub section">Roster <span class="num" style="color:var(--dim)">${people.length}</span></h2>
         <div class="panel rows">${people.length ? people.sort((a, b) => leads.includes(b) - leads.includes(a) || (a.displayName || '').localeCompare(b.displayName || '')).map(p => `
-          <div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">${p.rsiHandle ? 'RSI: ' + esc(p.rsiHandle) : '@' + esc(p.username)}</span></div></div>
-          ${p.role === 'admin' ? '<span class="pill role-admin">Staff</span>' : leads.includes(p) ? '<span class="pill role-lead">Lead</span>' : ''}</div>`).join('') : '<div class="row"><span class="hint">No members yet.</span></div>'}</div>
+          <div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">${p.rsiHandle ? 'RSI: ' + esc(p.rsiHandle) : '@' + esc(p.username)}</span></div></div>
+          ${leads.includes(p) && p.role !== 'admin' ? '<span class="pill role-lead">Lead</span>' : ''}</div>`).join('') : '<div class="row"><span class="hint">No members yet.</span></div>'}</div>
       </div>
     </div>`;
 }
 
 /* ---------- Staff ---------- */
 function viewStaff() {
-  if (!me().isAdmin || !D().staff) return '<p class="empty">Staff only.</p>';
-  const tabs = [['overview', 'Overview'], ['events', 'Major events'], ['news', 'Newsletters'], ['roles', 'Discord roles']];
-  if (!tabs.some(t => t[0] === S.staffTab)) S.staffTab = 'overview';
+  const m = me();
+  if (!m.isAdmin && !m.canEditRoles) return '<p class="empty">Staff only.</p>';
+  const tabs = (m.isAdmin && D().staff ? [['overview', 'Overview'], ['events', 'Major events'], ['news', 'Newsletters']] : []).concat(m.canEditRoles ? [['roles', 'Discord roles']] : []);
+  if (!tabs.some(t => t[0] === S.staffTab)) S.staffTab = tabs[0][0];
   const body = { overview: staffOverview, events: staffEvents, news: staffNews, roles: staffRoles }[S.staffTab]();
-  return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>Site content, Discord access and setup. Visible to Admin, Manager and Director roles.</p></div></div>
+  return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>${m.isAdmin ? 'Site content, Discord access and setup.' : 'Discord role permissions for the member portal.'}</p></div></div>
     <div class="subtabs chips">${tabs.map(t => `<button class="chip${S.staffTab === t[0] ? ' on' : ''}" type="button" data-staff-tab="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
 }
 
@@ -1445,8 +1490,8 @@ function staffOverview() {
   const items = [
     [st.discordLogin, 'Discord sign-in', 'DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET and DISCORD_REDIRECT_URI in Script Properties.'],
     [st.guild, 'Discord server', 'DISCORD_GUILD_ID: only members of the Project Six server can sign in, and roles decide access.'],
-    [st.bot, 'Discord bot', 'DISCORD_BOT_TOKEN: reads server roles and re-checks members every few minutes.'],
-    [d.rolesMode, 'Role access', d.rolesMode ? 'Access follows Discord roles. Adjust the mapping under Discord roles.' : 'Manual approval is in use until Discord roles are connected.'],
+    [st.bot, 'Discord bot (optional)', 'DISCORD_BOT_TOKEN: re-checks members’ roles between sign-ins. Roles are always read when a member signs in.'],
+    [d.rolesMode, 'Role permissions', d.rolesMode ? 'Access, titles and divisions follow Discord roles (set by the owner and Systems Admins).' : 'Manual approval is in use until role permissions are saved.'],
     [st.webhook, 'Announcements (optional)', 'DISCORD_ANNOUNCE_WEBHOOK: new major events and newsletters are posted to a Discord channel.'],
     [st.market, 'Market data', 'UEX_TOKEN: live commodity prices for the Market page and logistics.']
   ];
@@ -1525,18 +1570,24 @@ function staffRoles() {
   }
   const r = S.rolesData;
   if (r.error) return `<div class="panel panel-pad"><p class="msg-err">${esc(r.error)}</p><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload" style="margin-top:10px">Try again</button></div>`;
-  if (!r.guild || (!r.bot && !r.roles.length)) return `<div class="panel panel-pad stack"><p class="msg-err">${esc(r.botError || 'Discord roles aren’t connected yet.')}</p><p class="hint">Fix it in the Discord Developer Portal or in Apps Script → Project Settings → Script Properties, then press Try again. Roles also show up here once members have signed in.</p><div><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Try again</button></div></div>`;
-  const divs = D().divisions;
-  const manual = !r.bot;
-  return `${manual ? `<div class="panel panel-pad stack" style="margin-bottom:14px"><p><b>Working without the bot.</b> ${esc(r.botError || '')}</p>
-      <p class="hint">These are the roles seen on members when they signed in. Discord only sends role IDs this way, so name each one: in Discord turn on Developer Mode, open Server Settings → Roles, right-click a role → Copy Role ID, and match it below. Roles update each time a member signs in.</p></div>` : ''}
-    <form data-form="roles" novalidate>
-    <div class="toolbar"><p class="hint" style="max-width:700px">${r.saved ? 'Saved mapping.' : 'Suggested from role names. Nothing is saved until you press Save.'} Members need a role with <b>Member</b> or higher to use the portal. Division roles decide which division events, work orders and rosters they see.</p>
-      <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Reload from Discord</button><button class="btn btn-solid" type="submit">Save mapping</button></div></div>
-    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Discord role</th><th>Access</th><th>Division</th></tr></thead><tbody>
-      ${r.roles.map(x => `<tr data-role="${esc(x.id)}" data-name="${esc(x.name)}"><td>${manual ? `<div class="field"><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="Role name" aria-label="Name for role ${esc(x.id)}"><span class="hint num">ID ${esc(x.id)}</span></div>` : `<span class="role-name" style="--c:${esc(x.color || '')}"><i></i>${esc(x.name)}</span>`}</td>
-        <td><select name="access" aria-label="Access for ${esc(x.name)}">${[['', 'No access'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']].map(o => `<option value="${o[0]}"${o[0] === x.access ? ' selected' : ''}>${o[1]}</option>`).join('')}</select></td>
-        <td><select name="division" aria-label="Division for ${esc(x.name)}"><option value="">—</option>${divs.map(dv => `<option value="${dv.id}"${dv.id === x.division ? ' selected' : ''}>${esc(dv.name)}</option>`).join('')}</select></td></tr>`).join('')}
+  const divs = D().divisions, owner = r.owner;
+  const titleOpts = [['', '—'], ['director', 'Director'], ['manager', 'Manager'], ['admin', 'Admin'], ['staff', 'Staff']];
+  const accessOpts = [['', 'No access'], ['member', 'Member'], ['lead', 'Division lead'], ['staff', 'Staff']];
+  const sel = (name, opts, v, label) => `<select name="${name}" aria-label="${esc(label)}">${opts.map(o => `<option value="${o[0]}"${o[0] === (v || '') ? ' selected' : ''}>${o[1]}</option>`).join('')}</select>`;
+  const row = x => `<tr data-role="${esc(x.id)}">
+      <td><input name="rname" maxlength="60" value="${esc(x.name)}" placeholder="Role name" aria-label="Name for role ${esc(x.id)}"><span class="rid">ID ${esc(x.id)}</span></td>
+      <td>${sel('access', accessOpts, x.access, 'Access')}</td>
+      <td>${sel('title', titleOpts, x.title, 'Title')}</td>
+      <td>${sel('division', [['', '—']].concat(divs.map(d => [d.id, d.name])), x.division, 'Division')}</td>
+      ${owner ? `<td class="sys-col"><input type="checkbox" name="sysadmin" style="width:18px;height:18px;accent-color:var(--accent)"${x.sysadmin ? ' checked' : ''} aria-label="Systems Admin"></td>` : ''}
+    </tr>`;
+  return `<form data-form="roles" novalidate>
+    <div class="toolbar"><p class="hint" style="max-width:720px"><b>Access</b> lets a role into the portal (Staff gets this Staff area). <b>Title</b> sets the rank icon and tag next to names; the highest one wins. <b>Division</b> decides which division events, work orders and rosters they see.${owner ? ' <b>Systems Admin</b> roles can edit this page; only you can see or change that column.' : ''}</p>
+      <div class="head-actions"><button class="btn btn-ghost btn-sm" type="button" data-act="roles-reload">Refresh</button><button class="btn btn-solid" type="submit">Save permissions</button></div></div>
+    <div class="panel table-scroll"><table class="role-table"><thead><tr><th>Discord role</th><th>Access</th><th>Title</th><th>Division</th>${owner ? '<th class="sys-col">Systems Admin</th>' : ''}</tr></thead><tbody>
+      ${r.roles.map(row).join('')}
+      <tr class="add"><td><input id="newRoleId" inputmode="numeric" maxlength="25" placeholder="Role ID" aria-label="New role ID"><span class="rid">Discord: Server Settings → Roles → right-click → Copy Role ID</span></td>
+        <td colspan="${owner ? 4 : 3}"><div style="display:flex;gap:8px;flex-wrap:wrap"><input id="newRoleName" maxlength="60" placeholder="Role name" aria-label="New role name" style="flex:1;min-width:160px"><button class="btn btn-ghost btn-sm" type="button" data-act="role-add">Add role</button></div></td></tr>
     </tbody></table></div></form>`;
 }
 
@@ -1624,6 +1675,16 @@ document.addEventListener('click', async e => {
     case 'site-edit': { const list = b.dataset.kind === 'events' ? d.staff.events : d.staff.newsletters; siteForm(b.dataset.kind, list.find(x => x.id === id)); break; }
     case 'site-remove': if (await act('site.remove', { kind: b.dataset.kind, id }, 'Deleted.')) closeDialog(); break;
     case 'roles-reload': S.rolesData = null; render(); break;
+    case 'role-add': {
+      const idv = ($('newRoleId').value || '').trim(), nm = ($('newRoleName').value || '').trim();
+      if (!/^\d{5,25}$/.test(idv)) { toast('Paste the role ID (a long number) from Discord.', 'err'); break; }
+      if (S.rolesData.roles.some(x => x.id === idv)) { toast('That role is already in the list.', 'err'); break; }
+      // keep anything typed into the table before re-rendering
+      document.querySelectorAll('tr[data-role]').forEach(tr => { const x = S.rolesData.roles.find(y => y.id === tr.dataset.role); if (x) { x.name = tr.querySelector('[name=rname]').value; x.access = tr.querySelector('[name=access]').value; x.title = tr.querySelector('[name=title]').value; x.division = tr.querySelector('[name=division]').value; const c = tr.querySelector('[name=sysadmin]'); if (c) x.sysadmin = c.checked; } });
+      S.rolesData.roles.push({ id: idv, name: nm, access: '', title: '', division: '', sysadmin: false });
+      render(); toast('Role added. Set its permissions, then Save.', 'ok');
+      break;
+    }
   }
 });
 
@@ -1685,8 +1746,12 @@ document.addEventListener('submit', async e => {
         ok = await act('site.save', { kind: 'newsletters', item: { id: v('id'), title: v('title'), author: v('author'), status: v('status'), summary: v('summary'), body: v('body') } }, 'Newsletter saved.');
         break;
       case 'roles': {
-        const roles = [...f.querySelectorAll('tr[data-role]')].map(tr => ({ id: tr.dataset.role, name: tr.querySelector('[name=rname]') ? tr.querySelector('[name=rname]').value : tr.dataset.name, access: tr.querySelector('[name=access]').value, division: tr.querySelector('[name=division]').value }));
-        ok = await act('roles.save', { roles }, 'Role mapping saved.');
+        const roles = [...f.querySelectorAll('tr[data-role]')].map(tr => ({
+          id: tr.dataset.role, name: tr.querySelector('[name=rname]').value, access: tr.querySelector('[name=access]').value,
+          title: tr.querySelector('[name=title]').value, division: tr.querySelector('[name=division]').value,
+          sysadmin: tr.querySelector('[name=sysadmin]') ? tr.querySelector('[name=sysadmin]').checked : undefined
+        }));
+        ok = await act('roles.save', { roles }, 'Permissions saved.');
         if (ok) { S.rolesData = null; render(); }
         break;
       }
