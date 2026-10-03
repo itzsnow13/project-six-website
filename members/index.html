@@ -591,6 +591,70 @@ dialog.wide { width: min(860px, calc(100% - 24px)); }
   .app-fill { animation: none !important; width: var(--to); }
   .app-badge, .app-steps i { animation: none !important; }
 }
+.onboard-box { position: relative; border: 1px dashed rgba(95,207,126,.5); border-radius: 8px; background: var(--bg); padding: 12px 14px; }
+.onboard-box pre { margin: 0; white-space: pre-wrap; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .88rem; color: var(--text); padding-right: 70px; }
+.onboard-box .btn { position: absolute; top: 10px; right: 10px; }
+.connecting { margin-top: 14px; color: var(--muted); font-family: var(--f-label); letter-spacing: .14em; text-transform: uppercase; font-size: .85rem; }
+.bg-check { border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden; background: var(--bg); }
+.bg-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.bg-flags { display: flex; flex-wrap: wrap; gap: 6px; }
+.bg-flag { font-size: .76rem; padding: 2px 9px; border-radius: 999px; border: 1px solid; font-weight: 600; }
+.bg-flag.ok { color: var(--ok); border-color: rgba(95,207,126,.45); }
+.bg-flag.warn { color: var(--warn); border-color: rgba(224,180,90,.5); }
+.bg-flag.bad { color: #ff8a7d; border-color: rgba(229,96,82,.55); background: rgba(229,96,82,.08); }
+.bg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bg-grid > div { display: grid; gap: 2px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.bg-grid > div:nth-child(-n+2) { border-top: 0; }
+.bg-grid > div:nth-child(odd) { border-right: 1px solid var(--line); }
+.bg-grid small { color: var(--dim); font-size: .8rem; overflow-wrap: anywhere; }
+.bg-events { border-top: 1px solid var(--line); padding: 8px 14px; display: grid; gap: 4px; font-size: .86rem; color: #ffb1a8; }
+.bg-events span { color: var(--dim); margin-right: 8px; }
+.hist-form { border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; display: grid; gap: 8px; }
+.timeline { display: grid; gap: 0; }
+.tl-item { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 12px; padding: 10px 0; position: relative; }
+.tl-item::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: var(--line); }
+.tl-item:first-child::before { top: 16px; } .tl-item:last-child::before { bottom: calc(100% - 16px); }
+.tl-item > i { width: 14px; height: 14px; border-radius: 50%; margin-top: 3px; background: var(--surface-3); border: 2px solid var(--line-2); position: relative; }
+.tl-item.warn > i { border-color: var(--warn); } .tl-item.bad > i { border-color: var(--danger); background: rgba(229,96,82,.25); } .tl-item.ok > i { border-color: var(--ok); } .tl-item.info > i { border-color: #8fb0d0; }
+.tl-item.lifted { opacity: .6; }
+.tl-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: .88rem; }
+.tl-head time { color: var(--dim); font-size: .8rem; }
+.tl-kind { font-family: var(--f-label); font-weight: 700; font-size: .7rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.tl-kind.warn { color: var(--warn); } .tl-kind.bad { color: #ff8a7d; } .tl-kind.ok { color: var(--ok); } .tl-kind.info { color: #8fb0d0; }
+.tl-item p { margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.tl-item .link-btn { margin-right: 12px; font-size: .84rem; }
+.danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 14px; padding: 12px 14px; border: 1px solid rgba(229,96,82,.4); border-radius: 8px; }
+.danger-zone div { display: grid; gap: 2px; } .danger-zone span { color: var(--muted); font-size: .86rem; }
+.hooks { display: grid; }
+.hook-row { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.4fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.hook-info { display: grid; gap: 2px; } .hook-info span { color: var(--muted); font-size: .86rem; } .hook-now { color: var(--dim) !important; font-size: .8rem !important; }
+.hook-row input { width: 100%; padding: 9px 12px; border-radius: 6px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font: inherit; }
+.hook-row input:focus { outline: none; border-color: var(--accent); }
+@media (max-width: 800px) { .hook-row { grid-template-columns: 1fr; } .bg-grid { grid-template-columns: 1fr; } .bg-grid > div { border-right: 0 !important; border-top: 1px solid var(--line) !important; } .bg-grid > div:first-child { border-top: 0 !important; } }
+.crew-chat { position: fixed; right: 20px; bottom: 20px; z-index: 40; }
+.chat-fab { position: relative; width: 56px; height: 56px; border-radius: 50%; border: 1px solid rgba(201,181,142,.6); background: var(--accent); color: var(--accent-ink); cursor: pointer; display: grid; place-items: center; box-shadow: 0 10px 30px rgba(0,0,0,.45), 0 0 0 0 rgba(201,181,142,.5); animation: fabIn .35s cubic-bezier(.2,.8,.2,1); transition: transform .2s; }
+.chat-fab:hover { transform: translateY(-2px) scale(1.04); }
+.chat-fab svg { width: 24px; height: 24px; fill: currentColor; }
+.chat-fab .count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 999px; background: var(--danger); color: #fff; font-size: .72rem; font-weight: 700; display: grid; place-items: center; box-shadow: 0 0 0 2px var(--bg); }
+@keyframes fabIn { from { transform: scale(.4); opacity: 0; } }
+.chat-panel { width: min(360px, calc(100vw - 32px)); height: min(500px, calc(100vh - 110px)); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line-2); border-radius: 14px; overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.55); animation: panelIn .25s cubic-bezier(.2,.8,.2,1); }
+@keyframes panelIn { from { transform: translateY(12px) scale(.98); opacity: 0; } }
+.chat-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.chat-head b, .chat-head select { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-crew { display: flex; } .chat-crew .av { margin-left: -6px; box-shadow: 0 0 0 2px var(--surface-2); }
+.chat-msgs { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.chat-msg { display: grid; justify-items: start; gap: 2px; max-width: 85%; }
+.chat-msg.me { align-self: flex-end; justify-items: end; }
+.chat-name { font-size: .74rem; color: var(--muted); font-weight: 600; }
+.chat-bubble { padding: 7px 11px; border-radius: 14px 14px 14px 4px; background: var(--surface-2); border: 1px solid var(--line); overflow-wrap: anywhere; white-space: pre-wrap; animation: msgIn .25s ease-out; }
+.chat-msg.me .chat-bubble { border-radius: 14px 14px 4px 14px; background: color-mix(in srgb, var(--accent) 22%, var(--surface)); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.chat-msg time { font-size: .68rem; color: var(--dim); }
+.chat-empty { margin: auto; color: var(--dim); font-size: .9rem; text-align: center; }
+.chat-form { display: flex; gap: 8px; padding: 10px 12px 6px; border-top: 1px solid var(--line); }
+.chat-form textarea { flex: 1; resize: none; max-height: 100px; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg); color: var(--text); font: inherit; }
+.chat-form textarea:focus { outline: none; border-color: var(--accent); }
+.chat-note { padding: 0 12px 8px; font-size: .72rem; color: var(--dim); }
+@media (max-width: 520px) { .crew-chat { right: 12px; bottom: 12px; } }
 .mgmt-label { padding: 12px 16px 4px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); border-top: 1px solid var(--line); }
 .pill.stage-received { color: var(--steel); border-color: rgba(147,161,168,.5); }
 .pill.stage-forwarded { color: var(--accent); border-color: rgba(201,181,142,.45); }
@@ -702,6 +766,7 @@ dialog.wide { width: min(860px, calc(100% - 24px)); }
     <div class="wrap tabs" id="tabs" role="tablist"></div>
   </nav>
   <main class="wrap" id="view" tabindex="-1"></main>
+  <div id="crewChat" class="crew-chat"></div>
 </div>
 
 <dialog id="dlg"><div id="dlgInner"></div></dialog>
@@ -957,7 +1022,8 @@ const S = {
   woStatus: 'open', woDiv: 'all', fleetCat: 'all', fleetView: 'org', crewEdit: null,
   calMonth: '', calDay: '', calFilter: 'all', divTab: '', staffTab: 'overview', rolesData: null, rolesLoading: false,
   sub: { ops: 'work', treasury: 'mine' }, fundFilter: 'open',
-  threads: {}, ticketSel: null, tkFilter: 'pending', tkQ: ''
+  threads: {}, ticketSel: null, tkFilter: 'pending', tkQ: '',
+  chats: {}, chatOpen: false, chatWo: ''
 };
 const TOKEN_KEY = 'p6_member_session';
 const STATE_KEY = 'p6_oauth_state';
@@ -1158,7 +1224,7 @@ function render() {
   if (!S.data) return;
   if (S.data.pending) {
     const ap = D().apply || {};
-    if (D().review || (ap.application && ap.application.finalized)) { renderPending(); show('screenPending'); return; }
+    if (ap.application && ap.application.finalized && ap.application.status === 'accepted' && !ap.blocked && ap.standing !== 'removed') { renderPending(); show('screenPending'); return; }
     renderApplicant();
     if (S.ticketSel && $('threadBox')) renderThread();
     return;
@@ -1180,6 +1246,7 @@ function render() {
   if (S.tab === 'tickets' && S.ticketSel) { if (S.threads[S.ticketSel]) renderThread(); else loadThread(S.ticketSel).then(renderThread); }
   if (S.tab === 'ops' && S.sub.ops === 'logistics') loadMarket();
   if (S.tab === 'crew') applyRoster();
+  renderChat();
   const on = $('tabs').querySelector('.tab.on');
   if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -1696,6 +1763,7 @@ function viewRoster() {
     <div class="toolbar section roster-bar"><h2 class="sub" style="margin:0">Divisions</h2>
       <input class="roster-search" type="search" data-roster-q="all" value="${esc(S.crewQ || '')}" placeholder="Search crew by name or RSI handle…" aria-label="Search crew"></div>
     <div class="grid-2">${groups.map(block).join('')}</div>
+    ${(m.isManager || m.isCommand) && d.members.some(x => x.standing) ? `<details class="section done-list"><summary class="sub">Removed & banned <span class="num" style="color:var(--dim)">${d.members.filter(x => x.standing).length}</span></summary><div class="panel rows">${d.members.filter(x => x.standing).map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)} <span class="hint">@${esc(p.username)}</span></span><span class="row-sub"><span class="pill prio-high">${esc(STANDING_LABEL[p.standing] || p.standing)}</span> ${esc(p.standingNote || '')} · ${esc(rel(p.standingAt))}</span></div></div><div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-act="history" data-id="${esc(p.id)}">History</button><button class="btn btn-ghost btn-sm" type="button" data-act="standing-open" data-id="${esc(p.id)}">Change</button></div></div>`).join('')}</div></details>` : ''}
     ${suspended.length ? `<h2 class="sub section">Suspended</h2><div class="panel rows">${suspended.map(personRow).join('')}</div>` : ''}`;
 }
 
@@ -1746,6 +1814,8 @@ function memberForm(id) {
         ${m.isManager && !self ? `<div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status">${['active', 'suspended'].concat(p.status && !['active', 'suspended'].includes(p.status) ? [p.status] : []).map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>` : ''}
       </div>
       ${m.owner && !self ? `<label class="choice"><input type="checkbox" name="command"${p.command ? ' checked' : ''}><span><b>Command</b><small>Org leadership with full access: sets division leads, org-wide and major events. Only you can assign this.</small></span></label>` : ''}
+      ${(m.isManager || m.isCommand) && !self && !p.command ? `<div class="danger-zone"><div><b>Remove from portal</b><span>Banned, kicked, left, or gone inactive. Sends them back to the application screen.</span></div><button class="btn btn-danger btn-sm" type="button" data-act="standing-open" data-id="${esc(p.id)}">Remove…</button></div>` : ''}
+      ${m.staffLevel >= 2 && !self ? `<div><button class="btn btn-ghost btn-sm" type="button" data-act="history" data-id="${esc(p.id)}">History & notes</button></div>` : ''}
       <p class="hint" style="margin-top:12px">${rm ? 'Divisions from Discord roles stay as they are; a division set here is added in the portal. ' : ''}Leads and supervisors are set under Command → Division Management.${m.isManager ? ' Suspending blocks the portal and signs them out everywhere.' : ''}</p>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
@@ -1779,7 +1849,7 @@ function profileView(id) {
         : auxNow.length && (self || canAuxAny()) ? `<div class="stack" style="gap:8px"><span class="lbl">Auxiliary groups</span><div class="owners">${auxNow.map(x => crewChip(divOf(x))).join('')}</div></div>` : ''}
       <div class="stack" style="gap:6px"><span class="lbl">Hangar</span>
         ${ships.length ? `<div class="prof-ships">${ships.map(x => `<div class="prof-ship"><b>${esc(x.model)}${x.nickname ? ` <span>“${esc(x.nickname)}”</span>` : ''}</b><span>${esc(label(catalogInfo(x.model).category))}${x.available === 'yes' ? '' : ' · not available'}</span></div>`).join('')}</div>` : '<p class="hint">No pledged ships registered.</p>'}</div>
-      ${self ? '<div class="dlg-foot"><button class="btn btn-solid" type="button" data-act="profile-edit">Edit profile</button></div>' : ''}
+      ${self ? '<div class="dlg-foot"><button class="btn btn-solid" type="button" data-act="profile-edit">Edit profile</button></div>' : me().staffLevel >= 2 ? `<div class="dlg-foot"><button class="btn btn-ghost" type="button" data-act="history" data-id="${esc(id)}">History & notes</button></div>` : ''}
     </div>`);
 }
 
@@ -2049,7 +2119,7 @@ function staffOverview() {
     [st.guild, 'Discord server', 'DISCORD_GUILD_ID: only members of the Project Six server can sign in, and roles decide access.'],
     [st.bot, 'Discord bot (optional)', 'DISCORD_BOT_TOKEN: re-checks members’ roles between sign-ins. Roles are always read when a member signs in.'],
     [d.rolesMode, 'Role permissions', d.rolesMode ? 'Access, titles and divisions follow Discord roles (set by the owner and Systems Admins).' : 'Manual approval is in use until role permissions are saved.'],
-    [st.webhook, 'Announcements (optional)', 'DISCORD_ANNOUNCE_WEBHOOK: new major events and newsletters are posted to a Discord channel.'],
+    [st.webhook, 'Announcements (optional)', 'Discord webhooks for newsletters and events. The owner sets them above.'],
     [st.market, 'Market data', 'UEX_TOKEN: live commodity prices for the Market page and logistics.']
   ];
   const pending = d.members.filter(x => x.status === 'pending').length;
@@ -2060,6 +2130,14 @@ function staffOverview() {
       <div class="stat"><div class="stat-label">Major events</div><div class="stat-value">${majors}</div><div class="stat-note">Upcoming, on the website</div></div>
       <div class="stat"><div class="stat-label">Newsletters</div><div class="stat-value">${d.staff.newsletters.filter(n => n.status === 'published').length}</div><div class="stat-note">Published</div></div>
     </div>
+    ${me().owner && st.hooks ? `<h2 class="sub section">Discord webhooks <span class="hint" style="text-transform:none;letter-spacing:0;font-weight:500">· only you see this</span></h2>
+      <div class="panel hooks">${[['news', 'Newsletters', 'Published newsletters are posted here.'], ['events', 'Org-wide & major events', 'New major events and org-wide calendar events are posted here.']].map(([k, t, h]) => `
+        <form class="hook-row" data-form="hook" data-which="${k}" novalidate>
+          <div class="hook-info"><b>${t}</b><span>${h}</span><span class="hook-now">${st.hooks[k] ? `<span class="ok-mark">✓</span> ${esc(st.hooks[k])}` : st.hooks.fallback ? `Using the shared webhook (${esc(st.hooks.fallback)})` : 'Not set'}</span></div>
+          <input name="url" type="url" placeholder="https://discord.com/api/webhooks/…" aria-label="${t} webhook URL" autocomplete="off">
+          <div class="actions"><button class="btn btn-solid btn-sm" type="submit">Save</button>${st.hooks[k] || st.hooks.fallback ? `<button class="btn btn-ghost btn-sm" type="button" data-act="hook-test" data-which="${k}">Test</button>` : ''}${st.hooks[k] ? `<button class="btn btn-ghost btn-sm" type="button" data-act="hook-clear" data-which="${k}" data-confirm="Remove?">Remove</button>` : ''}</div>
+        </form>`).join('')}
+        <p class="hint" style="padding:0 16px 14px">In Discord: Channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL. The full URL is kept on the server and never shown again.</p></div>` : ''}
     <h2 class="sub section">Setup</h2>
     <div class="panel checklist">${items.map(i => `<div class="check-row"><span class="mark ${i[0] ? 'y' : 'n'}">${i[0] ? '✓' : '!'}</span><div><b>${esc(i[1])}</b><span>${esc(i[2])}</span></div></div>`).join('')}</div>`;
 }
@@ -2378,7 +2456,8 @@ const TICKET_CATS = {
   help: { label: 'Help', hint: 'Something isn’t working or you need a hand. Goes to your division lead.' },
   transfer: { label: 'Division transfer', hint: 'Change your main division. Goes to your current division lead.' },
   report: { label: 'Report a member', hint: 'Conduct problems. Urgent; goes to that member’s division lead.' },
-  appeal: { label: 'Blacklist appeal', hint: 'Only managers and Command see appeals.' }
+  appeal: { label: 'Application blacklist appeal', hint: 'For applicants blacklisted after three denials. Only managers and Command see appeals.' },
+  banappeal: { label: 'Ban appeal', hint: 'For accounts banned, kicked or marked as leaving without notice. Only managers and Command see appeals.' }
 };
 const LEVEL_NAMES = { supervisor: 'Supervisors', lead: 'Division Lead', manager: 'Managers', command: 'Command' };
 const PRIO = { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' };
@@ -2408,31 +2487,57 @@ function appProgress(a) {
   </div>`;
 }
 
+function onboardText(a, ap) {
+  const div = divOf(a.division), ok = ap.approver;
+  return ['**Onboarding request**',
+    `Discord: @${a.discordName}`,
+    `RSI handle: ${a.rsiHandle}`,
+    `Division: ${div ? div.name : 'Not sure yet'}`,
+    `Timezone: ${a.timezone}`,
+    `Application #${a.attempt} approved by ${ok ? `${ok.name} (${ok.title})` : 'Project Six staff'} on ${new Date(a.decidedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`].join('\n');
+}
 function viewApplication() {
   const ap = D().apply || {}, a = ap.application;
   const enlist = CONFIG.siteUrl + '#enlist';
   const head = `<div class="page-head"><div><div class="eyebrow">Recruitment</div><h1>My application</h1><p>Signed in as <b>${esc(me().username)}</b>. Live status from Project Six staff.</p></div></div>`;
-  if (!a) return head + `<section class="panel panel-pad app-empty"><h2>You haven’t applied yet</h2><p>The application takes about five minutes: confirm your Discord, fill in the form, verify your RSI profile and send your RSI join request.</p><a class="btn btn-solid" href="${esc(enlist)}">Start application</a></section>`;
+  const myAppeal = cat => (D().tickets || []).find(t => t.category === cat && t.status !== 'closed');
+  const appealBtn = (cat, label) => myAppeal(cat) ? `<button class="btn btn-ghost" type="button" data-ticket="${esc(myAppeal(cat).id)}">View my appeal</button>` : `<button class="btn btn-danger" type="button" data-act="ticket-new" data-cat="${cat}">${label}</button>`;
+  if (ap.blocked) {
+    const banned = ap.standing === 'kicked' || ap.standing === 'banned';
+    return head + `<section class="panel app-box tone-bad">
+      <span class="app-badge tone-bad" style="justify-self:start">${banned ? 'Banned' : 'Blacklisted'}</span>
+      <h2>${banned ? `Banned from portal due to reason: ${ap.standing === 'kicked' ? 'Kick' : 'Ban'}` : 'You left the Discord without notice'}</h2>
+      <p>${banned ? 'Your account was removed from the Project Six Discord, so portal access and applications are closed.' : 'Your account left the Project Six Discord without notice, so you’re blacklisted from applying.'} Submit an appeal ticket if you want to come back or have questions.</p>
+      ${ap.standingNote ? `<div class="deny-note"><span class="lbl">Reason on file</span><p>${esc(ap.standingNote)}</p></div>` : ''}
+      <div class="head-actions">${appealBtn('banappeal', 'Submit appeal ticket')}</div>
+    </section>`;
+  }
+  if (!a || (ap.standing === 'removed' && ap.canApply && !['pending', 'assigned', 'review'].includes(a.status))) return head + `<section class="panel app-empty">
+      <span class="app-badge tone-live" style="justify-self:start">No application</span>
+      <h2>${ap.standing === 'removed' ? 'You were removed from the portal' : 'You must submit an application'}</h2>
+      <p>${ap.standing === 'removed' ? `${ap.standingNote ? esc(ap.standingNote) + '. ' : ''}To come back, submit a new application.` : 'The portal opens once you’ve applied. It takes about five minutes: confirm your Discord, fill in the form, verify your RSI profile and send your RSI join request.'}</p>
+      <a class="btn btn-solid" href="${esc(enlist)}">Enlist now</a></section>`;
   const st = a.status;
-  const badge = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'] }[st];
+  const badge = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Voided', 'live'] }[st];
   const div = divOf(a.division);
+  if (st === 'voided') return head + `<section class="panel app-empty"><span class="app-badge tone-live" style="justify-self:start">Denial voided</span><h2>Your last denial was cancelled by staff</h2><p>${esc(a.note || '')} It no longer counts against you. Submit a new application whenever you’re ready.</p><a class="btn btn-solid" href="${esc(enlist)}">Apply again</a></section>`;
   const blacklisted = ap.blacklisted || st === 'blacklisted';
-  const appeal = (D().tickets || []).find(t => t.category === 'appeal' && t.status !== 'closed');
   let body = '';
   if (st === 'accepted') body = `
     <section class="panel app-box tone-ok">
       <h2>Welcome to Project Six</h2>
       <p>Your application was accepted${a.note ? `: <i>${esc(a.note)}</i>` : '.'} Here’s how to finish joining:</p>
-      <ol class="guide"><li><b>Open our Discord</b> and go to the <b>#onboarding</b> channel.</li><li><b>Get with a supervisor</b> there. They’ll walk you through onboarding.</li><li>Once onboarding is done, staff give you your Discord roles and this portal opens up.</li></ol>
+      <ol class="guide"><li><b>Open our Discord</b> and go to the <b>#onboarding</b> channel.</li><li><b>Paste the message below</b> so staff know who you are.</li><li><b>Get with a supervisor</b> there. They’ll walk you through onboarding and give you your roles.</li></ol>
+      <div class="onboard-box"><pre id="onboardText">${esc(onboardText(a, ap))}</pre><button class="btn btn-ghost btn-sm" type="button" data-act="copy-onboard">Copy</button></div>
       <div class="head-actions"><a class="btn btn-ghost" href="${esc(CONFIG.discordUrl)}" target="_blank" rel="noopener">Open Discord</a><button class="btn btn-ok" type="button" data-act="app-finalize" data-confirm="Finalize enlistment?">Finalize enlistment</button></div>
-      <p class="hint">Finalize once you’ve read the steps. Your application closes and you’ll wait for your roles.</p>
+      <p class="hint">Finalize once you’ve posted in #onboarding. Your application closes and the portal opens when your roles arrive.</p>
     </section>`;
   else if (blacklisted) body = `
     <section class="panel app-box tone-bad">
       <h2>You have been blacklisted from applying</h2>
       <p>${ap.strikes >= ap.maxStrikes ? `Your application was denied ${ap.maxStrikes} times.` : 'This application was blacklisted.'} You must submit a support ticket if you have questions or want to appeal.</p>
       ${a.note && st === 'denied' ? `<div class="deny-note"><span class="lbl">Division lead comments</span><p>${esc(a.note)}</p></div>` : ''}
-      <div class="head-actions">${appeal ? `<button class="btn btn-ghost" type="button" data-ticket="${esc(appeal.id)}">View my appeal</button>` : '<button class="btn btn-danger" type="button" data-act="ticket-new" data-cat="appeal">Appeal</button>'}</div>
+      <div class="head-actions">${appealBtn('appeal', 'Appeal')}</div>
     </section>`;
   else if (st === 'denied') body = `
     <section class="panel app-box tone-bad">
@@ -2450,7 +2555,7 @@ function viewApplication() {
     </section>`;
   return head + `
     <section class="panel app-card">
-      <div class="app-card-head"><div><span class="lbl">Application #${esc(a.attempt)}</span><h2>${div ? `${patchSVG(div, divIndex(div.id), 34)}${esc(div.name)}` : 'Division: not sure yet'}</h2></div><span class="app-badge tone-${badge[1]}">${esc(badge[0])}</span></div>
+      <div class="app-card-head"><div><span class="lbl">Application #${esc(a.attempt)} · ${esc(me().rank || 'Recruit')}</span><h2>${div ? `${patchSVG(div, divIndex(div.id), 34)}${esc(div.name)}` : 'Division: not sure yet'}</h2></div><span class="app-badge tone-${badge[1]}">${esc(badge[0])}</span></div>
       ${appProgress(a)}
       <div class="app-facts">
         <div><span class="lbl">Submitted</span><b>${esc(fmtDateTime(a.created))}</b></div>
@@ -2494,7 +2599,7 @@ function supportList(open, closed) {
 /* Member/applicant ticket form. */
 function ticketForm(cat) {
   const pending = !!D().pending, ap = D().apply || {};
-  const cats = pending ? ['question'].concat(ap.blacklisted ? ['appeal'] : []) : ['question', 'help', 'transfer', 'report'];
+  const cats = pending ? ['question'].concat(ap.blocked ? ['banappeal'] : []).concat(ap.blacklisted ? ['appeal'] : []) : ['question', 'help', 'transfer', 'report'];
   cat = cats.includes(cat) ? cat : cats[0];
   const myDiv = ((me().divisions || []).filter(x => x !== 'hq'))[0] || '';
   const people = pending ? [] : (D().members || []).filter(x => x.id !== me().id && (!x.status || x.status === 'active')).sort(byUser);
@@ -2503,7 +2608,7 @@ function ticketForm(cat) {
       <div class="field"><label for="tkCat">What’s it about?</label><select id="tkCat" name="category" data-tk-cat>${cats.map(c => `<option value="${c}"${c === cat ? ' selected' : ''}>${esc(TICKET_CATS[c].label)}</option>`).join('')}</select><p class="hint" data-tk-hint>${esc(TICKET_CATS[cat].hint)}</p></div>
       <div class="field" data-tk-for="transfer"${cat === 'transfer' ? '' : ' hidden'}><label for="tkDiv">Move to</label><select id="tkDiv" name="targetDiv">${D().divisions.filter(x => !x.command && x.id !== myDiv).map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select></div>
       <div class="field" data-tk-for="report"${cat === 'report' ? '' : ' hidden'}><label for="tkWho">Member</label><input id="tkWho" name="who" list="tkPeople" placeholder="Start typing a name" autocomplete="off"><datalist id="tkPeople">${people.map(x => `<option value="${esc(x.username)}">${esc(x.displayName || '')}</option>`).join('')}</datalist></div>
-      <div class="field"><label for="tkSubj">Subject *</label><input id="tkSubj" name="subject" maxlength="100" required placeholder="${cat === 'appeal' ? 'e.g. Appeal for my application' : 'Short summary'}"></div>
+      <div class="field"><label for="tkSubj">Subject *</label><input id="tkSubj" name="subject" maxlength="100" required placeholder="${cat === 'appeal' || cat === 'banappeal' ? 'e.g. Appeal for my account' : 'Short summary'}"></div>
       <div class="field"><label for="tkBody">Message *</label><textarea id="tkBody" name="body" maxlength="4000" required placeholder="Give staff everything they need: what happened, when, screenshots links…"></textarea></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Open ticket</button></div>
     </form>`);
@@ -2557,11 +2662,12 @@ function renderThread() {
   const closed = t.status === 'closed';
   const head = `<div class="tk-head"><div><h2>${esc(t.subject)}</h2>
       <div class="tk-headmeta">${statusPill(t)}${prioPill(t.priority)}<span class="pill">${esc(TICKET_CATS[t.category] ? TICKET_CATS[t.category].label : t.category)}</span><span class="tk-level">With ${esc(LEVEL_NAMES[t.level] || t.level)}${t.assignee ? ' · ' + esc(t.assignee) : ''}</span></div>
-      ${staff ? `<div class="tk-who">${discordAv(t.memberId, t.opener.avatar, t.opener.name, 'av-sm')}<b>${esc(t.opener.name)}</b> <span class="hint">@${esc(t.opener.username)}</span>${titleTag(t.opener.title)}${t.targetName ? ` <span class="hint">· reporting <b>${esc(t.targetName)}</b></span>` : ''}${t.category === 'transfer' && divOf(t.target) ? ` <span class="hint">· wants <b>${esc(divOf(t.target).name)}</b></span>` : ''}</div>` : ''}</div>
+      ${staff ? `<div class="tk-who">${discordAv(t.memberId, t.opener.avatar, t.opener.name, 'av-sm')}<b>${esc(t.opener.name)}</b> <span class="hint">@${esc(t.opener.username)}</span>${titleTag(t.opener.title)}${t.targetName ? ` <span class="hint">· reporting <b>${esc(t.targetName)}</b></span>` : ''}${t.openerStanding ? ` <span class="pill prio-high">${esc({ left: 'Left without notice', kicked: 'Kicked', banned: 'Banned', removed: 'Removed' }[t.openerStanding] || t.openerStanding)}</span>` : ''}${t.category === 'transfer' && divOf(t.target) ? ` <span class="hint">· wants <b>${esc(divOf(t.target).name)}</b></span>` : ''}</div>` : ''}</div>
     <div class="actions">${staff && !closed && t.assignedTo !== me().id ? `<button class="btn btn-ghost btn-sm" type="button" data-act="tk-take" data-id="${esc(t.id)}">Take</button>` : ''}
       ${staff && !closed && t.level !== 'command' ? `<button class="btn btn-ghost btn-sm" type="button" data-act="tk-escalate" data-id="${esc(t.id)}">Elevate</button>` : ''}
       ${staff ? `<select class="mini" data-tk-prio="${esc(t.id)}" aria-label="Priority">${Object.keys(PRIO).map(p => `<option value="${p}"${p === t.priority ? ' selected' : ''}>${PRIO[p]}</option>`).join('')}</select>` : ''}
       ${t.category === 'appeal' && staff && me().staffLevel >= 3 ? `<button class="btn btn-ok btn-sm" type="button" data-act="tk-clear" data-id="${esc(t.id)}" data-member="${esc(t.memberId)}" data-confirm="Clear their blacklist?">Clear blacklist</button>` : ''}
+      ${t.category === 'banappeal' && staff && me().staffLevel >= 3 && t.openerStanding ? `<button class="btn btn-ok btn-sm" type="button" data-act="tk-unban" data-id="${esc(t.id)}" data-member="${esc(t.memberId)}" data-confirm="Accept appeal?">Accept appeal</button>` : ''}
       ${closed ? `<button class="btn btn-ghost btn-sm" type="button" data-act="tk-reopen" data-id="${esc(t.id)}">Reopen</button>` : `<button class="btn btn-danger btn-sm" type="button" data-act="tk-close" data-id="${esc(t.id)}" data-confirm="Close ticket?">Close</button>`}</div></div>`;
   box.innerHTML = `${head}
     <div class="tk-msgs" id="threadMsgs">${msgs.length ? msgs.map(msgHTML).join('') : '<div class="spinner"></div>'}</div>
@@ -2627,8 +2733,8 @@ function appsNeedingMe() {
 function appAv(a, cls) { return discordAv(a.memberId, a.avatar, a.name, cls); }
 function appRow(a) {
   const div = divOf(a.division);
-  const stage = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'] }[a.status];
-  return `<div class="row app-row"><div class="who">${appAv(a)}<div class="row-main"><span class="row-title">${esc(a.name)} <span class="hint">@${esc(a.username)}</span></span>
+  const stage = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Voided', 'live'] }[a.status];
+  return `<div class="row app-row" data-q="${esc((a.name + ' ' + a.username + ' ' + a.rsiHandle).toLowerCase())}"><div class="who">${appAv(a)}<div class="row-main"><span class="row-title">${esc(a.name)} <span class="hint">@${esc(a.username)}</span></span>
       <span class="row-sub">${div ? esc(div.name) : 'Division not picked'} · RSI ${esc(a.rsiHandle)}${a.rsiVerified ? ' <span class="ok-mark">✓</span>' : ''} · ${esc(rel(a.created))}${a.strikes ? ` · <span style="color:var(--danger)">${a.strikes} denial${a.strikes === 1 ? '' : 's'}</span>` : ''}${a.leadId ? ' · lead: ' + esc(nameOf(a.leadId)) : ''}</span></div></div>
     <div class="actions"><span class="app-badge sm tone-${stage[1]}">${stage[0]}</span><button class="btn btn-ghost btn-sm" type="button" data-act="app-open" data-id="${esc(a.id)}">Open</button></div></div>`;
 }
@@ -2643,7 +2749,10 @@ function viewApplications() {
     ${sec('Needs a lead', unassigned, 'Nothing waiting.')}
     ${sec('Assigned to me', mine, 'Nothing assigned to you.')}
     ${others.length ? sec('With other leads', others, '') : ''}
-    <details class="section done-list"><summary class="sub">Decided (45 days) <span class="num" style="color:var(--dim)">${decided.length}</span></summary><div class="panel rows">${decided.length ? decided.map(appRow).join('') : '<div class="row"><span class="hint">None yet.</span></div>'}</div></details>`;
+    ${m.isManager || m.isCommand
+      ? `<div class="toolbar section"><h2 class="sub" style="margin:0">Completed history <span class="num" style="color:var(--dim)">${decided.length}</span></h2><input class="roster-search" type="search" data-app-q placeholder="Search name or RSI handle…" aria-label="Search applications"></div>
+        <div class="panel rows" id="appHistory">${decided.length ? decided.map(appRow).join('') : '<div class="row"><span class="hint">None yet.</span></div>'}</div>`
+      : `<details class="section done-list"><summary class="sub">Decided (45 days) <span class="num" style="color:var(--dim)">${decided.length}</span></summary><div class="panel rows">${decided.length ? decided.map(appRow).join('') : '<div class="row"><span class="hint">None yet.</span></div>'}</div></details>`}`;
 }
 function appDialog(id) {
   const a = (D().applications || []).find(x => x.id === id); if (!a) return;
@@ -2660,8 +2769,12 @@ function appDialog(id) {
         <div><span class="lbl">Timezone</span><b>${esc(a.timezone)}</b></div>
         <div><span class="lbl">Attempt</span><b>#${esc(a.attempt)}${a.strikes ? ` · ${a.strikes} prior denial${a.strikes === 1 ? '' : 's'}` : ''}</b></div>
       </div>
+      ${bgCheck(a.background, a.returningSaid)}
       <div class="stack" style="gap:6px"><span class="lbl">About them</span><p class="app-about">${esc(a.about || 'Nothing written.')}</p></div>
       ${a.note ? `<div class="deny-note"><span class="lbl">${a.status === 'denied' ? 'Denial comments' : 'Note'}</span><p>${esc(a.note)}</p></div>` : ''}
+      ${(a.status === 'denied' || a.status === 'blacklisted') && (m.isManager || m.isCommand) ? `<div class="danger-zone"><div><b>Denied by mistake?</b><span>Voiding removes this denial: it stops counting toward the blacklist and they can apply again right away.</span></div><button class="btn btn-ghost btn-sm" type="button" data-act="app-void" data-id="${esc(a.id)}">Void denial</button></div>` : ''}
+      ${a.discordRole ? `<p class="hint">${a.discordRole === 'set' ? `<span class="ok-mark">✓</span> Discord role given: ${a.status === 'accepted' ? 'Approved' : 'Denied'} Applicant.` : `<b style="color:var(--warn)">The bot couldn’t give the ${a.status === 'accepted' ? 'Approved' : 'Denied'} Applicant role.</b> Give it by hand in Discord.`}</p>` : ''}
+      ${me().staffLevel >= 2 ? `<div><button class="btn btn-ghost btn-sm" type="button" data-act="history" data-id="${esc(a.memberId)}">Full history & notes</button></div>` : ''}
       ${open ? `<div class="app-actions">
         ${boss ? `<form class="row" data-form="app-assign" data-id="${esc(a.id)}" novalidate style="gap:8px;padding:0"><select name="leadId" class="mini" style="flex:1" aria-label="Assign to lead"><option value="">Assign to a lead…</option>${leads.map(x => `<option value="${esc(x.id)}"${x.id === a.leadId ? ' selected' : ''}>${esc(x.displayName || x.username)} · ${esc((divOf(x.lead) || {}).name || '')}</option>`).join('')}</select><button class="btn btn-ghost btn-sm" type="submit">Assign</button></form>` : ''}
         <div class="head-actions">
@@ -2680,6 +2793,137 @@ function decideForm(id, accept) {
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn ${accept ? 'btn-ok' : 'btn-danger'}" type="submit">${accept ? 'Accept' : 'Deny'}</button></div>
     </form>`);
 }
+
+/* ---------- Background check and member history (division leads and up) ---------- */
+function ageText(iso) {
+  const ms = Date.now() - Date.parse(iso); if (!iso || !isFinite(ms)) return '';
+  const days = Math.floor(ms / 864e5);
+  if (days < 1) return 'today';
+  if (days < 60) return days + ' day' + (days === 1 ? '' : 's');
+  const months = Math.floor(days / 30.4);
+  if (months < 24) return months + ' month' + (months === 1 ? '' : 's');
+  return (days / 365.25).toFixed(1).replace(/\.0$/, '') + ' years';
+}
+const STANDING_LABEL = { removed: 'Removed from the portal', left: 'Left Discord without notice', kicked: 'Kicked from Discord', banned: 'Banned from Discord', restored: 'Restored' };
+function bgCheck(bg, said) {
+  if (!bg) return '';
+  const young = bg.discordCreated && Date.now() - Date.parse(bg.discordCreated) < 90 * 864e5;
+  const mismatch = bg.returningDetected && said === false;
+  const flags = [];
+  if (young) flags.push(['bad', `New Discord account (${ageText(bg.discordCreated)} old)`]);
+  if (bg.returningDetected) flags.push(['warn', 'Returning Discord account']);
+  if (mismatch) flags.push(['bad', 'Said they’re not a returning member']);
+  if (bg.activeDiscipline) flags.push(['bad', `${bg.activeDiscipline} active disciplinary action${bg.activeDiscipline === 1 ? '' : 's'}`]);
+  if (bg.standing) flags.push(['bad', STANDING_LABEL[bg.standing] || bg.standing]);
+  if (!flags.length) flags.push(['ok', 'No flags']);
+  return `<div class="bg-check"><div class="bg-head"><span class="lbl">Background check</span><div class="bg-flags">${flags.map(f => `<span class="bg-flag ${f[0]}">${esc(f[1])}</span>`).join('')}</div></div>
+    <div class="bg-grid">
+      <div><span class="lbl">Discord account</span><b>${bg.discordCreated ? `${esc(fmtDate(bg.discordCreated))}, ${esc(new Date(bg.discordCreated).getFullYear())}` : '—'}</b><small>${bg.discordCreated ? esc(ageText(bg.discordCreated)) + ' old' : ''}</small></div>
+      <div><span class="lbl">Joined our Discord</span><b>${bg.guildJoined ? esc(fmtDate(bg.guildJoined)) + ', ' + new Date(bg.guildJoined).getFullYear() : 'Unknown'}</b><small>${bg.guildJoined ? esc(ageText(bg.guildJoined)) + ' ago' : ''}</small></div>
+      <div><span class="lbl">Says returning member</span><b>${said == null ? '—' : said ? 'Yes' : 'No'}</b><small>${bg.memberSince ? 'Member since ' + esc(fmtDate(bg.memberSince)) : 'Never a member here'}</small></div>
+      <div><span class="lbl">Earlier applications</span><b>${bg.priorApps.length}</b><small>${bg.priorApps.map(x => esc(x.status)).join(', ') || 'None'}</small></div>
+    </div>
+    ${bg.standingEvents.length ? `<div class="bg-events">${bg.standingEvents.map(e => `<div><span>${esc(fmtDate(e.at))}</span>${esc(e.text)}</div>`).join('')}</div>` : ''}
+  </div>`;
+}
+
+const RECORD_META = { note: ['Note', 'plain'], warning: ['Warning', 'warn'], disciplinary: ['Disciplinary', 'bad'], application: ['Application', 'info'], appeal: ['Appeal', 'info'],
+  removed: ['Removed', 'bad'], left: ['Left without notice', 'bad'], kicked: ['Kicked', 'bad'], banned: ['Banned', 'bad'], restored: ['Restored', 'ok'] };
+async function historyDialog(id, keepOpen) {
+  const p = member(id);
+  if (!keepOpen) openDialog('Member history', '<div class="dlg-body"><div class="spinner"></div></div>');
+  let h;
+  try { h = await api('member.history', { id }); } catch (err) { toast(err.message, 'err'); return; }
+  S.history = h;
+  const name = p ? (p.displayName || p.username) : 'Member';
+  const recs = h.records;
+  $('dlgInner').querySelector('.dlg-head h2').textContent = 'History · ' + name;
+  const body = dlg.querySelector('.dlg-body') || dlg;
+  body.outerHTML = `<div class="dlg-body">
+      ${bgCheck(h.background, null)}
+      <form class="hist-form" data-form="record" data-id="${esc(id)}" novalidate>
+        <div class="form-grid">
+          <div class="field"><label for="hKind">Add</label><select id="hKind" name="kind" data-rec-kind><option value="note">Note</option><option value="warning">Warning</option><option value="disciplinary">Disciplinary action</option></select></div>
+          <div class="field" data-rec-exp hidden><label for="hExp">Expires (optional)</label><input id="hExp" name="expires" type="datetime-local"></div>
+          <div class="field full"><label for="hText">Details *</label><textarea id="hText" name="text" maxlength="2000" placeholder="What happened, who was involved, what was agreed…"></textarea></div>
+        </div>
+        <div class="dlg-foot"><button class="btn btn-solid btn-sm" type="submit">Add to history</button></div>
+      </form>
+      <div class="timeline">${recs.length ? recs.map(r => { const k = RECORD_META[r.kind] || [r.kind, 'info']; const lifted = (r.kind === 'warning' || r.kind === 'disciplinary') && !r.active;
+        return `<div class="tl-item ${k[1]}${lifted ? ' lifted' : ''}"><i></i><div><div class="tl-head"><span class="tl-kind ${k[1]}">${esc(k[0])}</span><b>${esc(r.byName || 'System')}</b><time>${esc(fmtDateTime(r.created))}</time>
+          ${r.active ? `<span class="pill prio-high">Active${r.expires ? ' until ' + esc(fmtDate(r.expires)) : ''}</span>` : lifted ? `<span class="pill">${r.endedAt ? 'Lifted ' + esc(fmtDate(r.endedAt)) : 'Expired'}</span>` : ''}</div>
+          <p>${esc(r.text)}</p>
+          ${r.canEnd ? `<button class="link-btn" type="button" data-act="rec-end" data-id="${esc(r.id)}" data-member="${esc(id)}">Lift now</button>` : ''}${r.canDelete ? `<button class="link-btn" type="button" data-act="rec-del" data-id="${esc(r.id)}" data-member="${esc(id)}" data-confirm="Delete note?">Delete</button>` : ''}</div></div>`; }).join('') : '<p class="hint">Nothing on file yet.</p>'}</div>
+    </div>`;
+}
+
+/* Managers and Command: take someone off the portal or restore them. */
+function standingForm(id) {
+  const p = (D().members || []).find(x => x.id === id); if (!p) return;
+  openDialog('Remove from portal', `
+    <form class="dlg-body" data-form="standing" data-id="${esc(id)}" novalidate>
+      <div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${esc(p.displayName || p.username)}</span><span class="row-sub">@${esc(p.username)}${p.standing ? ' · currently: ' + esc(STANDING_LABEL[p.standing]) : ''}</span></div></div>
+      <div class="field"><label for="sdReason">Reason</label><select id="sdReason" name="standing">
+        <option value="removed"${p.standing === 'removed' ? ' selected' : ''}>Removed: left the org / inactive (can apply again)</option>
+        <option value="left"${p.standing === 'left' ? ' selected' : ''}>Left Discord without notice (blacklisted, must appeal)</option>
+        <option value="kicked"${p.standing === 'kicked' ? ' selected' : ''}>Kicked from Discord (banned from portal, must appeal)</option>
+        <option value="banned"${p.standing === 'banned' ? ' selected' : ''}>Banned from Discord (banned from portal, must appeal)</option></select></div>
+      <div class="field"><label for="sdNote">Reason on file *</label><input id="sdNote" name="note" maxlength="500" placeholder="They see this, and it goes on their history"></div>
+      <p class="hint">They lose the portal straight away and go back to the application screen. Leads, roles and Command are cleared.</p>
+      <div class="dlg-foot">${p.standing ? `<button class="btn btn-ghost" type="button" data-act="standing-clear" data-id="${esc(id)}" data-confirm="Restore access?">Restore to good standing</button>` : ''}<button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-danger" type="submit">Remove</button></div>
+    </form>`);
+}
+
+/* ---------- Crew chat (bottom-right bubble while you're crew on a running job) ---------- */
+const CHAT_SEEN_KEY = 'p6_chat_seen';
+const CHAT_ICON = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H9l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/></svg>';
+function chatSeen() { try { return JSON.parse(localStorage.getItem(CHAT_SEEN_KEY + ':' + me().id) || '{}'); } catch (_) { return {}; } }
+function markSeen(id) { const s = chatSeen(); s[id] = new Date().toISOString(); try { localStorage.setItem(CHAT_SEEN_KEY + ':' + me().id, JSON.stringify(s)); } catch (_) {} }
+function myCrews() { return S.data && !S.data.pending ? (D().workorders || []).filter(w => (w.status === 'active' || w.status === 'open') && w.assignees.includes(me().id)) : []; }
+function chatUnread(w) { const h = (D().chatHeads || {})[w.id], seen = chatSeen()[w.id]; return !!h && (!seen || Date.parse(h) > Date.parse(seen)); }
+function chatMsgsHTML(id) {
+  const list = S.chats[id];
+  if (!list) return '<div class="spinner"></div>';
+  if (!list.length) return '<p class="chat-empty">No messages yet. Say hi to your crew.</p>';
+  return list.map(x => `<div class="chat-msg${x.authorId === me().id ? ' me' : ''}">${x.authorId === me().id ? '' : `<span class="chat-name">${esc(x.name)}</span>`}<div class="chat-bubble">${esc(x.body)}</div><time>${esc(fmtTime(x.created))}</time></div>`).join('');
+}
+function renderChat() {
+  const box = $('crewChat'); if (!box) return;
+  const crews = myCrews();
+  if (!crews.length) { box.innerHTML = ''; box.dataset.key = ''; S.chatOpen = false; return; }
+  if (!crews.some(w => w.id === S.chatWo)) S.chatWo = crews[0].id;
+  const unread = crews.filter(w => chatUnread(w) && !(S.chatOpen && w.id === S.chatWo)).length;
+  const key = JSON.stringify([S.chatOpen, S.chatWo, crews.map(w => [w.id, w.title, w.assignees.length]), unread]);
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  if (!S.chatOpen) { box.innerHTML = `<button class="chat-fab" type="button" data-act="chat-toggle" aria-label="Open crew chat">${CHAT_ICON}${unread ? `<span class="count">${unread}</span>` : ''}</button>`; return; }
+  const w = crews.find(x => x.id === S.chatWo);
+  const typed = box.querySelector('textarea') ? box.querySelector('textarea').value : '';
+  box.innerHTML = `<section class="chat-panel" aria-label="Crew chat">
+    <header class="chat-head">
+      ${crews.length > 1 ? `<select class="mini" data-chat-wo aria-label="Which crew">${crews.map(x => `<option value="${esc(x.id)}"${x.id === w.id ? ' selected' : ''}>${esc(x.title)}${chatUnread(x) && x.id !== w.id ? ' •' : ''}</option>`).join('')}</select>` : `<b>${esc(w.title)}</b>`}
+      <span class="chat-crew">${w.assignees.map(id => avatar(id, true)).join('')}</span>
+      <button class="x" type="button" data-act="chat-toggle" aria-label="Close chat">&times;</button>
+    </header>
+    <div class="chat-msgs" id="chatMsgs">${chatMsgsHTML(w.id)}</div>
+    <form class="chat-form" data-form="chat" data-id="${esc(w.id)}" novalidate><textarea name="body" rows="1" maxlength="1000" placeholder="Message your crew…" aria-label="Message">${esc(typed)}</textarea><button class="btn btn-solid btn-sm" type="submit">Send</button></form>
+    <p class="chat-note">Just this job’s crew. The chat closes when the job ends.</p>
+  </section>`;
+  const list = $('chatMsgs'); if (list) list.scrollTop = list.scrollHeight;
+  if (!S.chats[w.id]) loadChat(w.id);
+  markSeen(w.id);
+}
+async function loadChat(id) {
+  try {
+    const r = await api('wo.chat', { id });
+    const before = (S.chats[id] || []).length;
+    S.chats[id] = r.chat;
+    markSeen(id);
+    const list = $('chatMsgs');
+    if (list && S.chatWo === id && (before !== r.chat.length || list.querySelector('.spinner'))) { list.innerHTML = chatMsgsHTML(id); list.scrollTop = list.scrollHeight; }
+  } catch (err) { if (err.auth) signOut(err.message); }
+}
+setInterval(() => { if (S.chatOpen && S.chatWo && !document.hidden && !S.busy && $('chatMsgs')) loadChat(S.chatWo); }, 6000);
 
 /* ---------- Dialog ---------- */
 const dlg = $('dlg');
@@ -2808,6 +3052,17 @@ document.addEventListener('click', async e => {
     case 'tk-reopen': if (await tact('ticket.reopen', { id }, 'Ticket reopened.')) { render(); renderThread(); } break;
     case 'tk-escalate': openDialog('Elevate ticket', `<form class="dlg-body" data-form="tk-escalate" data-id="${esc(id)}" novalidate><p>It moves up one step in the chain of command. You keep access; other staff at your level lose it.</p><div class="field"><label for="teNote">Note (optional)</label><input id="teNote" name="note" maxlength="500" placeholder="Why it needs to go up"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Elevate</button></div></form>`); break;
     case 'tk-clear': if (await act('app.clear', { memberId: b.dataset.member, ticketId: id }, 'Blacklist cleared. They can apply again.')) { await loadThread(id); renderThread(); } break;
+    case 'history': historyDialog(id); break;
+    case 'app-void': openDialog('Void denial', `<form class="dlg-body" data-form="app-void" data-id="${esc(id)}" novalidate><p>The applicant sees that staff cancelled the denial, and can apply again straight away.</p><div class="field"><label for="avNote">Reason *</label><input id="avNote" name="note" maxlength="500" placeholder="e.g. Denied by mistake; wrong applicant"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Void denial</button></div></form>`); break;
+    case 'chat-toggle': S.chatOpen = !S.chatOpen; renderChat(); if (S.chatOpen) { const ta = document.querySelector('.chat-form textarea'); if (ta) ta.focus(); } break;
+    case 'standing-open': standingForm(id); break;
+    case 'standing-clear': if (await act('member.remove', { id, standing: '', note: '' }, 'Restored.')) closeDialog(); break;
+    case 'rec-end': if (await act('member.recordEnd', { recordId: id }, 'Lifted.')) historyDialog(b.dataset.member); break;
+    case 'rec-del': if (await act('member.recordEnd', { recordId: id, remove: true }, 'Note deleted.')) historyDialog(b.dataset.member); break;
+    case 'hook-test': try { await api('setup.webhookTest', { which: b.dataset.which }); toast('Test message sent. Check the channel.', 'ok'); } catch (err) { toast(err.message, 'err'); } break;
+    case 'hook-clear': act('setup.webhook', { which: b.dataset.which, url: '' }, 'Webhook removed.'); break;
+    case 'copy-onboard': { const t = $('onboardText').textContent; navigator.clipboard.writeText(t).then(() => toast('Copied. Paste it in #onboarding.', 'ok'), () => toast('Select the text and copy it.', 'err')); break; }
+    case 'tk-unban': if (await act('member.remove', { id: b.dataset.member, standing: 'removed', note: 'Appeal accepted' }, 'Appeal accepted. They can apply again.')) { await tact('ticket.reply', { id, body: 'Your appeal was accepted. You can submit a new application from the homepage.' }); render(); renderThread(); } break;
     case 'app-finalize': act('apply.finalize', {}, 'Enlistment finalized. See you in Discord!'); break;
     case 'app-open': appDialog(id); break;
     case 'app-take': if (await act('app.assign', { id }, 'Application is yours.')) appDialog(id); break;
@@ -2827,6 +3082,7 @@ document.addEventListener('input', e => {
     const el = document.querySelector('[data-tk-q]'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); }
     return;
   }
+  if (e.target.matches('[data-app-q]')) { const q = e.target.value.trim().toLowerCase(); document.querySelectorAll('#appHistory .app-row').forEach(r => { r.hidden = !!q && !r.dataset.q.includes(q); }); return; }
   if (e.target.matches('[data-roster-q]')) { if (e.target.dataset.rosterQ === 'unassigned') S.unQ = e.target.value; else S.crewQ = e.target.value; applyRoster(); return; }
   if (e.target.matches('[data-member-q]')) { S.memberQ = e.target.value; const r = $('memberResults'); if (r) r.innerHTML = memberResults(); return; }
   if (e.target.matches('[data-share-total], [data-share-amt]')) shareSum(e.target.form);
@@ -2841,6 +3097,7 @@ document.addEventListener('click', e => {
 });
 
 document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && e.target.closest && e.target.closest('form[data-form="chat"]')) { e.preventDefault(); e.target.closest('form').requestSubmit(); return; }
   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey) && e.target.closest && e.target.closest('form[data-form="ticket-reply"]')) { e.preventDefault(); e.target.closest('form').requestSubmit(); return; }
   if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('[data-cal-day], [data-profile]')) { e.preventDefault(); e.target.click(); }
 });
@@ -2858,6 +3115,8 @@ document.addEventListener('change', e => {
     e.target.form.querySelectorAll('.contract-off').forEach(x => { x.hidden = e.target.checked; });
     return;
   }
+  if (e.target.matches('[data-chat-wo]')) { S.chatWo = e.target.value; renderChat(); return; }
+  if (e.target.matches('[data-rec-kind]')) { e.target.form.querySelector('[data-rec-exp]').hidden = e.target.value === 'note'; return; }
   if (e.target.matches('[data-tk-cat]')) {
     const f = e.target.form, c = e.target.value;
     f.querySelectorAll('[data-tk-for]').forEach(x => { x.hidden = x.dataset.tkFor !== c; });
@@ -3007,6 +3266,29 @@ document.addEventListener('submit', async e => {
         if (f.dataset.decision === 'deny' && !v('note').trim()) { toast('Add your comments. The applicant sees them.', 'err'); break; }
         ok = await act('app.decide', { id: f.dataset.id, decision: f.dataset.decision, note: v('note') }, f.dataset.decision === 'accept' ? 'Accepted. They’ll see the onboarding steps.' : 'Denied. They’ll see your comments.');
         break;
+      case 'chat': {
+        const body = v('body').trim(); if (!body) break;
+        try { const r = await api('wo.say', { id: f.dataset.id, body }); S.chats[r.id] = r.chat; markSeen(r.id); f.elements.body.value = ''; const list = $('chatMsgs'); if (list) { list.innerHTML = chatMsgsHTML(r.id); list.scrollTop = list.scrollHeight; } }
+        catch (err) { toast(err.message, 'err'); if (/over|crew on this job/.test(err.message)) loadAll(true); }
+        if (submit) submit.disabled = false; f.elements.body.focus();
+        return;
+      }
+      case 'app-void':
+        if (!v('note').trim()) { toast('Add a reason.', 'err'); break; }
+        ok = await act('app.void', { id: f.dataset.id, note: v('note') }, 'Denial voided. They can apply again.');
+        break;
+      case 'record':
+        if (!v('text').trim()) { toast('Add the details.', 'err'); break; }
+        if (await act('member.record', { id: f.dataset.id, kind: v('kind'), text: v('text'), expires: fromLocalInput(v('expires')) }, 'Added to their history.')) historyDialog(f.dataset.id);
+        break;
+      case 'standing':
+        if (!v('note').trim()) { toast('Add the reason. It goes on their history.', 'err'); break; }
+        ok = await act('member.remove', { id: f.dataset.id, standing: v('standing'), note: v('note') }, 'Removed from the portal.');
+        break;
+      case 'hook':
+        ok = await act('setup.webhook', { which: f.dataset.which, url: v('url') }, 'Webhook saved.');
+        if (ok) f.reset();
+        break;
       case 'payout':
         ok = await act('wo.payout', { id: f.dataset.id, reward: v('reward'), fee: v('fee'), note: v('note') }, 'Payout updated.');
         break;
@@ -3108,8 +3390,9 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S.
   if (params.get('apply') === '1') {
     if (S.token) { location.replace(CONFIG.siteUrl + '#enlist'); return; }
     store.set(APPLY_KEY, '1', true);
-    show('screenLogin');
-    startLogin();
+    show('screenLoading');
+    $('screenLoading').insertAdjacentHTML('beforeend', '<p class="connecting">Connecting to Discord…</p>');
+    startLogin().then(() => { if (!$('loginError').hidden) backToEnlist($('loginError').textContent); });
     return;
   }
   if (S.token) loadAll(); else show('screenLogin');
