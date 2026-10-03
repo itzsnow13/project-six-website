@@ -8,7 +8,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' width='512' height='512'>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800&family=Rajdhani:wght@500;600;700&family=Barlow:wght@400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #121315; --bg-alt: #17181b; --surface: #1d1e22; --surface-2: #24262a; --surface-3: #2a2c31;
@@ -922,6 +922,57 @@ body.working::before, body.syncing::before { content: ''; position: fixed; top: 
 .aux-req .row-main { gap: 3px; }
 .aux-role { font-size: .9rem; }
 .aux-role b { font-weight: 600; color: var(--muted); }
+
+/* ---------- Sign-in intro (members, once every 12 hours) ---------- */
+.p6i { position: fixed; inset: 0; z-index: 9000; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(ellipse at 50% 42%, #17191c 0%, #0c0d0e 62%, #08090a 100%); --c: var(--accent); pointer-events: auto; }
+.p6i::before { content: ''; position: absolute; inset: -2px; opacity: .35;
+  background-image: linear-gradient(rgba(255,255,255,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size: 44px 44px; -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%); mask-image: radial-gradient(ellipse at center, #000 30%, transparent 75%); }
+.p6i::after { content: ''; position: absolute; inset: 0; opacity: .5; background: repeating-linear-gradient(0deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px); }
+.p6i-sweep { position: absolute; left: 0; right: 0; height: 120px; top: -120px; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--c) 7%, transparent), transparent); animation: p6iSweep 2.6s ease-in-out .2s 1 both; }
+.p6i-stage { position: relative; z-index: 1; width: min(560px, 90vw); display: grid; justify-items: center; }
+.p6i-mark { position: relative; width: 132px; height: 132px; display: grid; place-items: center; transition: transform .7s cubic-bezier(.2,.8,.2,1), opacity .5s; }
+.p6i-logo { width: 84px; height: 84px; opacity: 0; transform: scale(.86); animation: p6iLogo .9s cubic-bezier(.2,.8,.2,1) .15s forwards; }
+.p6i-logo svg { width: 100%; height: 100%; }
+.p6i-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.p6i-ring circle { fill: none; stroke-width: 1.5; }
+.p6i-ring .t { stroke: rgba(255,255,255,.07); }
+.p6i-ring .r { stroke: var(--c); stroke-linecap: round; stroke-dasharray: 402; stroke-dashoffset: 402; animation: p6iRing 1.15s cubic-bezier(.65,0,.35,1) .35s forwards; filter: drop-shadow(0 0 6px var(--c)); }
+.p6i-ring .k { stroke: var(--c); stroke-width: 3; stroke-dasharray: 2 31.5; opacity: 0; animation: p6iFade .4s ease 1.2s forwards; }
+.p6i-term { width: 100%; margin-top: 26px; font-family: 'Share Tech Mono', ui-monospace, Menlo, Consolas, monospace; font-size: .86rem; line-height: 1.75; color: #8e8a82; min-height: 6.2em; transition: opacity .35s, transform .35s; }
+.p6i-ln { display: flex; gap: 10px; white-space: nowrap; overflow: hidden; }
+.p6i-ln .k { flex: 1; overflow: hidden; }
+.p6i-ln .k::after { content: ' ················································'; color: #3a3c40; }
+.p6i-ln .v { color: var(--c); font-weight: 600; }
+.p6i-ln .v.ok { color: #6fcf8a; }
+.p6i-caret { display: inline-block; width: .55em; height: 1.05em; background: var(--c); vertical-align: -.15em; animation: p6iBlink .9s steps(1) infinite; }
+.p6i-hello { position: absolute; top: 50%; left: 0; right: 0; transform: translateY(-50%); display: grid; justify-items: center; text-align: center; gap: 4px; }
+.p6i-patch { opacity: 0; transform: translateY(10px) scale(.92); transition: opacity .55s ease, transform .7s cubic-bezier(.2,.8,.2,1); filter: drop-shadow(0 10px 30px color-mix(in srgb, var(--c) 30%, transparent)); }
+.p6i-patch .p6i-logo { opacity: 1; transform: none; animation: none; width: 96px; height: 96px; }
+.p6i-lbl { margin-top: 18px; font-family: var(--f-label); font-weight: 700; letter-spacing: .42em; font-size: .78rem; color: var(--muted); text-transform: uppercase; opacity: 0; transition: opacity .5s ease .1s, letter-spacing .9s ease .1s; }
+.p6i-rank { display: block; font-family: var(--f-label); font-weight: 700; font-size: clamp(.95rem, 2.4vw, 1.25rem); letter-spacing: .32em; text-transform: uppercase; color: var(--c); margin: 6px 0 2px; }
+.p6i-name { font-family: var(--f-display); font-weight: 800; font-size: clamp(1.6rem, 5.4vw, 3rem); letter-spacing: .05em; text-transform: uppercase; line-height: 1.15; max-width: 92vw; color: var(--text); }
+.p6i .ch { display: inline-block; opacity: 0; transform: translateY(.35em); filter: blur(6px); transition: opacity .45s ease, transform .55s cubic-bezier(.2,.8,.2,1), filter .5s ease; }
+.p6i-bar { width: 0; height: 2px; margin: 12px 0 8px; background: linear-gradient(90deg, transparent, var(--c), transparent); transition: width .8s cubic-bezier(.65,0,.35,1) .2s; box-shadow: 0 0 12px var(--c); }
+.p6i-div { font-family: var(--f-label); font-weight: 700; letter-spacing: .2em; text-transform: uppercase; font-size: .95rem; color: var(--c); opacity: 0; transition: opacity .5s ease .45s; }
+.p6i.p2 .p6i-term { opacity: 0; transform: translateY(8px); }
+.p6i.p2 .p6i-mark { transform: translateY(-38vh) scale(.42); opacity: 0; }
+.p6i.p2 .p6i-patch { opacity: 1; transform: none; }
+.p6i.p2 .p6i-lbl { opacity: 1; letter-spacing: .3em; }
+.p6i.p2 .ch { opacity: 1; transform: none; filter: none; }
+.p6i.p2 .p6i-bar { width: min(320px, 70vw); }
+.p6i.p2 .p6i-div { opacity: 1; }
+.p6i.out { opacity: 0; transform: scale(1.03); filter: blur(4px); transition: opacity .6s ease, transform .7s ease, filter .6s ease; pointer-events: none; }
+@keyframes p6iLogo { to { opacity: 1; transform: none; filter: drop-shadow(0 0 18px color-mix(in srgb, var(--c) 45%, transparent)); } }
+@keyframes p6iRing { to { stroke-dashoffset: 0; } }
+@keyframes p6iFade { to { opacity: 1; } }
+@keyframes p6iBlink { 50% { opacity: 0; } }
+@keyframes p6iSweep { to { top: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  .p6i *, .p6i *::before, .p6i *::after { animation-duration: .01s !important; animation-delay: 0s !important; transition-duration: .2s !important; transition-delay: 0s !important; }
+  .p6i-sweep { display: none; }
+}
 .is-busy { position: relative; color: transparent !important; pointer-events: none; }
 .is-busy::after { content: ''; position: absolute; inset: 0; margin: auto; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: transparent; animation: spin .7s linear infinite; }
 .review-list { border: 1px solid rgba(201,181,142,.4); border-radius: 10px; background: var(--accent-soft); padding: 10px 12px; display: grid; gap: 4px; }
@@ -1021,6 +1072,7 @@ body.working::before, body.syncing::before { content: ''; position: fixed; top: 
 <div id="screenApp" hidden>
   <header class="top">
     <div class="wrap">
+      <template id="logoTpl"><svg width="64" height="64" viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#ECE9E3" points="266.4,58.0 422.3,148.0 368.3,179.2 266.4,120.4"/><polygon fill="#ECE9E3" points="432.7,166.0 432.7,346.0 378.7,314.8 378.7,197.2"/><polygon fill="#ECE9E3" points="422.3,364.0 266.4,454.0 266.4,391.6 368.3,332.8"/><polygon fill="#ECE9E3" points="245.6,454.0 89.7,364.0 143.7,332.8 245.6,391.6"/><polygon fill="#ECE9E3" points="79.3,346.0 79.3,166.0 133.3,197.2 133.3,314.8"/><polygon fill="#C9B58E" points="89.7,148.0 245.6,58.0 245.6,120.4 143.7,179.2"/></svg></template>
       <a class="brand" id="brandLink" href="#"><svg width="30" height="30" viewBox="0 0 512 512" aria-hidden="true"><polygon fill="#ECE9E3" points="266.4,58.0 422.3,148.0 368.3,179.2 266.4,120.4"/><polygon fill="#ECE9E3" points="432.7,166.0 432.7,346.0 378.7,314.8 378.7,197.2"/><polygon fill="#ECE9E3" points="422.3,364.0 266.4,454.0 266.4,391.6 368.3,332.8"/><polygon fill="#ECE9E3" points="245.6,454.0 89.7,364.0 143.7,332.8 245.6,391.6"/><polygon fill="#ECE9E3" points="79.3,346.0 79.3,166.0 133.3,197.2 133.3,314.8"/><polygon fill="#C9B58E" points="89.7,148.0 245.6,58.0 245.6,120.4 143.7,179.2"/></svg><b>Project Six</b><span>Members</span></a>
       <div class="user">
         <button class="user-btn" type="button" id="profileBtn" aria-label="Edit profile"><span id="meAvatar"></span><span class="user-name" id="meName"></span></button>
@@ -1414,11 +1466,83 @@ function readSnap() {
     return s && S.token && s.t === S.token.slice(-12) && Date.now() - s.at < 7 * 864e5 ? s.data : null;
   } catch (_) { return null; }
 }
+
+/* ---------- Sign-in intro ----------
+   Plays for active members (never applicants) when they open the portal after 12+ hours away.
+   It plays through once (about four seconds) while the portal finishes loading underneath, then removes itself. */
+const INTRO_GAP = 12 * 3600e3;
+let introDone = false;
+function introWho() {
+  const m = me(), h = headline(m);
+  const homeId = m.commandTitle || m.isCommand ? 'hq' : (m.divisions || []).filter(x => x !== 'hq')[0] || m.division || '';
+  const dv = divOf(homeId);
+  const clearance = m.isCommand ? 'DIRECTOR' : m.commandTitle === 'manager' || m.isManager ? 'MANAGER' : m.lead ? 'DIVISION LEAD' : m.supervisor ? 'SUPERVISOR' : 'MEMBER';
+  return { name: m.displayName || m.username, title: h ? h.label : 'Member', clearance, dv };
+}
+function maybeIntro() {
+  if (introDone || !S.data || S.data.pending || !me() || (me().status && me().status !== 'active')) return;
+  introDone = true;
+  const key = 'p6_seen_' + me().id, last = Number(store.get(key)) || 0, now = Date.now();
+  store.set(key, String(now));
+  if (store.get(key) !== String(now)) return;   // no storage on this device: skip rather than replay every time
+  if (now - last < INTRO_GAP) return;
+  playIntro(introWho());
+}
+// keep "last seen" fresh while the portal is open, so the 12 hours count from when they leave
+setInterval(() => { if (introDone && S.data && !S.data.pending && me()) store.set('p6_seen_' + me().id, String(Date.now())); }, 60000);
+function playIntro(p) {
+  const c = p.dv ? p.dv.color : 'var(--accent)';
+  const tpl = $('logoTpl'), logo = tpl ? tpl.innerHTML : '';
+  const el = document.createElement('div');
+  el.className = 'p6i';
+  el.style.setProperty('--c', c);
+  el.setAttribute('role', 'status');
+  el.setAttribute('aria-label', 'Welcome back, ' + p.title + ' ' + p.name);
+  const letters = (txt, cls) => `<span class="${cls || ''}">${[...txt].map((ch, i) => `<span class="ch" style="transition-delay:${(i * 28) + 120}ms">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`).join('')}</span>`;
+  el.innerHTML = `
+    <div class="p6i-sweep"></div>
+    <div class="p6i-stage">
+      <div class="p6i-mark">
+        <svg class="p6i-ring" viewBox="0 0 132 132" aria-hidden="true"><circle class="t" cx="66" cy="66" r="64"/><circle class="k" cx="66" cy="66" r="58"/><circle class="r" cx="66" cy="66" r="64"/></svg>
+        <div class="p6i-logo">${logo}</div>
+      </div>
+      <div class="p6i-term" aria-hidden="true"></div>
+    </div>
+    <div class="p6i-hello">
+      <div class="p6i-patch">${p.dv ? patchSVG(p.dv, divIndex(p.dv.id), 96) : `<div class="p6i-logo">${logo}</div>`}</div>
+      <div class="p6i-lbl">Welcome back</div>
+      ${letters(p.title, 'p6i-rank')}
+      <div class="p6i-name">${letters(p.name)}</div>
+      <div class="p6i-bar"></div>
+      <div class="p6i-div">${esc(p.dv ? p.dv.name : 'Project Six')}</div>
+    </div>
+`;
+  document.body.appendChild(el);
+  const term = el.querySelector('.p6i-term');
+  const lines = [['PROJECT SIX // SECURE LINK', 'OPEN', 'ok'], ['discord identity', 'VERIFIED', 'ok'], ['clearance', p.clearance, ''], ['assignment', p.dv ? String(p.dv.tabTop || p.dv.name).toUpperCase() : 'UNASSIGNED', '']];
+  const timers = [], at = (ms, fn) => timers.push(setTimeout(fn, ms));
+  let when = 750;
+  lines.forEach(([k, v, cls]) => {
+    const ln = document.createElement('div'); ln.className = 'p6i-ln';
+    const ks = document.createElement('span'); ks.className = 'k';
+    const vs = document.createElement('span'); vs.className = 'v ' + cls;
+    ln.append(ks, vs);
+    at(when, () => { term.appendChild(ln); [...('> ' + k)].forEach((ch, i) => at(i * 11, () => { ks.textContent += ch; })); });
+    at(when + k.length * 11 + 110, () => { vs.textContent = v; });
+    when += k.length * 11 + 210;
+  });
+  at(when, () => { const cr = document.createElement('div'); cr.className = 'p6i-ln'; cr.innerHTML = '<span class="p6i-caret"></span>'; term.appendChild(cr); });
+  const p2 = Math.max(when + 160, 2050);
+  at(p2, () => el.classList.add('p2'));
+  at(p2 + 1750, () => { el.classList.add('out'); setTimeout(() => { timers.forEach(clearTimeout); el.remove(); }, 650); });
+}
+
 async function loadAll(silent) {
   try {
     S.data = await api('sync');
     keepSnap();
     render();
+    maybeIntro();
   } catch (err) {
     if (err.auth) { signOut(err.message); return; }
     if (!silent) { show('screenLogin'); loginError(err.message); }
@@ -2963,7 +3087,7 @@ function nlMode(f, mode) {
   st.mode = mode;
   ed.hidden = mode !== 'visual'; src.hidden = mode !== 'html'; pv.hidden = mode !== 'preview';
   f.querySelector('.nl-insert').hidden = true;
-  f.querySelectorAll('[data-nl]').forEach(b => { b.disabled = mode !== 'visual'; });
+  f.querySelectorAll('[data-nl]').forEach(b => { b.disabled = b.dataset.nl === 'upload' ? mode === 'preview' : mode !== 'visual'; });   // Upload also works in HTML view
   f.querySelectorAll('[data-nl-mode]').forEach(b => b.classList.toggle('on', b.dataset.nlMode === mode));
   if (mode === 'visual') { ed.innerHTML = html; ed.querySelectorAll('figure.nl-embed').forEach(x => { x.contentEditable = 'false'; }); }
   if (mode === 'html') src.value = nlPretty(html);
@@ -4458,7 +4582,14 @@ document.addEventListener('change', async e => {
   if (!r || !f) return;
   if (inp.classList.contains('nl-cover-file')) { f.elements.cover.value = r.url; toast('Cover uploaded.', 'ok'); return; }
   const nm = esc(r.name.replace(/\.[a-z0-9]+$/i, ''));
-  nlInsert(f, r.kind === 'image' ? `<figure><img src="${esc(r.url)}" alt="${nm}"></figure><p><br></p>` : `<p><a class="nl-btn" href="${esc(r.url)}">Open ${nm} (PDF)</a></p><p><br></p>`);
+  const snippet = r.kind === 'image' ? `<figure><img src="${esc(r.url)}" alt="${nm}"></figure>` : `<p><a class="nl-btn" href="${esc(r.url)}">Open ${nm} (PDF)</a></p>`;
+  const src = f.querySelector('.nl-source');
+  if (f._nl && f._nl.mode === 'html' && src) {
+    // HTML view: replace whatever was highlighted (or drop it at the cursor)
+    const a = src.selectionStart ?? src.value.length, z = src.selectionEnd ?? a;
+    src.value = src.value.slice(0, a) + snippet + src.value.slice(z);
+    src.focus(); src.selectionStart = src.selectionEnd = a + snippet.length;
+  } else nlInsert(f, snippet + '<p><br></p>');
   toast('Added to the newsletter.', 'ok');
 });
 document.addEventListener('submit', async e => {
