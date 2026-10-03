@@ -1465,6 +1465,8 @@ function headline(m) {
   }
   const r = RANKS[m.title]; if (!r) return null;
   if (m.title === 'supervisor') { const dv = divOf(m.supervisor); return { key: 'supervisor', label: (dv ? (dv.tabTop || dv.name) + ' ' : '') + r.label, c: r.c, d: r.d }; }
+  // Command titles read as Director or Manager, whatever the Discord rank is called
+  if (m.commandTitle && RANKS[m.commandTitle]) { const cr = RANKS[m.commandTitle]; return { key: m.commandTitle, label: cr.label, c: cr.c, d: cr.d }; }
   return { key: m.title, label: m.title === 'admin' ? r.label : (m.rank || r.label), c: r.c, d: r.d };
 }
 let HEX_SEGS;
@@ -1724,12 +1726,22 @@ function payBtn(w) {
 function closedRow(w) {
   const m = me(), f = fundsFor(w);
   const canGive = w.status === 'complete' && !w.contracted && w.assignees.includes(m.id) && !f;
-  const sub = [w.type, (w.status === 'failed' ? 'failed ' : 'completed ') + rel(w.completedAt || w.updated), w.assignees.map(id => nameOf(id)).join(', ')].concat(moneyLine(w) ? [moneyLine(w)] : []);
+  const sub = [w.type, 'for ' + (w.division === 'all' || !w.division ? 'the org' : ((divOf(w.division) || {}).name || 'a division')), (w.status === 'failed' ? 'failed ' : 'completed ') + rel(w.completedAt || w.updated), w.assignees.map(id => nameOf(id)).join(', ')].concat(moneyLine(w) ? [moneyLine(w)] : []);
   return `<div class="row"><div style="display:flex;gap:12px;align-items:center;min-width:0">${patch(w.division, 26)}<div class="row-main"><span class="row-title">${esc(w.title)}</span><span class="row-sub">${sub.map(esc).join(' · ')}</span></div></div>
     <div class="actions">${w.status === 'failed' ? '<span class="pill failed">Failed</span>' : ''}${f ? stagePill(f.status) : ''}${canGive ? `<button class="btn btn-ghost btn-sm" type="button" data-act="funds-for-wo" data-id="${w.id}">Give to org</button>` : ''}${payBtn(w)}</div></div>`;
 }
+/* Who's log this is: your own jobs, your division's, or the whole org's. */
+function doneScope() {
+  const m = me();
+  if (m.isManager || m.isCommand || m.commandTitle) return { tag: 'Org-wide log', hint: 'Every finished job across the org.' };
+  const divs = [m.lead, m.supervisor].filter(Boolean).filter((x, i, a) => a.indexOf(x) === i).map(x => (divOf(x) || {}).name).filter(Boolean);
+  if (divs.length) return { tag: divs.join(' · ') + ' log', hint: 'Everything your division finished, plus jobs you crewed.' };
+  return { tag: 'Your jobs', hint: 'Jobs you crewed or posted, and the division each one was for.' };
+}
 function doneList(list, labelText) {
-  return `<details class="section done-list"${S.showDone ? ' open' : ''}><summary class="sub" data-toggle-done>${esc(labelText)} <span class="num" style="color:var(--dim)">${list.length}</span></summary>
+  const sc = doneScope();
+  return `<details class="section done-list"${S.showDone ? ' open' : ''}><summary class="sub" data-toggle-done>${esc(labelText)} <span class="num" style="color:var(--dim)">${list.length}</span> <span class="pill" style="margin-left:6px;font-weight:500">${esc(sc.tag)}</span></summary>
+    <p class="hint" style="margin:6px 0 10px">${esc(sc.hint)}</p>
     ${list.length ? `<div class="panel rows">${list.slice(0, 30).map(closedRow).join('')}</div>` : '<p class="empty">Nothing yet.</p>'}</details>`;
 }
 const byClosed = (a, b) => Date.parse(b.completedAt || b.updated) - Date.parse(a.completedAt || a.updated);
@@ -1955,7 +1967,7 @@ function haulCard(w) {
 
 function reqCard(r) {
   const hauls = D().workorders.filter(x => x.requestId === r.id && x.status !== 'cancelled' && x.status !== 'failed');
-  const done = hauls.filter(x => x.status === 'complete').reduce((a, x) => a + (x.scu || 0), 0);
+  const done = r.delivered != null ? r.delivered : hauls.filter(x => x.status === 'complete').reduce((a, x) => a + (x.scu || 0), 0);
   const moving = hauls.filter(x => x.status !== 'complete').reduce((a, x) => a + (x.scu || 0), 0);
   const q = Math.max(r.quantity, 1);
   const pd = Math.min(100, done / q * 100), pm = Math.min(100 - pd, moving / q * 100);
@@ -2075,6 +2087,8 @@ function viewLedger() {
 function canManage(p) {
   const m = me();
   if (p.id === m.id && !m.owner) return false;
+  // Command is managed from the top down: the owner manages everyone, directors manage Command managers, managers manage below Command.
+  if (p.commandTitle) return m.owner || (m.isCommand && p.commandTitle === 'manager');
   if (m.isCommand || m.isManager) return true;
   // Leads manage their own division and people who aren't in a division yet.
   if (p.commandTitle || (p.divisions || []).includes('hq')) return false;   // Command members are the owner's
@@ -2205,7 +2219,16 @@ function staffAux(p) { return canAuxAny() && (p.aux || []).length ? ' · aux: ' 
    One place for background checks and discipline. What you can do depends on your rank:
    leads note, warn and refer; managers add disciplinary actions and suspensions and refer to Command;
    Command terminates. History always stays on file. */
-function referralsForMe() { const m = me(); return (D().referrals || []).filter(r => r.status === 'open' && (m.inCommand || r.level === 'manager')); }
+function referralsForMe() { const m = me(); return (D().referrals || []).filter(r => r.status === 'open' && (m.isCommand || r.level === 'manager')); }
+/* Same clearance rule the server uses: leads check members, managers check leads and below, directors check everyone. */
+function fileLevel(p) {
+  if (!p) return 1;
+  if (p.command || p.commandTitle) return 4;
+  if (p.tier === 'manager' || p.tier === 'director') return 3;
+  if (p.lead || p.tier === 'admin') return 2;
+  return 1;
+}
+function canProbe(p) { const lv = me().staffLevel || 0; return lv >= 4 || (lv >= 2 && fileLevel(p) < lv); }
 function viewMemberCheck() {
   const m = me(), boss = m.isManager || m.isCommand;
   const q = (S.checkQ || '').trim().toLowerCase();
@@ -2213,26 +2236,27 @@ function viewMemberCheck() {
   const hits = q ? people.filter(x => rosterKey(x).includes(q)).sort(byUser).slice(0, 12) : [];
   const refs = referralsForMe();
   const done = (D().referrals || []).filter(r => r.status !== 'open').slice(0, 15);
-  const refRow = (r, open) => `<div class="row"><div class="who">${discordAv(r.memberId, r.avatar, r.name)}<div class="row-main"><span class="row-title">${esc(r.name)} <span class="pill ${r.level === 'command' ? 'cmd-director' : ''}">${r.level === 'command' ? 'To Command' : 'To managers'}</span></span>
+  const refRow = (r, open) => `<div class="row"><div class="who">${discordAv(r.memberId, r.avatar, r.name)}<div class="row-main"><span class="row-title">${esc(r.name)} <span class="pill ${r.level === 'command' ? 'cmd-director' : ''}">${r.level === 'command' ? 'To Directors' : 'To managers'}</span></span>
       <span class="row-sub">${esc(r.reason)}</span><span class="hint">By ${esc(r.byName)} · ${esc(rel(r.created))}${!open ? ` · ${r.status === 'actioned' ? 'Handled' : 'Dismissed'} by ${esc(r.handledName)}${r.note ? ': ' + esc(r.note) : ''}` : ''}</span></div></div>
-    <div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-act="check-open" data-id="${esc(r.memberId)}">Open check</button>${open ? `${r.level === 'manager' && !m.inCommand ? `<button class="btn btn-ghost btn-sm" type="button" data-act="ref-handle" data-decision="escalate" data-id="${esc(r.id)}">Send to Command</button>` : ''}<button class="btn btn-ghost btn-sm" type="button" data-act="ref-handle" data-decision="dismissed" data-id="${esc(r.id)}">Dismiss</button><button class="btn btn-ok btn-sm" type="button" data-act="ref-handle" data-decision="actioned" data-id="${esc(r.id)}">Handled</button>` : ''}</div></div>`;
+    <div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-act="check-open" data-id="${esc(r.memberId)}">Open check</button>${open ? `${r.level === 'manager' && !m.isCommand ? `<button class="btn btn-ghost btn-sm" type="button" data-act="ref-handle" data-decision="escalate" data-id="${esc(r.id)}">Send to the Directors</button>` : ''}<button class="btn btn-ghost btn-sm" type="button" data-act="ref-handle" data-decision="dismissed" data-id="${esc(r.id)}">Dismiss</button><button class="btn btn-ok btn-sm" type="button" data-act="ref-handle" data-decision="actioned" data-id="${esc(r.id)}">Handled</button>` : ''}</div></div>`;
   return `
     <div class="page-head"><div><div class="eyebrow">Leads and up</div><h1>Member check</h1><p>Look anyone up for their full background and record, and take the action your rank allows.</p></div></div>
-    <div class="check-steps">${[['Leads', 'Notes and warnings for your division. Refer to managers or Command when warnings aren’t working.'],
-      ['Managers', 'Disciplinary actions and suspensions. Refer to Command for termination.'], ['Command', 'Terminations, bans and the final call on appeals.']].map(([t, d]) => `<div class="${(t === 'Leads' && !boss) || (t === 'Managers' && m.isManager && !m.inCommand) || (t === 'Command' && m.inCommand) ? 'on' : ''}"><b>${t}</b><span>${d}</span></div>`).join('')}</div>
+    <div class="check-steps">${[['Leads', 'Notes and warnings for your division. Refer to managers or the Directors when warnings aren’t working.'],
+      ['Managers', 'Disciplinary actions and suspensions. Refer to the Directors for termination.'], ['Directors', 'Terminations, bans and the final call on appeals. Command managers work at the manager level.']].map(([t, d]) => `<div class="${(t === 'Leads' && !boss) || (t === 'Managers' && m.isManager && !m.isCommand) || (t === 'Directors' && m.isCommand) ? 'on' : ''}"><b>${t}</b><span>${d}</span></div>`).join('')}</div>
     ${boss ? `<h2 class="sub section">Referred for review <span class="num" style="color:var(--dim)">${refs.length}</span></h2>
       <div class="panel rows">${refs.length ? refs.map(r => refRow(r, true)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">Nothing waiting. Referrals from leads and managers show up here.</span></div>'}</div>
       ${done.length ? `<details class="section done-list"><summary class="sub">Handled <span class="num" style="color:var(--dim)">${done.length}</span></summary><div class="panel rows">${done.map(r => refRow(r, false)).join('')}</div></details>` : ''}` : ''}
     <h2 class="sub section">Look someone up</h2>
     <input class="roster-search wide" type="search" data-check-q value="${esc(S.checkQ || '')}" placeholder="Name, Discord username or RSI handle…" aria-label="Search for a member to check">
-    <div class="panel rows" id="checkResults" style="margin-top:8px">${q ? (hits.length ? hits.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.status && p.status !== 'active' ? ' · ' + esc(p.status === 'suspended' ? 'Suspended' : STANDING_LABEL[p.standing] || 'Not active') : ''}</span></div></div><div class="actions"><button class="btn btn-solid btn-sm" type="button" data-act="check-open" data-id="${esc(p.id)}">Check</button></div></div>`).join('') : '<div class="row"><span class="hint">No one matches.</span></div>') : '<div class="row"><span class="hint">Start typing to search every account, including former members.</span></div>'}</div>`;
+    <div class="panel rows" id="checkResults" style="margin-top:8px">${q ? (hits.length ? hits.map(p => `<div class="row"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.status && p.status !== 'active' ? ' · ' + esc(p.status === 'suspended' ? 'Suspended' : STANDING_LABEL[p.standing] || 'Not active') : ''}</span></div></div><div class="actions">${canProbe(p) ? `<button class="btn btn-solid btn-sm" type="button" data-act="check-open" data-id="${esc(p.id)}">Check</button>` : '<span class="pill" title="Files at your rank and above are kept confidential.">Above your clearance</span>'}</div></div>`).join('') : '<div class="row"><span class="hint">No one matches.</span></div>') : '<div class="row"><span class="hint">Start typing to search every account, including former members.</span></div>'}</div>`;
 }
 /* The check itself opens as a wide dialog: background, record and the actions this person's rank allows. */
 async function checkDialog(id) {
   openDialog('Member check', '<div class="dlg-body"><div class="spinner"></div></div>');
   dlg.classList.add('wide');
   let h;
-  try { h = await api('member.history', { id }); } catch (err) { toast(err.message, 'err'); closeDialog(); return; }
+  const fromApp = S.returnApp && ((D().applications || []).find(x => x.id === S.returnApp) || {}).memberId === id ? S.returnApp : '';
+  try { h = await api('member.history', fromApp ? { id, appId: fromApp } : { id }); } catch (err) { toast(err.message, 'err'); closeDialog(); return; }
   S.history = h;
   const p = member(id) || {}, m = me(), boss = m.isManager || m.isCommand;
   const inMyDiv = m.lead && (p.divisions || []).includes(m.lead);
@@ -2241,10 +2265,10 @@ async function checkDialog(id) {
   const btn = (act, label, cls) => `<button class="btn ${cls || 'btn-ghost'} btn-sm" type="button" data-act="${act}" data-id="${esc(id)}">${label}</button>`;
   const acts = protectedAcct ? '<span class="hint">Command member: only the owner takes action here.</span>' : [
     !boss ? btn('ref-new', 'Refer to managers') : '',
-    !m.inCommand ? btn('ref-new-cmd', 'Refer to Command') : '',
+    !m.isCommand ? btn('ref-new-cmd', 'Refer to the Directors') : '',
     boss && !susp ? btn('susp-new', 'Suspend', 'btn-danger') : '',
     boss && susp ? btn('susp-lift', 'Lift suspension') : '',
-    m.inCommand ? btn('standing-open', 'Terminate or remove…', 'btn-danger') : ''
+    m.isCommand ? btn('standing-open', 'Terminate or remove…', 'btn-danger') : ''
   ].join('');
   $('dlgInner').querySelector('.dlg-head h2').textContent = 'Member check · ' + (p.displayName || p.username || 'Member');
   (dlg.querySelector('.dlg-body') || dlg).outerHTML = `<div class="dlg-body">
@@ -2277,7 +2301,7 @@ function memberForm(id) {
   const all = D().divisions.filter(x => !x.command);
   const crewChoices = m.isCommand ? all : all.filter(x => x.id === m.lead);
   const cmdMember = !!p.commandTitle;
-  const locked = cmdMember && !m.owner;   // Command members are the owner's to change
+  const locked = cmdMember && !m.owner && !(m.isCommand && p.commandTitle === 'manager');   // directors handle Command managers; the rest is the owner's
   const canCrew = !self && !locked && (m.isCommand || (m.lead && (!p.crew || p.crew === m.lead)));
   openDialog('Manage member', `
     <form class="dlg-body" data-form="member" novalidate>
@@ -2287,15 +2311,15 @@ function memberForm(id) {
         ${canCrew ? `<div class="field full"><label for="mCrew">Division</label><select id="mCrew" name="crew"><option value="">${p.crew ? 'Remove from ' + esc((divOf(p.crew) || {}).name || 'division') : 'Unassigned'}</option>${crewChoices.map(x => `<option value="${x.id}"${x.id === p.crew ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
         ${false ? `<div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status">${['active', 'suspended'].concat(p.status && !['active', 'suspended'].includes(p.status) ? [p.status] : []).map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>` : ''}
       </div>
-      ${m.owner && !self ? `<div class="field"><label for="mCmd">Command</label><select id="mCmd" name="command">
+      ${(m.owner || (m.isCommand && p.commandTitle !== 'director')) && !self ? `<div class="field"><label for="mCmd">Command</label><select id="mCmd" name="command">
           <option value=""${!cmdMember ? ' selected' : ''}>Not in Command</option>
-          <option value="director"${p.commandTitle === 'director' ? ' selected' : ''}>Command · Director</option>
+          ${m.owner ? `<option value="director"${p.commandTitle === 'director' ? ' selected' : ''}>Command · Director</option>` : ''}
           <option value="manager"${p.commandTitle === 'manager' ? ' selected' : ''}>Command · Manager</option></select>
-        <span class="hint">Directors run the org: division leads, org-wide and major events, insights. Managers are listed in Command and get manager access (the highest regular staff role, a step above leads) without Director powers. Only you can set this.</span></div>` : ''}
+        <span class="hint">Directors run the org: division leads, org-wide and major events, insights. Managers are listed in Command and get manager access (the highest regular staff role, a step above leads) without Director powers. Joining Command takes them out of their division, lead and supervisor spots. ${m.owner ? 'Only you appoint Directors.' : 'Directors can promote to Manager; only the owner appoints Directors.'}</span></div>` : ''}
       ${titleFields(p)}
       ${locked ? '<p class="hint">This member is in Command. Only the owner can change their division, status or Command title.</p>' : ''}
-      ${m.inCommand && !self && !cmdMember ? `<div class="danger-zone"><div><b>Remove from portal</b><span>Banned, kicked, left, or gone inactive. Sends them back to the application screen.</span></div><button class="btn btn-danger btn-sm" type="button" data-act="standing-open" data-id="${esc(p.id)}">Remove…</button></div>` : ''}
-      ${m.staffLevel >= 2 && !self ? `<div><button class="btn btn-ghost btn-sm" type="button" data-act="check-open" data-id="${esc(p.id)}">Member check: history, warnings${m.isManager || m.isCommand ? ', suspensions' : ''}</button></div>` : ''}
+      ${m.isCommand && !self && !cmdMember ? `<div class="danger-zone"><div><b>Remove from portal</b><span>Banned, kicked, left, or gone inactive. Sends them back to the application screen.</span></div><button class="btn btn-danger btn-sm" type="button" data-act="standing-open" data-id="${esc(p.id)}">Remove…</button></div>` : ''}
+      ${m.staffLevel >= 2 && !self && canProbe(p) ? `<div><button class="btn btn-ghost btn-sm" type="button" data-act="check-open" data-id="${esc(p.id)}">Member check: history, warnings${m.isManager || m.isCommand ? ', suspensions' : ''}</button></div>` : ''}
       <p class="hint" style="margin-top:12px">${rm ? 'Divisions from Discord roles stay as they are; a division set here is added in the portal. ' : ''}Leads and supervisors are set in Division Management.${m.isManager ? ' Suspending blocks the portal and signs them out everywhere.' : ''}</p>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
@@ -2361,8 +2385,8 @@ function profileForm() {
     <form class="dlg-body" data-form="profile" novalidate>
       <div class="who">${avatar(m.id)}<div class="row-main"><span class="row-title">${esc(m.displayName || m.username)}</span><span class="row-sub">@${esc(m.username)}</span></div></div>
       <div class="field"><label for="prRsi">RSI handle</label><input id="prRsi" name="rsiHandle" maxlength="40" value="${esc(m.rsiHandle)}" autocomplete="off"></div>
-      <div class="field"><label for="prDiv">Primary crew</label><select id="prDiv" name="division"><option value="">None</option>${crewOptions(m).map(x => `<option value="${x.id}"${x.id === ((m.divisions || [])[0] || m.division) ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>
-        <span class="hint">${D().rolesMode ? 'Crews come from your Discord roles. Your primary crew shows next to your name; the rest are listed as auxiliaries on your profile.' : 'Shown next to your name across the portal.'}</span></div>
+      <div class="field"><label>Primary crew</label><div class="prof-fact" style="text-align:left">${(() => { const dv = divOf((m.divisions || []).filter(x => x !== 'hq')[0] || m.division); return dv ? patch(dv.id, 20) + ' <b>' + esc(dv.name) + '</b>' : '<span class="hint">Not assigned yet</span>'; })()}</div>
+        <span class="hint">Crew changes go through the process: request a transfer from Tickets, or your division lead assigns you. That keeps every move on record.</span></div>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
 }
@@ -2580,12 +2604,33 @@ function viewStaff() {
     .concat(m.inCommand ? [['insights', 'Insights']] : [])
     .concat((m.inCommand || m.isManager) && D().staff ? [['events', 'Major events']] : [])
     .concat((m.isAdmin || m.inCommand) && D().staff ? [['news', 'Newsletters']] : [])
+    .concat(m.isCommand ? [['checks', 'Check log']] : [])
     .concat(m.owner ? [['setup', 'Set up']] : []);
   if (!tabs.some(t => t[0] === S.staffTab)) S.staffTab = tabs[0][0];
-  const body = { overview: staffOverview, insights: viewInsights, events: staffEvents, news: staffNews, setup: staffSetup }[S.staffTab]();
+  const body = { overview: staffOverview, insights: viewInsights, events: staffEvents, news: staffNews, checks: viewCheckLog, setup: staffSetup }[S.staffTab]();
   const blurb = m.inCommand ? 'How the org is doing, major events and newsletters. Divisions are run from the Management tab.' : m.isManager ? 'Major events and newsletters for the website and every member’s dashboard.' : 'Newsletters for the website and the member dashboard.';
   return `<div class="page-head"><div><div class="eyebrow">Staff</div><h1>Command</h1><p>${blurb}</p></div></div>
     <div class="subtabs chips">${tabs.map(t => `<button class="chip${S.staffTab === t[0] ? ' on' : ''}" type="button" data-staff-tab="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
+}
+
+/* Who opened whose file, and whether it was for an application review or a check on their own. Directors only. */
+function viewCheckLog() {
+  if (!S.checkLog) {
+    if (!S.checkLogLoading) { S.checkLogLoading = true; api('audit.checks').then(r => { S.checkLog = r.entries || []; }).catch(err => { S.checkLog = []; toast(err.message, 'err'); }).finally(() => { S.checkLogLoading = false; render(); }); }
+    return '<div class="spinner"></div>';
+  }
+  const f = S.checkLogF || 'all', q = (S.checkLogQ || '').trim().toLowerCase();
+  const list = S.checkLog.filter(e => (f === 'all' || e.reason === f) && (!q || (e.byName + ' ' + e.memberName).toLowerCase().includes(q)));
+  const n = k => S.checkLog.filter(e => e.reason === k).length;
+  return `<p class="hint" style="margin:0 0 12px">Every member check is logged here. Checks opened from an application under review are marked separately so the ones people ran on their own stand out.</p>
+    <div class="toolbar" style="gap:8px;flex-wrap:wrap">
+      <div class="chips">${[['all', 'All', S.checkLog.length], ['manual', 'Manual checks', n('manual')], ['application', 'Application reviews', n('application')]].map(([k, l, c]) => `<button class="chip${f === k ? ' on' : ''}" type="button" data-checklog-f="${k}">${l} <span class="num">${c}</span></button>`).join('')}</div>
+      <input class="roster-search" type="search" data-checklog-q value="${esc(S.checkLogQ || '')}" placeholder="Search who ran it or who was checked…" aria-label="Search the check log">
+      <button class="btn btn-ghost btn-sm" type="button" data-act="checklog-refresh">Refresh</button></div>
+    <div class="panel rows">${list.length ? list.slice(0, 200).map(e => `<div class="row"><div class="who">${avatar(e.by, true)}<div class="row-main">
+      <span class="row-title">${esc(e.byName || 'Former member')} <span class="hint">checked</span> ${esc(e.memberName || 'Former member')}</span>
+      <span class="hint">${esc(new Date(e.at).toLocaleString())} · ${esc(rel(e.at))}</span></div></div>
+      <span class="pill${e.reason === 'manual' ? ' review' : ' active'}">${e.reason === 'application' ? 'Application review' + (e.ref ? ' · ' + esc(e.ref.replace('Application ', '')) : '') : 'Manual check'}</span></div>`).join('') : '<div class="row"><span class="hint">Nothing logged yet.</span></div>'}</div>`;
 }
 
 /* ---------- Division Management ----------
@@ -2667,15 +2712,18 @@ function leadBlock(dv) {
   const inCrew = (x, id) => (x.divisions || [x.division]).includes(id);
   const leads = active.filter(x => x.lead === dv.id);
       const sups = active.filter(x => x.supervisor === dv.id);
-      const supPick = active.filter(x => inCrew(x, dv.id) && x.supervisor !== dv.id && x.tier && x.tier !== 'recruit');
+      const supPick = active.filter(x => inCrew(x, dv.id) && x.supervisor !== dv.id && !x.lead && x.tier && x.tier !== 'recruit');
+      // leads come up through the chain: supervisors first, then managers, Command and anyone already leading
+      const rankOrder = x => x.supervisor === dv.id ? 0 : x.supervisor ? 1 : x.tier === 'admin' ? 2 : x.lead ? 3 : 4;
+      const leadPick = active.filter(x => x.lead !== dv.id && (x.supervisor || x.lead || x.command || x.commandTitle || ['admin', 'manager', 'director'].includes(x.tier))).sort((a, b) => rankOrder(a) - rankOrder(b) || (a.displayName || a.username).localeCompare(b.displayName || b.username));
       return `<section class="panel div-block" style="--div:${esc(dv.color)}"><div class="div-head">${patchSVG(dv, divIndex(dv.id), 40)}<div><h3>${esc(dv.name)}</h3><p>${leads.length ? 'Lead: ' + leads.map(p => esc(nameOf(p.id))).join(', ') : 'No lead yet'} · ${sups.length} supervisor${sups.length === 1 ? '' : 's'}</p></div></div>
         <div class="mgmt-label">Division lead</div>
         <div class="rows">${leads.map(p => `<div class="row"><span class="row-title">${nameTag(p.id)}</span>${m.isCommand ? `<button class="btn btn-ghost btn-sm" type="button" data-act="lead-clear" data-id="${esc(p.id)}" data-confirm="Remove lead?">Remove</button>` : ''}</div>`).join('') || '<div class="row"><span class="hint">Nobody yet.</span></div>'}
-        ${m.isCommand ? `<form class="row" data-form="lead" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make lead"><option value="">${leads.length ? 'Replace or add a lead…' : 'Assign a lead…'}</option>${active.filter(x => x.lead !== dv.id && x.tier && x.tier !== 'recruit').sort((a, b) => (b.tier === 'admin') - (a.tier === 'admin')).map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.lead ? ' (leads ' + esc((divOf(x.lead) || {}).name || x.lead) + ')' : x.tier === 'admin' ? ' (Division Lead rank)' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit">Assign</button></form>` : ''}</div>
+        ${m.isCommand ? `<form class="row" data-form="lead" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make lead"><option value="">${leads.length ? 'Replace or add a lead…' : 'Assign a lead…'}</option>${leadPick.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.lead ? ' (leads ' + esc((divOf(x.lead) || {}).name || x.lead) + ')' : x.supervisor ? ' (supervises ' + esc((divOf(x.supervisor) || {}).name || x.supervisor) + ')' : x.command || x.commandTitle ? ' (Command)' : x.tier === 'manager' || x.tier === 'director' ? ' (Manager)' : x.tier === 'admin' ? ' (Division Lead rank)' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit">Assign</button></form>` : ''}</div>
         <div class="mgmt-label">Supervisors</div>
         <div class="rows">${sups.map(p => `<div class="row"><span class="row-title">${nameTag(p.id)}</span><button class="btn btn-ghost btn-sm" type="button" data-act="sup-clear" data-id="${esc(p.id)}" data-confirm="Remove?">Remove</button></div>`).join('') || '<div class="row"><span class="hint">No supervisors yet.</span></div>'}
         <form class="row" data-form="sup" data-div="${dv.id}" novalidate style="gap:8px"><select name="who" class="mini" style="flex:1" aria-label="Member to make supervisor"><option value="">${supPick.length ? 'Add a supervisor…' : 'No crew members to add'}</option>${supPick.map(x => `<option value="${esc(x.id)}">${esc(x.displayName || x.username)}${x.supervisor ? ' (supervises ' + esc((divOf(x.supervisor) || {}).name || x.supervisor) + ')' : ''}</option>`).join('')}</select><button class="btn btn-solid btn-sm" type="submit"${supPick.length ? '' : ' disabled'}>Add</button></form></div>
-        <p class="hint" style="padding:0 16px 14px">${m.isCommand ? 'Command sets one lead per division. ' : ''}Leads pick their supervisors. Supervisors handle treasury submissions only.</p>
+        <p class="hint" style="padding:0 16px 14px">${m.isCommand ? 'Command sets one lead per division, picked from supervisors, managers and Command. A supervisor made lead leaves the supervisor list. ' : ''}Leads pick their supervisors. Supervisors handle treasury submissions only.</p>
       </section>`;
 }
 
@@ -3457,7 +3505,7 @@ const TICKET_CATS = {
   appeal: { label: 'Application blacklist appeal', hint: 'For applicants blacklisted after three denials. Only managers and Command see appeals.' },
   banappeal: { label: 'Ban or termination appeal', hint: 'For accounts that were terminated, banned, kicked or marked as leaving without notice. Managers and Command review these; terminations go to Command.' }
 };
-const LEVEL_NAMES = { supervisor: 'Supervisors', lead: 'Division Lead', manager: 'Managers', command: 'Command' };
+const LEVEL_NAMES = { supervisor: 'Supervisors', lead: 'Division Lead', manager: 'Managers', command: 'Directors' };
 const PRIO = { low: 'Low', normal: 'Normal', high: 'High', urgent: 'Urgent' };
 const applicantTabs = () => [['application', D().suspension || (D().apply || {}).blocked ? 'Account' : 'Application'], ['support', 'Support']];
 
@@ -3631,6 +3679,7 @@ function ticketForm(cat) {
         const isAux = id => (me().aux || []).includes(id);
         return `<select id="tkDiv" name="targetDiv">${open.map(x => `<option value="${x.id}">${esc(x.name)}${isAux(x.id) ? ' (you’re an auxiliary here)' : ''}</option>`).join('')}</select>
           ${shut.length ? `<p class="hint">Not taking transfers right now: ${shut.map(x => esc(x.name)).join(', ')}.</p>` : ''}
+          <p class="hint">One transfer at a time: it has to be approved or denied before you file another. After a move goes through, you can ask again after 10 days.</p>
           ${myDiv && divOf(myDiv) ? `<label class="check" style="margin-top:8px"><input type="checkbox" name="keepAux"${st[myDiv] && !st[myDiv].aux ? ' disabled' : ''}> Keep ${esc(divOf(myDiv).name)} as an auxiliary${st[myDiv] && !st[myDiv].aux ? ' (not taking auxiliaries right now)' : ''}</label><p class="hint">Your primary division moves. If you’re already an auxiliary in the new division, that spot becomes your primary.</p>` : ''}`;
       })()}</div>
       <div class="field" data-tk-for="report"${cat === 'report' ? '' : ' hidden'}><label for="tkWho">Member</label><input id="tkWho" name="who" list="tkPeople" placeholder="Start typing a name" autocomplete="off"><datalist id="tkPeople">${people.map(x => `<option value="${esc(x.username)}">${esc(x.displayName || '')}</option>`).join('')}</datalist></div>
@@ -3714,7 +3763,7 @@ function msgHTML(x) {
 /* Appeal decisions: each kind only offers what fits it. */
 function appealButtons(t, staff) {
   if (!staff || me().staffLevel < 3 || t.outcome) return '';
-  const open = t.category === 'banappeal' ? ['terminated', 'left', 'kicked', 'banned'].includes(t.openerStanding) && (t.openerStanding !== 'terminated' || me().inCommand) : t.category === 'appeal' ? t.openerBlacklisted : false;
+  const open = t.category === 'banappeal' ? ['terminated', 'left', 'kicked', 'banned'].includes(t.openerStanding) && (t.openerStanding !== 'terminated' || me().isCommand) : t.category === 'appeal' ? t.openerBlacklisted : false;
   if (!open) return '';
   const acceptLabel = t.category === 'banappeal' ? (t.openerStanding === 'terminated' ? 'Lift termination' : 'Lift ban') : 'Accept · clear blacklist';
   return `<button class="btn btn-ok btn-sm" type="button" data-act="appeal-decide" data-decision="accept" data-id="${esc(t.id)}">${acceptLabel}</button><button class="btn btn-danger btn-sm" type="button" data-act="appeal-decide" data-decision="deny" data-id="${esc(t.id)}">Deny appeal</button>`;
@@ -4105,6 +4154,8 @@ document.addEventListener('click', async e => {
   }
   const stb = e.target.closest('[data-staff-tab]');
   if (stb) { S.staffTab = stb.dataset.staffTab; render(); return; }
+  const clf = e.target.closest('[data-checklog-f]');
+  if (clf) { S.checkLogF = clf.dataset.checklogF; render(); return; }
   const cd = e.target.closest('[data-cal-day]');
   if (cd && !e.target.closest('[data-act]')) { S.calDay = S.calDay === cd.dataset.calDay ? '' : cd.dataset.calDay; render(); return; }
 
@@ -4194,14 +4245,15 @@ document.addEventListener('click', async e => {
     case 'exit-open': exitForm(); break;
     case 'mg-transfer': transferForm(id); break;
     case 'check-open': checkDialog(id); break;
+    case 'checklog-refresh': S.checkLog = null; render(); break;
     case 'ref-new': case 'ref-new-cmd': {
       const cmd = b.dataset.act === 'ref-new-cmd';
-      openDialog(cmd ? 'Refer to Command' : 'Refer to managers', `<form class="dlg-body" data-form="ref-new" data-id="${esc(id)}" data-to="${cmd ? 'command' : 'manager'}" novalidate><p>${cmd ? 'Command reviews the account and decides on termination or other action.' : 'Managers review the account and decide on a disciplinary action or suspension.'} It goes on their record.</p><div class="field"><label for="rfWhy">What’s going on? *</label><textarea id="rfWhy" name="reason" maxlength="1000" placeholder="e.g. Third warning this month for griefing; it keeps happening"></textarea></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-act="check-open" data-id="${esc(id)}">Back</button><button class="btn btn-solid" type="submit">Send referral</button></div></form>`);
+      openDialog(cmd ? 'Refer to the Directors' : 'Refer to managers', `<form class="dlg-body" data-form="ref-new" data-id="${esc(id)}" data-to="${cmd ? 'command' : 'manager'}" novalidate><p>${cmd ? 'The Directors review the account and decide on termination or other action.' : 'Managers review the account and decide on a disciplinary action or suspension.'} It goes on their record.</p><div class="field"><label for="rfWhy">What’s going on? *</label><textarea id="rfWhy" name="reason" maxlength="1000" placeholder="e.g. Third warning this month for griefing; it keeps happening"></textarea></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-act="check-open" data-id="${esc(id)}">Back</button><button class="btn btn-solid" type="submit">Send referral</button></div></form>`);
       break;
     }
     case 'ref-handle': {
       const dec = b.dataset.decision;
-      openDialog(dec === 'escalate' ? 'Send to Command' : dec === 'dismissed' ? 'Dismiss referral' : 'Mark handled', `<form class="dlg-body" data-form="ref-handle" data-id="${esc(id)}" data-decision="${dec}" novalidate><div class="field"><label for="rhNote">${dec === 'dismissed' ? 'Why? *' : 'Note (optional)'}</label><input id="rhNote" name="note" maxlength="500" placeholder="${dec === 'actioned' ? 'e.g. Gave a 7 day suspension' : dec === 'escalate' ? 'e.g. Recommend termination' : 'e.g. Talked to them, sorted'}"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div></form>`);
+      openDialog(dec === 'escalate' ? 'Send to the Directors' : dec === 'dismissed' ? 'Dismiss referral' : 'Mark handled', `<form class="dlg-body" data-form="ref-handle" data-id="${esc(id)}" data-decision="${dec}" novalidate><div class="field"><label for="rhNote">${dec === 'dismissed' ? 'Why? *' : 'Note (optional)'}</label><input id="rhNote" name="note" maxlength="500" placeholder="${dec === 'actioned' ? 'e.g. Gave a 7 day suspension' : dec === 'escalate' ? 'e.g. Recommend termination' : 'e.g. Talked to them, sorted'}"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div></form>`);
       break;
     }
     case 'susp-new': openDialog('Suspend member', `<form class="dlg-body" data-form="susp-new" data-id="${esc(id)}" novalidate><p>The portal closes for them until the end date, then reopens on its own. They see the reason and can still open a support ticket.</p>
@@ -4229,7 +4281,7 @@ document.addEventListener('click', async e => {
     case 'standing-clear': if (await act('member.remove', { id, standing: '', note: '' }, 'Restored.')) closeDialog(); break;
     case 'rec-end': openDialog('Lift entry', `<form class="dlg-body" data-form="rec-lift" data-id="${esc(id)}" data-member="${esc(b.dataset.member)}" novalidate><p>It stays on their record, marked as lifted with your note.</p><div class="field"><label for="rlNote">Note <span class="opt">(optional)</span></label><input id="rlNote" name="note" maxlength="500" placeholder="e.g. Appeal granted after talking it through"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-act="check-open" data-id="${esc(b.dataset.member)}">Back</button><button class="btn btn-solid" type="submit">Lift</button></div></form>`); break;
     case 'rec-del': if (await act('member.recordExpunge', { recordId: id }, 'Entry removed.')) checkDialog(b.dataset.member); break;
-    case 'hook-test': try { await api('setup.webhookTest', { which: b.dataset.which }); toast('Test message sent. Check the channel.', 'ok'); } catch (err) { toast(err.message, 'err'); } break;
+    case 'hook-test': if (b.classList.contains('is-busy')) break; b.classList.add('is-busy'); try { await api('setup.webhookTest', { which: b.dataset.which }); toast('Test message sent. Check the channel.', 'ok'); } catch (err) { toast(err.message, 'err'); } finally { b.classList.remove('is-busy'); } break;
     case 'hook-clear': act('setup.webhook', { which: b.dataset.which, url: '' }, 'Webhook removed.'); break;
     case 'copy-text': { const t = b.dataset.text || ''; navigator.clipboard.writeText(t).then(() => toast(`${b.dataset.what || 'Text'} copied: ${t}`, 'ok'), () => toast('Couldn’t copy. Select the name and copy it.', 'err')); break; }
     case 'copy-onboard': { const t = $('onboardText').textContent; navigator.clipboard.writeText(t).then(() => toast('Copied. Paste it in #onboarding.', 'ok'), () => toast('Select the text and copy it.', 'err')); break; }
@@ -4258,6 +4310,7 @@ document.addEventListener('input', e => {
   if (e.target.matches('[data-roster-q]')) { if (e.target.dataset.rosterQ === 'unassigned') S.unQ = e.target.value; else S.crewQ = e.target.value; S.rosterPage = {}; applyRoster(); return; }
   if (e.target.matches('[data-mg-div]')) { S.mgDiv = e.target.value; S.crewQ = ''; render(); return; }
   if (e.target.matches('[data-mk-q]')) { S.mkQ = e.target.value; S.mkOpen = true; const r = $('mkList'); if (r) r.innerHTML = mkList(); return; }
+  if (e.target.matches('[data-checklog-q]')) { S.checkLogQ = e.target.value; const at = e.target.selectionStart; render(); const i = document.querySelector('[data-checklog-q]'); if (i) { i.focus(); try { i.setSelectionRange(at, at); } catch (_) {} } return; }
   if (e.target.matches('[data-check-q]')) { S.checkQ = e.target.value; const r = $('checkResults'); if (r) { const tmp = document.createElement('div'); tmp.innerHTML = viewMemberCheck(); const nr = tmp.querySelector('#checkResults'); if (nr) r.innerHTML = nr.innerHTML; } return; }
   if (e.target.matches('[data-member-q]')) { S.memberQ = e.target.value; const r = $('memberResults'); if (r) r.innerHTML = memberResults(); return; }
   if (e.target.matches('[data-share-total], [data-share-amt]')) shareSum(e.target.form);
@@ -4374,7 +4427,7 @@ document.addEventListener('submit', async e => {
         }
         break;
       case 'profile':
-        ok = await act('profile.update', { rsiHandle: v('rsiHandle'), division: f.elements.division.disabled ? me().division : v('division') }, 'Profile saved.');
+        ok = await act('profile.update', { rsiHandle: v('rsiHandle') }, 'Profile saved.');
         break;
       case 'cal':
         if (!v('title').trim() || !v('start')) { toast('Add a title and start time.', 'err'); break; }
@@ -4464,9 +4517,10 @@ document.addEventListener('submit', async e => {
         break;
       case 'chat': {
         const body = v('body').trim(); if (!body) break;
+        if (f.dataset.sending) break; f.dataset.sending = '1';
         try { const r = await api('wo.say', { id: f.dataset.id, body }); S.chats[r.id] = r.chat; markSeen(r.id); f.elements.body.value = ''; const list = $('chatMsgs'); if (list) { list.innerHTML = chatMsgsHTML(r.id); list.scrollTop = list.scrollHeight; } }
         catch (err) { toast(err.message, 'err'); if (/over|crew on this job/.test(err.message)) loadAll(true); }
-        if (submit) submit.disabled = false; f.elements.body.focus();
+        delete f.dataset.sending; if (submit) submit.disabled = false; f.elements.body.focus();
         return;
       }
       case 'appeal': {
@@ -4482,7 +4536,7 @@ document.addEventListener('submit', async e => {
         break;
       case 'ref-handle':
         if (f.dataset.decision === 'dismissed' && !v('note').trim()) { toast('Add a short note.', 'err'); break; }
-        ok = await act('refer.handle', { id: f.dataset.id, decision: f.dataset.decision, note: v('note') }, f.dataset.decision === 'escalate' ? 'Sent to Command.' : 'Saved.');
+        ok = await act('refer.handle', { id: f.dataset.id, decision: f.dataset.decision, note: v('note') }, f.dataset.decision === 'escalate' ? 'Sent to the Directors.' : 'Saved.');
         break;
       case 'susp-new': {
         if (!v('reason').trim()) { toast('Add a reason.', 'err'); break; }
@@ -4570,7 +4624,21 @@ $('pendingForm').addEventListener('submit', async e => {
   const f = e.target;
   await act('profile.update', { rsiHandle: f.elements.rsiHandle.value, division: f.elements.division.value }, 'Profile saved.');
 });
-$('pendingRefresh').addEventListener('click', () => loadAll());
+$('pendingRefresh').addEventListener('click', async () => {
+  const b = $('pendingRefresh');
+  if (b.classList.contains('is-busy')) return;
+  b.classList.add('is-busy');
+  try {
+    S.data = await api('sync', { recheck: true });
+    keepSnap();
+    render();
+    // still on the waiting screen: say so, so it doesn't look like nothing happened
+    if (S.data.pending && $('pendingSmall')) $('pendingSmall').textContent = 'Checked Discord just now and didn’t find a member role yet. Roles can take a few seconds to show up, so try again shortly. If it still doesn’t work, ask staff to make sure you have the Recruit role.';
+  } catch (err) {
+    if (err.auth) { signOut(err.message); return; }
+    if ($('pendingSmall')) $('pendingSmall').textContent = err.message;
+  } finally { b.classList.remove('is-busy'); }
+});
 $('loginBtn').addEventListener('click', startLogin);
 $('profileBtn').addEventListener('click', () => profileView(me().id));
 $('backToSite').href = CONFIG.siteUrl;
