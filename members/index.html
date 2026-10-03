@@ -912,6 +912,22 @@ dialog.wide { width: min(860px, calc(100% - 24px)); }
 .check-steps span { color: var(--muted); font-size: .84rem; }
 .check-acts { display: flex; flex-wrap: wrap; gap: 6px; padding: 4px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
 @media (max-width: 760px) { .check-steps { grid-template-columns: 1fr; } }
+/* Activity: a thin bar along the top while the server works, and a spinner on the button pressed */
+body.working::before, body.syncing::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 200; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: workbar 1s linear infinite; }
+@keyframes workbar { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+.is-busy { position: relative; color: transparent !important; pointer-events: none; }
+.is-busy::after { content: ''; position: absolute; inset: 0; margin: auto; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: transparent; animation: spin .7s linear infinite; }
+.review-list { border: 1px solid rgba(201,181,142,.4); border-radius: 10px; background: var(--accent-soft); padding: 10px 12px; display: grid; gap: 4px; }
+.rl-head { display: flex; justify-content: space-between; align-items: center; padding-bottom: 4px; }
+.rl-head b { font-family: var(--f-label); letter-spacing: .1em; text-transform: uppercase; font-size: .82rem; }
+.rl-head span { font-weight: 700; color: var(--muted); }
+.rl-head span.ok { color: var(--ok); }
+.rl-item { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 4px; border-top: 1px solid rgba(201,181,142,.18); cursor: pointer; }
+.rl-item input { width: 18px; height: 18px; accent-color: var(--ok); }
+.rl-item span { display: grid; gap: 1px; min-width: 0; }
+.rl-item small { color: var(--muted); }
+.rl-item.done b { color: var(--ok); }
+.btn[disabled] { opacity: .45; cursor: not-allowed; }
 .mg-pick { min-width: 240px; padding: 10px 12px; font-size: .95rem; }
 .tr-route { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .tr-route svg { vertical-align: middle; }
@@ -1237,7 +1253,8 @@ const fromLocalInput = v => (v ? new Date(v).toISOString() : '');
 function rel(iso) {
   const t = Date.parse(iso); if (isNaN(t)) return '';
   const diff = t - Date.now(), abs = Math.abs(diff), m = Math.round(abs / 60000);
-  const txt = m < 1 ? 'now' : m < 60 ? m + 'm' : m < 1440 ? Math.round(m / 60) + 'h' : Math.round(m / 1440) + 'd';
+  const n = (v, w) => v + ' ' + w + (v === 1 ? '' : 's');
+  const txt = m < 1 ? 'now' : m < 60 ? m + ' min' : m < 1440 ? n(Math.round(m / 60), 'hour') : n(Math.round(m / 1440), 'day');
   return txt === 'now' ? 'just now' : diff > 0 ? 'in ' + txt : txt + ' ago';
 }
 const LABELS = {
@@ -1303,12 +1320,18 @@ async function api(action, extra) {
   return json;
 }
 
+let lastPressed = null;
+document.addEventListener('pointerdown', e => { const b = e.target.closest && e.target.closest('button, .btn'); if (b) lastPressed = b; }, true);
 async function act(action, extra, okMsg) {
   if (S.busy) return false;
   S.busy = true;
   document.body.style.cursor = 'progress';
+  document.body.classList.add('working');
+  const pressed = lastPressed && document.contains(lastPressed) ? lastPressed : null;
+  if (pressed) pressed.classList.add('is-busy');
   try {
     S.data = await api(action, extra);
+    keepSnap();
     render();
     if (okMsg) toast(okMsg, 'ok');
     return true;
@@ -1319,6 +1342,8 @@ async function act(action, extra, okMsg) {
   } finally {
     S.busy = false;
     document.body.style.cursor = '';
+    document.body.classList.remove('working');
+    document.querySelectorAll('.is-busy').forEach(x => x.classList.remove('is-busy'));
   }
 }
 
@@ -1368,9 +1393,24 @@ async function finishLogin(params) {
   }
 }
 
+/* The last page data is kept on this device so the portal shows up instantly next time,
+   then refreshes in the background. Cleared on sign-out. */
+const SNAP_KEY = 'p6_member_snap';
+let snapTimer = 0;
+function keepSnap() {
+  clearTimeout(snapTimer);
+  snapTimer = setTimeout(() => { if (S.data && S.token) store.set(SNAP_KEY, JSON.stringify({ t: S.token.slice(-12), at: Date.now(), data: S.data })); }, 400);
+}
+function readSnap() {
+  try {
+    const s = JSON.parse(store.get(SNAP_KEY) || 'null');
+    return s && S.token && s.t === S.token.slice(-12) && Date.now() - s.at < 7 * 864e5 ? s.data : null;
+  } catch (_) { return null; }
+}
 async function loadAll(silent) {
   try {
     S.data = await api('sync');
+    keepSnap();
     render();
   } catch (err) {
     if (err.auth) { signOut(err.message); return; }
@@ -1381,7 +1421,7 @@ async function loadAll(silent) {
 async function signOut(msg) {
   const token = S.token;
   S.token = null; S.data = null;
-  store.del(TOKEN_KEY);
+  store.del(TOKEN_KEY); store.del(SNAP_KEY);
   show('screenLogin');
   loginError(msg && !/^Please sign in/.test(msg) ? msg : '');
   if (token && !msg) { try { await fetch(CONFIG.apiUrl, { method: 'POST', body: JSON.stringify({ action: 'logout', token }) }); } catch (_) {} }
@@ -2209,7 +2249,7 @@ async function checkDialog(id) {
   $('dlgInner').querySelector('.dlg-head h2').textContent = 'Member check · ' + (p.displayName || p.username || 'Member');
   (dlg.querySelector('.dlg-body') || dlg).outerHTML = `<div class="dlg-body">
     <div class="who">${avatar(id)}<div class="row-main"><span class="row-title">${p.id ? nameTag(id, { noClick: true }) : esc(h.name || 'Member')}</span><span class="row-sub">${p.username ? '@' + esc(p.username) : ''}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}${susp && p.suspendedUntil ? ' · <b style="color:var(--danger)">Suspended until ' + esc(fmtDateTime(p.suspendedUntil)) + '</b>' : ''}</span></div>
-      <div class="actions" style="margin-left:auto">${p.id ? `<button class="btn btn-ghost btn-sm" type="button" data-profile="${esc(id)}">Profile</button>` : ''}</div></div>
+      <div class="actions" style="margin-left:auto">${S.returnApp ? `<button class="btn btn-solid btn-sm" type="button" data-act="app-back" data-id="${esc(S.returnApp)}">Back to application</button>` : ''}${p.id ? `<button class="btn btn-ghost btn-sm" type="button" data-profile="${esc(id)}">Profile</button>` : ''}</div></div>
     <div class="check-acts">${acts}</div>
     ${historyHTML(h, id, { kinds: boss ? ['note', 'warning', 'disciplinary'] : inMyDiv ? ['note', 'warning'] : ['note'] })}
   </div>`;
@@ -3607,6 +3647,7 @@ async function tact(action, extra, okMsg) {
   try {
     const r = await api(action, extra);
     S.data = r;
+    keepSnap();
     if (r.threadId) { S.threads[r.threadId] = r.thread || []; }
     if (okMsg) toast(okMsg, 'ok');
     return r;
@@ -3796,6 +3837,10 @@ function appDialog(id) {
       </div>
       ${bgCheck(a.background, a.returningSaid)}
       <div class="stack" style="gap:6px"><span class="lbl">About them</span><p class="app-about">${esc(a.about || 'Nothing written.')}</p></div>
+      <div class="stack" style="gap:6px"><span class="lbl">Pledged ships</span><p class="app-about">${esc(a.ships || 'Not listed (applied before ships were asked for).')}</p>
+        ${(D().shipRequirements || {})[a.division] ? `<p class="hint"><b>${esc(div ? div.name : 'This division')}:</b> ${esc(D().shipRequirements[a.division])} ${a.shipReq ? 'They confirmed they own one; check it’s on the list.' : ''}</p>` : ''}</div>
+      ${a.checklist ? `<p class="hint"><span class="ok-mark">✓</span> Review checklist completed by ${esc(a.checklist.by)} · ${esc(fmtDateTime(a.checklist.at))}</p>` : ''}
+      ${a.status === 'review' && (mineA || boss) ? reviewList(a) : ''}
       ${a.note ? `<div class="deny-note"><span class="lbl">${a.status === 'denied' ? 'Denial comments' : 'Note'}</span><p>${esc(a.note)}</p></div>` : ''}
       ${a.withdrawNote && a.status !== 'accepted' ? `<div class="deny-note"><span class="lbl">Approval withdrawn${a.withdrawnBy ? ' by ' + esc(nameOf(a.withdrawnBy)) : ''}</span><p>${esc(a.withdrawNote)}</p></div>` : ''}
       ${a.status === 'accepted' && (m.isManager || m.isCommand) ? `<div class="danger-zone"><div><b>Accepted by mistake?</b><span>Withdrawing sends it back to review so the lead can decide again. Any access the approval gave is undone and the Approved Applicant role is taken back.</span></div><button class="btn btn-ghost btn-sm" type="button" data-act="app-withdraw" data-id="${esc(a.id)}">Withdraw approval</button></div>` : ''}
@@ -3807,9 +3852,29 @@ function appDialog(id) {
         <div class="head-actions">
           ${!a.leadId && (boss || mineA) ? `<button class="btn btn-ghost" type="button" data-act="app-take" data-id="${esc(a.id)}">Take it</button>` : ''}
           ${(mineA || boss) && a.status !== 'review' ? `<button class="btn btn-ghost" type="button" data-act="app-review" data-id="${esc(a.id)}">Start review</button>` : ''}
-          ${mineA || boss ? `<button class="btn btn-danger" type="button" data-act="app-deny" data-id="${esc(a.id)}">Deny</button><button class="btn btn-ok" type="button" data-act="app-accept" data-id="${esc(a.id)}">Accept</button>` : ''}
+          ${(mineA || boss) && a.status === 'review' ? `<button class="btn btn-danger" type="button" data-act="app-deny" data-id="${esc(a.id)}"${reviewDone(a.id) ? '' : ' disabled title="Finish the checklist first"'}>Deny</button><button class="btn btn-ok" type="button" data-act="app-accept" data-id="${esc(a.id)}"${reviewDone(a.id) ? '' : ' disabled title="Finish the checklist first"'}>Accept</button>` : ''}
         </div></div>` : ''}
     </div>`);
+}
+/* The review checklist: every item has to be ticked before Accept or Deny unlock. The record item unlocks
+   once the reviewer has actually opened the applicant's record. */
+const REVIEW_ITEMS = [
+  ['rsi', 'RSI profile verified', a => a.rsiVerified ? 'Handle verified through their profile bio.' : 'Not verified. Don’t accept until it is.', a => `<a class="btn btn-ghost btn-sm" href="https://robertsspaceindustries.com/citizens/${encodeURIComponent(a.rsiHandle)}" target="_blank" rel="noopener">Open RSI profile</a>`],
+  ['discord', 'They’re in our Discord', a => a.background && a.background.guildJoined ? 'Joined ' + fmtDate(a.background.guildJoined) + '. Check they’re still there.' : 'Search their name in the Discord member list.', () => ''],
+  ['record', 'Reviewed their record and background check', () => 'Previous memberships, bans, terminations, warnings and notes.', a => `<button class="btn btn-ghost btn-sm" type="button" data-act="app-record" data-id="${esc(a.id)}">Open record</button>`],
+  ['about', 'Read their About me', () => 'At least 3 sentences, and it makes sense for the division.', () => ''],
+  ['ships', 'Checked their ships', a => (D().shipRequirements || {})[a.division] ? 'Pledged only, and they meet this division’s ship requirement.' : 'Pledged only (no in-game aUEC ships).', () => ''],
+  ['rsiOrg', 'Handled their RSI join request', () => 'On the Project Six org page on RSI, accept or decline their request to match your decision.', () => `<a class="btn btn-ghost btn-sm" href="https://robertsspaceindustries.com/en/orgs/PSIX" target="_blank" rel="noopener">Open org on RSI</a>`]
+];
+function reviewState(id) { S.rv = S.rv || {}; return (S.rv[id] = S.rv[id] || {}); }
+function reviewDone(id) { const r = reviewState(id); return REVIEW_ITEMS.every(([k]) => r[k]); }
+function reviewList(a) {
+  const r = reviewState(a.id), n = REVIEW_ITEMS.filter(([k]) => r[k]).length;
+  return `<div class="review-list"><div class="rl-head"><b>Review checklist</b><span class="${n === REVIEW_ITEMS.length ? 'ok' : ''}">${n} of ${REVIEW_ITEMS.length}</span></div>
+    ${REVIEW_ITEMS.map(([k, label, help, tool]) => { const locked = k === 'record' && !r.recordOpened; return `<label class="rl-item${r[k] ? ' done' : ''}">
+      <input type="checkbox" data-review="${esc(a.id)}" data-key="${k}"${r[k] ? ' checked' : ''}${locked ? ' disabled' : ''}>
+      <span><b>${esc(label)}</b><small>${esc(help(a))}${locked ? ' Open it first.' : ''}</small></span>${tool(a)}</label>`; }).join('')}
+  </div>`;
 }
 function decideForm(id, accept) {
   const a = (D().applications || []).find(x => x.id === id); if (!a) return;
@@ -4169,7 +4234,9 @@ document.addEventListener('click', async e => {
     case 'copy-text': { const t = b.dataset.text || ''; navigator.clipboard.writeText(t).then(() => toast(`${b.dataset.what || 'Text'} copied: ${t}`, 'ok'), () => toast('Couldn’t copy. Select the name and copy it.', 'err')); break; }
     case 'copy-onboard': { const t = $('onboardText').textContent; navigator.clipboard.writeText(t).then(() => toast('Copied. Paste it in #onboarding.', 'ok'), () => toast('Select the text and copy it.', 'err')); break; }
     case 'app-finalize': act('apply.finalize', {}, 'Enlistment finalized. See you in Discord!'); break;
-    case 'app-open': appDialog(id); break;
+    case 'app-open': S.returnApp = null; appDialog(id); break;
+    case 'app-back': S.returnApp = null; appDialog(id); break;
+    case 'app-record': { const a = (D().applications || []).find(x => x.id === id); if (!a) break; reviewState(id).recordOpened = true; S.returnApp = id; checkDialog(a.memberId); break; }
     case 'app-take': if (await act('app.assign', { id }, 'Application is yours.')) appDialog(id); break;
     case 'app-review': if (await act('app.review', { id }, 'Marked under review.')) appDialog(id); break;
     case 'app-accept': decideForm(id, true); break;
@@ -4211,6 +4278,7 @@ document.addEventListener('keydown', e => {
 });
 
 document.addEventListener('change', async e => {
+  if (e.target.matches('[data-review]')) { reviewState(e.target.dataset.review)[e.target.dataset.key] = e.target.checked; const sc = dlg.querySelector('.dlg-body') ? dlg.querySelector('.dlg-body').scrollTop : 0; appDialog(e.target.dataset.review); const b = dlg.querySelector('.dlg-body'); if (b) b.scrollTop = sc; return; }
   if (e.target.matches('[data-susp-len]')) { const d = e.target.form.querySelector('[data-susp-date]'); if (d) d.hidden = e.target.value !== '0'; return; }
   if (e.target.matches('[data-rank-icon]')) {
     const key = e.target.dataset.rankIcon, file = e.target.files && e.target.files[0];
@@ -4392,7 +4460,7 @@ document.addEventListener('submit', async e => {
         break;
       case 'app-decide':
         if (f.dataset.decision === 'deny' && !v('note').trim()) { toast('Add your comments. The applicant sees them.', 'err'); break; }
-        ok = await act('app.decide', { id: f.dataset.id, decision: f.dataset.decision, note: v('note') }, f.dataset.decision === 'accept' ? 'Accepted. They’ll see the onboarding steps.' : 'Denied. They’ll see your comments.');
+        ok = await act('app.decide', { id: f.dataset.id, decision: f.dataset.decision, note: v('note'), checks: reviewState(f.dataset.id) }, f.dataset.decision === 'accept' ? 'Accepted. They’ll see the onboarding steps.' : 'Denied. They’ll see your comments.');
         break;
       case 'chat': {
         const body = v('body').trim(); if (!body) break;
@@ -4624,7 +4692,12 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S.
     startLogin().then(() => { if (!$('loginError').hidden) backToEnlist($('loginError').textContent); });
     return;
   }
-  if (S.token) loadAll(); else show('screenLogin');
+  if (S.token) {
+    // Show the last saved view straight away, then catch up with the server.
+    const snap = readSnap();
+    if (snap) { S.data = snap; try { render(); document.body.classList.add('syncing'); } catch (_) { S.data = null; } }
+    loadAll(!!S.data).finally(() => document.body.classList.remove('syncing'));
+  } else show('screenLogin');
 })();
 </script>
 </body>
