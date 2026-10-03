@@ -877,6 +877,11 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
 
 .news .nl-cover { margin: 0 0 16px; }
 .div-closed { display: block; margin-top: 6px; color: var(--muted); font-size: .85rem; }
+.div-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; font-family: var(--f-label); font-weight: 600; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; color: var(--ok); }
+.div-status::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.div-status.closed { color: var(--dim); }
+.dossier-body .div-status { margin-top: 12px; }
+.division .div-status { justify-self: start; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -2276,6 +2281,35 @@ const fleetView = (function fleet() {
   if ('IntersectionObserver' in window) new IntersectionObserver((es, io) => { if (es.some(x => x.isIntersecting)) { io.disconnect(); start(); } }).observe(stepper);
   else start();
   window.addEventListener('storage', e => { if (e.key === TOKEN_KEY && state.started) { undo(0); step1(); open(0); } });
+})();
+
+/* ---------- Division recruiting status ----------
+   A small "Recruiting" / "Not recruiting" line under each division card and division file.
+   Leads open or close their division in the member portal; checked again every few minutes. */
+(function divisionStatus() {
+  async function load() {
+    let open = null;
+    try {
+      const res = await fetch(CONFIG.feedUrl, { method: 'POST', body: JSON.stringify({ action: 'config' }) });
+      const json = await res.json();
+      if (json && json.ok) open = json.divOpen || {};
+    } catch (_) { return; }
+    if (!open) return;
+    Object.keys(open).forEach(id => {
+      const on = open[id] !== false;
+      const targets = [document.querySelector(`a.division[data-anchor="div-${id}"]`), document.querySelector(`#div-${id} .dossier-body`)];
+      targets.forEach(el => {
+        if (!el) return;
+        let tag = el.querySelector('.div-status');
+        if (!tag) { tag = document.createElement('span'); tag.className = 'div-status'; el.appendChild(tag); }
+        tag.classList.toggle('closed', !on);
+        tag.textContent = on ? 'Recruiting' : 'Not recruiting';
+        tag.title = on ? 'Taking applications and transfers' : 'Not taking new members right now';
+      });
+    });
+  }
+  load();
+  setInterval(() => { if (!document.hidden) load(); }, 300000);
 })();
 
 /* ---------- Newsletter content ----------
