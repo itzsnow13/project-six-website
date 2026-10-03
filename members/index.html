@@ -2911,22 +2911,24 @@ function siteForm(kind, item) {
           <div class="field"><label for="snAuthor">Author</label><input id="snAuthor" name="author" maxlength="60" value="${esc(n.author)}"></div>
           <div class="field"><label for="snStatus">Status</label><select id="snStatus" name="status"><option value="draft"${n.status !== 'published' ? ' selected' : ''}>Draft (only staff see it)</option><option value="published"${n.status === 'published' ? ' selected' : ''}>Published (website, dashboard and Discord)</option></select></div>
           <div class="field full"><label for="snSummary">Summary <span class="opt">(optional)</span></label><input id="snSummary" name="summary" maxlength="300" value="${esc(n.summary)}" placeholder="One or two lines for the newsletter list. Left blank, the opening lines are used."></div>
-          <div class="field full"><label for="snCover">Cover image <span class="opt">(optional)</span></label><input id="snCover" name="cover" maxlength="500" value="${esc(n.cover || '')}" placeholder="https://… link to an image (screenshot, key art, banner)"></div>
+          <div class="field full"><label for="snCover">Cover image <span class="opt">(optional)</span></label><input id="snCover" name="cover" maxlength="500" value="${esc(n.cover || '')}" placeholder="https://… link to an image (screenshot, key art, banner)"><div style="display:flex;gap:8px;align-items:center;margin-top:6px"><button class="btn btn-ghost btn-sm" type="button" data-act="nl-cover-upload">Upload cover</button><span class="hint">or paste a link above</span></div>
+            <input type="file" class="nl-cover-file" accept="image/png,image/jpeg,image/webp,image/gif" hidden></div>
         </div>
         <div class="field full"><label>Body *</label>
           <div class="nl-tools" role="toolbar" aria-label="Formatting">
             ${tb('bold', 'Bold', '<b>B</b>')}${tb('italic', 'Italic', '<i>I</i>')}${tb('underline', 'Underline', '<u>U</u>')}<span class="sep"></span>
             ${tb('h2', 'Big heading', 'H2')}${tb('h3', 'Small heading', 'H3')}${tb('p', 'Normal text', 'Text')}<span class="sep"></span>
             ${tb('ul', 'Bullet list', '• List')}${tb('ol', 'Numbered list', '1. List')}${tb('quote', 'Quote', 'Quote')}${tb('callout', 'Highlight box', 'Box')}${tb('hr', 'Divider', 'Line')}<span class="sep"></span>
-            ${tb('link', 'Insert link', 'Link')}${tb('button', 'Button link', 'Button')}${tb('image', 'Insert image', 'Image')}${tb('video', 'Insert video (YouTube, Vimeo, Streamable, Google Drive, mp4)', 'Video')}${tb('doc', 'Insert Google Doc, Slides, Sheet or Form', 'Google Doc')}<span class="sep"></span>
+            ${tb('upload', 'Upload an image or PDF from your computer (saved to the org Google Drive)', 'Upload')}${tb('link', 'Insert link', 'Link')}${tb('button', 'Button link', 'Button')}${tb('image', 'Insert image from a link', 'Image link')}${tb('video', 'Insert video (YouTube, Vimeo, Streamable, Google Drive, mp4)', 'Video')}${tb('doc', 'Insert Google Doc, Slides, Sheet or Form', 'Google Doc')}<span class="sep"></span>
             ${tb('clear', 'Clear formatting', 'Clear')}
             <span class="nl-modes" role="group" aria-label="Editor view"><button type="button" class="on" data-nl-mode="visual">Write</button><button type="button" data-nl-mode="html">HTML</button><button type="button" data-nl-mode="preview">Preview</button></span>
           </div>
           <div class="nl-insert" hidden></div>
+          <input type="file" class="nl-file" accept="image/png,image/jpeg,image/webp,image/gif,application/pdf" hidden>
           <div class="nl-editor nl-content" contenteditable="true" spellcheck="true" data-ph="Start writing… Use the buttons above for headings, links, images, videos and Google Docs.">${startHtml}</div>
           <textarea class="nl-source" hidden spellcheck="false" aria-label="HTML source"></textarea>
           <div class="nl-preview" hidden></div>
-          <p class="hint">Paste from Google Docs or Word and the formatting comes along. In HTML view you can write your own markup; scripts and styles are removed, and players only load from YouTube, Vimeo, Streamable, Google Drive and Google Docs.</p>
+          <p class="hint">Paste from Google Docs or Word and the formatting comes along. <b>Upload</b> puts your images and PDFs in the org’s Google Drive and drops them in here, so nothing has to be added to the website by hand. In HTML view you can write your own markup; scripts and styles are removed, and players only load from YouTube, Vimeo, Streamable, Google Drive and Google Docs.</p>
         </div>
         <div class="dlg-foot">${n.id ? `<button class="btn btn-danger" type="button" data-act="site-remove" data-kind="newsletters" data-id="${esc(n.id)}" data-confirm="Delete for good?" style="margin-right:auto">Delete</button>` : ''}<button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
       </form>`);
@@ -3016,8 +3018,19 @@ function nlGo(f, kind) {
   box.hidden = true;
   nlInsert(f, html);
 }
+/* Upload a file to the org's Drive through the portal and get back a link that works on the site. */
+async function nlUpload(file) {
+  if (!file) return null;
+  if (file.size > 8 * 1024 * 1024) { toast('Files can be up to 8 MB. Shrink or compress it and try again.', 'err'); return null; }
+  const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+  document.body.classList.add('working'); toast('Uploading ' + file.name + '…', 'ok');
+  try { return await api('site.upload', { name: file.name, type: file.type, data }); }
+  catch (err) { toast(err.message, 'err'); return null; }
+  finally { document.body.classList.remove('working'); }
+}
 function nlTool(f, k) {
   const ed = f.querySelector('.nl-editor');
+  if (k === 'upload') { const inp = f.querySelector('.nl-file'); inp.value = ''; inp.click(); return; }
   if (NL_ASK[k]) { nlAsk(f, k); return; }
   ed.focus();
   if (f._nl.range) { const sel = getSelection(); sel.removeAllRanges(); sel.addRange(f._nl.range); }
@@ -4096,7 +4109,7 @@ function standingForm(id) {
         <option value="banned"${p.standing === 'banned' ? ' selected' : ''}>Banned from Discord (banned from portal, must appeal)</option></select></div>
       <div class="field"><label for="sdNote">Reason on file *</label><input id="sdNote" name="note" maxlength="500" placeholder="They see this, and it goes on their history"></div>
       <p class="hint">They lose the portal straight away and go back to the application screen. Leads, roles and Command are cleared.</p>
-      <div class="dlg-foot">${p.standing ? `<button class="btn btn-ghost" type="button" data-act="standing-clear" data-id="${esc(id)}" data-confirm="Restore access?">Restore to good standing</button>` : ''}<button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-danger" type="submit">Remove</button></div>
+      <div class="dlg-foot">${p.standing ? `<button class="btn btn-ghost" type="button" data-act="standing-clear" data-id="${esc(id)}" data-confirm="Lift this? They can apply again, and get back in once their new application is accepted and their Discord roles are set.">Lift: allow re-applying</button>` : ''}<button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-danger" type="submit">Remove</button></div>
     </form>`);
 }
 
@@ -4309,6 +4322,7 @@ document.addEventListener('click', async e => {
     case 'exit-open': exitForm(); break;
     case 'mg-transfer': transferForm(id); break;
     case 'check-open': checkDialog(id); break;
+    case 'nl-cover-upload': { const f = b.closest('form'); const inp = f && f.querySelector('.nl-cover-file'); if (inp) { inp.value = ''; inp.click(); } break; }
     case 'aux-req': auxRequestDialog(b.dataset.div); break;
     case 'aux-cancel': act('aux.cancel', { id }, 'Request cancelled.'); break;
     case 'aux-leave': act('aux.leave', { division: b.dataset.div }, 'You left that auxiliary group.'); break;
@@ -4347,7 +4361,7 @@ document.addEventListener('click', async e => {
     case 'app-void': openDialog('Void denial', `<form class="dlg-body" data-form="app-void" data-id="${esc(id)}" novalidate><p>The applicant sees that staff cancelled the denial, and can apply again straight away.</p><div class="field"><label for="avNote">Reason *</label><input id="avNote" name="note" maxlength="500" placeholder="e.g. Denied by mistake; wrong applicant"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Void denial</button></div></form>`); break;
     case 'chat-toggle': S.chatOpen = !S.chatOpen; renderChat(); if (S.chatOpen) { const ta = document.querySelector('.chat-form textarea'); if (ta) ta.focus(); } break;
     case 'standing-open': standingForm(id); break;
-    case 'standing-clear': if (await act('member.remove', { id, standing: '', note: '' }, 'Restored.')) closeDialog(); break;
+    case 'standing-clear': if (await act('member.remove', { id, standing: '', note: '' }, 'Lifted. They can apply again.')) closeDialog(); break;
     case 'rec-end': openDialog('Lift entry', `<form class="dlg-body" data-form="rec-lift" data-id="${esc(id)}" data-member="${esc(b.dataset.member)}" novalidate><p>It stays on their record, marked as lifted with your note.</p><div class="field"><label for="rlNote">Note <span class="opt">(optional)</span></label><input id="rlNote" name="note" maxlength="500" placeholder="e.g. Appeal granted after talking it through"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-act="check-open" data-id="${esc(b.dataset.member)}">Back</button><button class="btn btn-solid" type="submit">Lift</button></div></form>`); break;
     case 'rec-del': if (await act('member.recordExpunge', { recordId: id }, 'Entry removed.')) checkDialog(b.dataset.member); break;
     case 'hook-test': if (b.classList.contains('is-busy')) break; b.classList.add('is-busy'); try { await api('setup.webhookTest', { which: b.dataset.which }); toast('Test message sent. Check the channel.', 'ok'); } catch (err) { toast(err.message, 'err'); } finally { b.classList.remove('is-busy'); } break;
@@ -4436,6 +4450,17 @@ document.addEventListener('change', async e => {
   }
 });
 
+document.addEventListener('change', async e => {
+  const inp = e.target;
+  if (!inp.matches || !inp.matches('.nl-file, .nl-cover-file')) return;
+  const f = inp.closest('form'), file = inp.files && inp.files[0];
+  const r = await nlUpload(file);
+  if (!r || !f) return;
+  if (inp.classList.contains('nl-cover-file')) { f.elements.cover.value = r.url; toast('Cover uploaded.', 'ok'); return; }
+  const nm = esc(r.name.replace(/\.[a-z0-9]+$/i, ''));
+  nlInsert(f, r.kind === 'image' ? `<figure><img src="${esc(r.url)}" alt="${nm}"></figure><p><br></p>` : `<p><a class="nl-btn" href="${esc(r.url)}">Open ${nm} (PDF)</a></p><p><br></p>`);
+  toast('Added to the newsletter.', 'ok');
+});
 document.addEventListener('submit', async e => {
   const f = e.target;
   const kind = f.dataset.form;
