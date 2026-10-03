@@ -843,6 +843,40 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
   .hero-title .ch { opacity: 1; transform: none; filter: none; }
   .hero-title::after { opacity: 1; transform: none; }
 }
+/* Newsletter content (shared by the website and the member portal) */
+.nl-cover { display: block; width: 100%; max-height: 360px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); margin: 4px 0 6px; }
+.nl-content { display: grid; gap: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+.nl-content > * { margin: 0; }
+.nl-content h2, .nl-content h3, .nl-content h4 { font-family: var(--f-label); font-weight: 700; letter-spacing: .04em; line-height: 1.25; color: var(--text); margin-top: 8px; }
+.nl-content h2 { font-size: 1.45rem; }
+.nl-content h3 { font-size: 1.18rem; }
+.nl-content h4 { font-size: 1rem; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
+.nl-content p, .nl-content li { color: var(--muted); }
+.nl-content strong, .nl-content b { color: var(--text); }
+.nl-content a { color: var(--accent); text-underline-offset: 3px; }
+.nl-content ul, .nl-content ol { padding-left: 1.3em; display: grid; gap: 4px; }
+.nl-content blockquote { border-left: 3px solid var(--accent); padding: 4px 0 4px 16px; color: var(--text); font-style: italic; }
+.nl-content hr { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
+.nl-content img { max-width: 100%; height: auto; border-radius: 8px; border: 1px solid var(--line); }
+.nl-content figure { display: grid; gap: 6px; }
+.nl-content figcaption { color: var(--dim); font-size: .86rem; text-align: center; }
+.nl-content iframe, .nl-content video { width: 100%; aspect-ratio: 16 / 9; border: 1px solid var(--line); border-radius: 10px; background: #000; display: block; }
+.nl-content .nl-doc iframe, .nl-content iframe.nl-doc { aspect-ratio: auto; height: 560px; background: #fff; }
+.nl-content .nl-tall iframe { height: 820px; }
+.nl-content code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: .9em; background: rgba(255,255,255,.06); padding: 1px 5px; border-radius: 4px; }
+.nl-content pre { background: rgba(0,0,0,.35); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; overflow-x: auto; }
+.nl-content pre code { background: none; padding: 0; }
+.nl-content table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+.nl-content th, .nl-content td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+.nl-content th { color: var(--text); background: rgba(255,255,255,.03); }
+.nl-content .nl-btn { justify-self: start; display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-family: var(--f-label); font-weight: 700; letter-spacing: .1em; text-transform: uppercase; text-decoration: none; font-size: .9rem; }
+.nl-content .nl-btn:hover { background: var(--accent-hi); }
+.nl-content .nl-callout { border: 1px solid rgba(201,181,142,.35); background: var(--accent-soft); border-radius: 10px; padding: 14px 16px; color: var(--text); }
+.nl-content .nl-center { text-align: center; justify-self: center; }
+.nl-content .nl-lead { font-size: 1.12rem; color: var(--text); }
+
+.news .nl-cover { margin: 0 0 16px; }
+.div-closed { display: block; margin-top: 6px; color: var(--muted); font-size: .85rem; }
 </style>
 </head>
 <body>
@@ -1075,11 +1109,11 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
       <div class="join-copy">
         <div class="eyebrow">Join us</div>
         <h2 class="section-title">Enlist</h2>
-        <p class="section-lede">Looking for a crew? Project Six welcomes pilots of every ship and skill level. Applying takes about three minutes, and org staff reply in Discord within 72 hours.</p>
+        <p class="section-lede">Looking for a crew? Project Six welcomes pilots of every ship and skill level. Applying takes about five minutes, and you can follow your application live in the member portal.</p>
         <ol class="join-steps">
-          <li><span>1</span>Fill out the form</li>
-          <li><span>2</span>Post it in Discord</li>
-          <li><span>3</span>Apply on RSI</li>
+          <li><span>1</span>Sign in and fill out the form</li>
+          <li><span>2</span>Verify your RSI profile</li>
+          <li><span>3</span>Track it in the portal</li>
         </ol>
       </div>
       <a class="btn btn-solid join-btn" href="#enlist" data-page="enlist">Enlist now</a>
@@ -1147,11 +1181,11 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
         <h2 class="section-title">From recruit to crew</h2>
       </div>
       <ol class="process">
-        <li><span class="process-n">01</span><h3>Enlist</h3><p>Send your application through the Enlist page and post it in Discord.</p></li>
-        <li><span class="process-n">02</span><h3>Get approved</h3><p>Staff review it within 72 hours and accept you into the org on RSI.</p></li>
-        <li><span class="process-n">03</span><h3>Join a division</h3><p>Choose a home division. Its lead gets you set up with roles and channels.</p></li>
-        <li><span class="process-n">04</span><h3>Take work orders</h3><p>Sign in to the member dashboard and claim jobs posted by division leads.</p></li>
-        <li><span class="process-n">05</span><h3>Earn &amp; advance</h3><p>Completed work pays out from the treasury and builds your standing.</p></li>
+        <li><span class="process-n">01</span><h3>Enlist</h3><p>Sign in with Discord, verify your RSI profile and send your application from the Enlist page.</p></li>
+        <li><span class="process-n">02</span><h3>Get approved</h3><p>A division lead reviews it, usually within 72 hours. You can follow every step in the member portal.</p></li>
+        <li><span class="process-n">03</span><h3>Join a division</h3><p>Finish onboarding in Discord with a supervisor, and your division sets you up with roles.</p></li>
+        <li><span class="process-n">04</span><h3>Take work orders</h3><p>Join jobs that need crew from the member portal, or post your own for your division.</p></li>
+        <li><span class="process-n">05</span><h3>Earn &amp; advance</h3><p>Earn org rewards, share profit with the org if you choose, and build your standing.</p></li>
       </ol>
     </div>
   </section>
@@ -1271,12 +1305,12 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
           </div>
         </div>
         <ul class="dash-features">
-          <li><h3>Work orders</h3><p>Jobs posted by division leads, with slots, rewards and a clear claim → submit → approve flow.</p></li>
-          <li><h3>Live logistics</h3><p>Request supplies or a transport run, and see what is moving across the 'verse right now.</p></li>
+          <li><h3>Work orders</h3><p>Post or join jobs in your crews, with crew slots, progress steps and a crew chat for each job.</p></li>
+          <li><h3>Live logistics</h3><p>Every haul in the org, open to everyone, with supply requests and a live commodity price board.</p></li>
           <li><h3>Market prices</h3><p>Live commodity prices and trade routes from UEX, built into hauling and mining work.</p></li>
           <li><h3>Org hangar</h3><p>Register your ships. The public fleet on this site is built from the hangar.</p></li>
-          <li><h3>Treasury ledger</h3><p>Every deposit, expense and payout, split evenly across the crew who did the work.</p></li>
-          <li><h3>Crew &amp; roles</h3><p>Division rosters, leads and admins, all tied to your Discord account.</p></li>
+          <li><h3>Treasury ledger</h3><p>Report aUEC from org work, follow it to the treasurer, and see every confirmed deposit and payout.</p></li>
+          <li><h3>Crew &amp; roles</h3><p>Division rosters, leads and supervisors, plus support tickets that reach the right staff.</p></li>
         </ul>
       </div>
     </div>
@@ -1399,6 +1433,7 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
                         <option value="industry">Deepcore Industrial Corps (Mining &amp; salvage)</option>
                         <option value="">Not sure yet</option>
                       </select>
+                      <small class="div-closed" id="divClosed" hidden></small>
                     </div>
                     <div class="field">
                       <label for="fTz">Timezone *</label>
@@ -2223,11 +2258,106 @@ const fleetView = (function fleet() {
   rsiMsg.textContent = step4Text();
   render();
   open(0, false);
+  // Divisions that aren't recruiting are taken out of the list (checked again every minute while the page is open).
+  const divSelect = form.elements.division, divClosed = document.getElementById('divClosed');
+  const allDivs = [...divSelect.options].map(o => ({ value: o.value, text: o.textContent }));
+  async function divisionsOpen() {
+    let open;
+    try { open = (await api('config')).divOpen || {}; } catch (_) { return; }
+    const keep = divSelect.value;
+    const shut = allDivs.filter(o => o.value && open[o.value] === false);
+    divSelect.innerHTML = allDivs.filter(o => !o.value || open[o.value] !== false).map(o => `<option value="${esc(o.value)}">${esc(o.text)}</option>`).join('');
+    divSelect.value = [...divSelect.options].some(o => o.value === keep) ? keep : divSelect.options[0].value;
+    divClosed.hidden = !shut.length;
+    divClosed.textContent = shut.length ? 'Not recruiting right now: ' + shut.map(o => o.text.replace(/\s*\(.*$/, '')).join(', ') + '.' : '';
+  }
   // Load the account state the first time the Enlist page is on screen.
-  const start = () => { if (state.started) return; state.started = true; step1(); };
+  const start = () => { if (state.started) return; state.started = true; step1(); divisionsOpen(); setInterval(() => { if (!document.hidden) divisionsOpen(); }, 60000); };
   if ('IntersectionObserver' in window) new IntersectionObserver((es, io) => { if (es.some(x => x.isIntersecting)) { io.disconnect(); start(); } }).observe(stepper);
   else start();
   window.addEventListener('storage', e => { if (e.key === TOKEN_KEY && state.started) { undo(0); step1(); open(0); } });
+})();
+
+/* ---------- Newsletter content ----------
+   Newsletters written in the portal are HTML. They are cleaned on the server when saved and again here
+   before they're shown: only simple formatting, https links and images, and players from known video and
+   Google Docs addresses are kept. */
+const NL = (() => {
+  const TAGS = new Set(['p', 'br', 'h2', 'h3', 'h4', 'strong', 'b', 'em', 'i', 'u', 's', 'a', 'ul', 'ol', 'li', 'blockquote', 'hr', 'img', 'figure', 'figcaption',
+    'iframe', 'video', 'code', 'pre', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'div', 'span']);
+  const DROP = new Set(['script', 'style', 'object', 'embed', 'template', 'svg', 'math', 'noscript', 'textarea', 'select', 'button', 'form', 'input', 'link', 'meta', 'base', 'head', 'title']);
+  const CLASSES = ['nl-embed', 'nl-video', 'nl-doc', 'nl-btn', 'nl-callout', 'nl-center', 'nl-lead', 'nl-wide', 'nl-tall'];
+  const EMBED_RE = /^https:\/\/(www\.youtube-nocookie\.com\/embed\/[\w-]{6,20}(\?[\w=&.-]*)?|player\.vimeo\.com\/video\/\d+(\?[\w=&.-]*)?|streamable\.com\/e\/\w+|drive\.google\.com\/file\/d\/[\w-]+\/preview|docs\.google\.com\/(document|presentation|spreadsheets)\/d\/(e\/)?[\w-]+\/(preview|embed|pub|pubhtml)(\?[\w=&.%-]*)?|docs\.google\.com\/forms\/d\/e\/[\w-]+\/viewform\?embedded=true)$/;
+  const https = u => /^https:\/\/[^\s<>"'`]+$/i.test(String(u || '').trim()) ? String(u).trim() : '';
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function clean(node, into) {
+    node.childNodes.forEach(ch => {
+      if (ch.nodeType === 3) { into.appendChild(document.createTextNode(ch.nodeValue)); return; }
+      if (ch.nodeType !== 1) return;
+      const tag = ch.tagName.toLowerCase();
+      if (DROP.has(tag)) return;
+      if (!TAGS.has(tag)) { clean(ch, into); return; }   // unknown wrapper: keep what's inside
+      const el = document.createElement(tag);
+      const cls = (ch.getAttribute('class') || '').split(/\s+/).filter(c => CLASSES.includes(c));
+      if (cls.length) el.className = cls.join(' ');
+      if (tag === 'a') {
+        const h = (ch.getAttribute('href') || '').trim();
+        if (/^(https?:\/\/|mailto:)[^\s<>"'`]+$/i.test(h)) { el.href = h; el.target = '_blank'; el.rel = 'noopener noreferrer'; }
+      } else if (tag === 'img') {
+        const u = https(ch.getAttribute('src')); if (!u) return;
+        el.src = u; el.alt = (ch.getAttribute('alt') || '').slice(0, 200); el.loading = 'lazy';
+      } else if (tag === 'iframe') {
+        const u = (ch.getAttribute('src') || '').trim(); if (!EMBED_RE.test(u)) return;
+        el.src = u; el.loading = 'lazy'; el.allowFullscreen = true; el.title = 'Embedded content';
+        el.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen'); el.referrerPolicy = 'strict-origin-when-cross-origin';
+        into.appendChild(el); return;
+      } else if (tag === 'video') {
+        const u = https(ch.getAttribute('src')); if (!u || !/\.(mp4|webm)(\?\S*)?$/i.test(u)) return;
+        el.src = u; el.controls = true; el.preload = 'metadata'; el.playsInline = true;
+        const p = https(ch.getAttribute('poster')); if (p) el.poster = p;
+        into.appendChild(el); return;
+      } else if (tag === 'td' || tag === 'th') {
+        const n = Number(ch.getAttribute('colspan')); if (n > 1 && n < 20) el.colSpan = n;
+      }
+      if (tag !== 'br' && tag !== 'hr') clean(ch, el);
+      into.appendChild(el);
+    });
+    return into;
+  }
+  function sanitize(html) {
+    const doc = new DOMParser().parseFromString('<!doctype html><body><div>' + String(html || '') + '</div>', 'text/html');
+    const box = document.createElement('div');
+    clean(doc.body.firstChild || doc.body, box);
+    return box.innerHTML;
+  }
+  /* Older plain-text newsletters: blank line between paragraphs, **bold**, bare https links. */
+  function fromText(body) {
+    return String(body || '').trim().split(/\n{2,}/).map(par => {
+      const html = esc(par)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/https:\/\/[^\s<]+[^\s<.,;:!?)\]]/g, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`)
+        .replace(/\n/g, '<br>');
+      return `<p>${html}</p>`;
+    }).join('');
+  }
+  function body(n) { return n.format === 'html' ? sanitize(n.body) : fromText(n.body); }
+  function cover(n) { const u = https(n.cover); return u ? `<img class="nl-cover" src="${esc(u)}" alt="" loading="lazy">` : ''; }
+  /* Turns a pasted share link into an embeddable player address. */
+  function embed(url) {
+    const u = String(url || '').trim();
+    let m;
+    if ((m = u.match(/^https?:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:watch\?(?:.*&)?v=|shorts\/|embed\/|live\/)|youtu\.be\/)([\w-]{6,20})/))) return { src: 'https://www.youtube-nocookie.com/embed/' + m[1], kind: 'video' };
+    if ((m = u.match(/^https?:\/\/(?:www\.)?vimeo\.com\/(?:video\/)?(\d+)/)) || (m = u.match(/^https:\/\/player\.vimeo\.com\/video\/(\d+)/))) return { src: 'https://player.vimeo.com/video/' + m[1], kind: 'video' };
+    if ((m = u.match(/^https?:\/\/(?:www\.)?streamable\.com\/(?:e\/)?(\w+)/))) return { src: 'https://streamable.com/e/' + m[1], kind: 'video' };
+    if ((m = u.match(/^https:\/\/drive\.google\.com\/(?:file\/d\/|open\?id=)([\w-]+)/))) return { src: 'https://drive.google.com/file/d/' + m[1] + '/preview', kind: 'video' };
+    if ((m = u.match(/^https:\/\/docs\.google\.com\/(document|presentation|spreadsheets)\/d\/e\/([\w-]+)/))) return { src: `https://docs.google.com/${m[1]}/d/e/${m[2]}/${m[1] === 'presentation' ? 'embed' : m[1] === 'spreadsheets' ? 'pubhtml' : 'pub'}${m[1] === 'document' ? '?embedded=true' : ''}`, kind: m[1] === 'presentation' ? 'video' : 'doc' };
+    if ((m = u.match(/^https:\/\/docs\.google\.com\/(document|presentation|spreadsheets)\/d\/([\w-]+)/))) return { src: `https://docs.google.com/${m[1]}/d/${m[2]}/preview`, kind: m[1] === 'presentation' ? 'video' : 'doc' };
+    if ((m = u.match(/^https:\/\/docs\.google\.com\/forms\/d\/e\/([\w-]+)/))) return { src: `https://docs.google.com/forms/d/e/${m[1]}/viewform?embedded=true`, kind: 'doc' };
+    if (/^https:\/\/[^\s<>"'`]+\.(mp4|webm)(\?\S*)?$/i.test(u)) return { src: u, kind: 'file' };
+    return null;
+  }
+  return { sanitize, body, cover, embed, fromText, esc, https };
 })();
 
 /* ---------- Events and newsletters (read-only, from the Apps Script ?data=site route) ---------- */
@@ -2333,17 +2463,7 @@ const fleetView = (function fleet() {
     }).join('');
   }
 
-  // Newsletter body: escaped text, blank line = paragraph, **bold**, https links
-  function formatBody(text) {
-    return esc(text).split(/\n{2,}/).map(par => {
-      const html = par
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/https:\/\/[^\s<]+[^\s<.,;:!?)\]]/g, url => `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`)
-        .replace(/\n/g, '<br>');
-      return `<p>${html}</p>`;
-    }).join('');
-  }
-
+  // Newsletters: HTML ones are cleaned by NL before showing; older plain-text ones are formatted as paragraphs
   function renderNewsletters() {
     const list = data.newsletters || [];
     if (!list.length) {
@@ -2355,6 +2475,7 @@ const fleetView = (function fleet() {
       const open = i === 0;
       const bodyId = 'news-body-' + i;
       return `<article class="news">
+        ${NL.cover(n)}
         <div class="news-meta">
           ${open ? '<span class="latest">Latest</span>' : ''}
           <time datetime="${esc(n.published)}">${esc(isNaN(d) ? '' : d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}</time>
@@ -2362,7 +2483,7 @@ const fleetView = (function fleet() {
         </div>
         <h2>${esc(n.title)}</h2>
         ${open ? '' : `<p class="news-summary">${esc(n.summary)}</p>`}
-        <div class="news-body" id="${bodyId}" ${open ? '' : 'hidden'}>${formatBody(n.body)}</div>
+        <div class="news-body nl-content" id="${bodyId}" ${open ? '' : 'hidden'}>${NL.body(n)}</div>
         ${open ? '' : `<button class="news-toggle" type="button" aria-expanded="false" aria-controls="${bodyId}">Read full update</button>`}
       </article>`;
     }).join('');
