@@ -915,6 +915,13 @@ dialog.wide { width: min(860px, calc(100% - 24px)); }
 /* Activity: a thin bar along the top while the server works, and a spinner on the button pressed */
 body.working::before, body.syncing::before { content: ''; position: fixed; top: 0; left: 0; right: 0; height: 2px; z-index: 200; background: linear-gradient(90deg, transparent, var(--accent), transparent); background-size: 40% 100%; background-repeat: no-repeat; animation: workbar 1s linear infinite; }
 @keyframes workbar { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+.aux-boxes { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.aux-cta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 16px; border-top: 1px solid var(--line); }
+.ship-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.ship-chips .chip { cursor: default; font-size: .78rem; padding: 3px 9px; }
+.aux-req .row-main { gap: 3px; }
+.aux-role { font-size: .9rem; }
+.aux-role b { font-weight: 600; color: var(--muted); }
 .is-busy { position: relative; color: transparent !important; pointer-events: none; }
 .is-busy::after { content: ''; position: absolute; inset: 0; margin: auto; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: transparent; animation: spin .7s linear infinite; }
 .review-list { border: 1px solid rgba(201,181,142,.4); border-radius: 10px; background: var(--accent-soft); padding: 10px 12px; display: grid; gap: 4px; }
@@ -1533,7 +1540,7 @@ function render() {
   const tabOk = t => (!t.staff || staffOk) && (!t.manage || manageOk) && (!t.tickets || me().staffLevel > 0);
   if (!TABS.some(t => t.id === S.tab && tabOk(t))) S.tab = 'dashboard';
   $('tabs').innerHTML = TABS.filter(tabOk).map(t => {
-    const n = t.id === 'crew' ? pendingCount + (me().canReviewApps ? appsNeedingMe() : 0) : t.id === 'tickets' ? tkCount() : t.id === 'manage' ? transfersForMe().length : t.id === 'treasury' ? subCount('treasury', 'approvals') * (me().canTreasury ? 1 : 0) + subCount('treasury', 'treasurer') * (me().isManager ? 1 : 0) : 0;
+    const n = t.id === 'crew' ? pendingCount + (me().canReviewApps ? appsNeedingMe() : 0) : t.id === 'tickets' ? tkCount() : t.id === 'manage' ? transfersForMe().length + auxQueueForMe().length : t.id === 'treasury' ? subCount('treasury', 'approvals') * (me().canTreasury ? 1 : 0) + subCount('treasury', 'treasurer') * (me().isManager ? 1 : 0) : 0;
     return `<button class="tab${S.tab === t.id ? ' on' : ''}" role="tab" aria-selected="${S.tab === t.id}" data-tab="${t.id}" type="button">${t.label}${n ? `<span class="count">${n}</span>` : ''}</button>`;
   }).join('');
   const view = $('view');
@@ -2121,7 +2128,7 @@ function viewRoster() {
   const groups = d.divisions.filter(x => !x.command).map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) }));
   const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)))
     .sort((a, b) => (Date.parse(b.joined) || 0) - (Date.parse(a.joined) || 0));
-  const manageBtn = p => canManage(p) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">${m.lead && !m.isCommand && !m.isManager && !(p.divisions || []).some(x => divOf(x)) ? 'Assign' : 'Manage'}</button>` : '';
+  const manageBtn = p => canManage(p) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">${!D().rolesMode && m.lead && !m.isCommand && !m.isManager && !(p.divisions || []).some(x => divOf(x)) ? 'Assign' : 'Manage'}</button>` : '';
   const cmdTag = p => p.commandTitle ? `<span class="pill cmd-${p.commandTitle}">${p.commandTitle === 'manager' ? 'Command · Manager' : 'Command · Director'}</span>` : '';
   const personRow = (p, isCmd) => `<div class="row" data-q="${esc(rosterKey(p))}"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · ' + esc(p.rsiHandle) : ''}</span></div></div>
     <div class="actions">${isCmd ? cmdTag(p) : ''}${manageBtn(p)}</div></div>`;
@@ -2134,6 +2141,7 @@ function viewRoster() {
     return `<section class="panel div-block roster-block" data-box="${esc(g.div.id)}" style="--div:${esc(g.div.color)}">
       <div class="div-head roster-head">${patchSVG(g.div, divIndex(g.div.id), 44)}<div class="roster-title"><h3>${esc(g.div.name)}</h3><p>${esc(g.div.focus)} · ${g.people.length} member${g.people.length === 1 ? '' : 's'}</p>${divOpenChips(g.div.id)}</div></div>
       <div class="sup-strip"><span class="lbl">Lead</span>${leads.length ? leads.map(chip).join('') : '<span class="hint">Not assigned</span>'}<span class="lbl" style="margin-left:10px">Supervisors</span>${sups.length ? sups.map(chip).join('') : '<span class="hint">None yet</span>'}</div>
+      ${auxAction(g.div)}
       ${list(crew, 6, 'all')}
     </section>`;
   };
@@ -2303,12 +2311,15 @@ function memberForm(id) {
   const cmdMember = !!p.commandTitle;
   const locked = cmdMember && !m.owner && !(m.isCommand && p.commandTitle === 'manager');   // directors handle Command managers; the rest is the owner's
   const canCrew = !self && !locked && (m.isCommand || (m.lead && (!p.crew || p.crew === m.lead)));
+  const auxBoxes = self || locked ? [] : all.filter(x => !(p.divisions || []).includes(x.id) && (m.isCommand || m.isManager || m.lead === x.id));
   openDialog('Manage member', `
     <form class="dlg-body" data-form="member" novalidate>
       <input type="hidden" name="id" value="${esc(p.id)}">
       <div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id, { noClick: true })}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · RSI: ' + esc(p.rsiHandle) : ''}${(p.divisions || []).length ? ' · ' + p.divisions.map(x => esc((divOf(x) || {}).name || '')).join(', ') : ' · Unassigned'}</span></div></div>
       <div class="form-grid">
-        ${canCrew ? `<div class="field full"><label for="mCrew">Division</label><select id="mCrew" name="crew"><option value="">${p.crew ? 'Remove from ' + esc((divOf(p.crew) || {}).name || 'division') : 'Unassigned'}</option>${crewChoices.map(x => `<option value="${x.id}"${x.id === p.crew ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
+        ${rm && !cmdMember ? `<div class="field full"><label>Primary crew</label><div class="prof-fact" style="text-align:left">${(() => { const pd = divOf((p.divisions || []).filter(x => x !== 'hq')[0]); return pd ? patch(pd.id, 20) + ' <b>' + esc(pd.name) + '</b> <span class="hint">from Discord</span>' : '<span class="hint">No crew role in Discord yet. Give them a division role there.</span>'; })()}</div></div>
+          ${auxBoxes.length ? `<div class="field full"><label>Auxiliary</label><div class="aux-boxes">${auxBoxes.map(x => `<label class="check"><input type="checkbox" name="aux" value="${x.id}"${(p.aux || []).includes(x.id) ? ' checked' : ''}> ${esc(x.name)}</label>`).join('')}</div><span class="hint">Auxiliaries help in that division’s ops and keep their own crew. Members can also ask from the Crew roster.</span></div>` : ''}` : ''}
+        ${canCrew && !rm ? `<div class="field full"><label for="mCrew">Division</label><select id="mCrew" name="crew"><option value="">${p.crew ? 'Remove from ' + esc((divOf(p.crew) || {}).name || 'division') : 'Unassigned'}</option>${crewChoices.map(x => `<option value="${x.id}"${x.id === p.crew ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>` : ''}
         ${false ? `<div class="field"><label for="mStatus">Status</label><select id="mStatus" name="status">${['active', 'suspended'].concat(p.status && !['active', 'suspended'].includes(p.status) ? [p.status] : []).map(s => `<option value="${s}"${s === p.status ? ' selected' : ''}>${s.charAt(0).toUpperCase() + s.slice(1)}</option>`).join('')}</select></div>` : ''}
       </div>
       ${(m.owner || (m.isCommand && p.commandTitle !== 'director')) && !self ? `<div class="field"><label for="mCmd">Command</label><select id="mCmd" name="command">
@@ -2320,7 +2331,7 @@ function memberForm(id) {
       ${locked ? '<p class="hint">This member is in Command. Only the owner can change their division, status or Command title.</p>' : ''}
       ${m.isCommand && !self && !cmdMember ? `<div class="danger-zone"><div><b>Remove from portal</b><span>Banned, kicked, left, or gone inactive. Sends them back to the application screen.</span></div><button class="btn btn-danger btn-sm" type="button" data-act="standing-open" data-id="${esc(p.id)}">Remove…</button></div>` : ''}
       ${m.staffLevel >= 2 && !self && canProbe(p) ? `<div><button class="btn btn-ghost btn-sm" type="button" data-act="check-open" data-id="${esc(p.id)}">Member check: history, warnings${m.isManager || m.isCommand ? ', suspensions' : ''}</button></div>` : ''}
-      <p class="hint" style="margin-top:12px">${rm ? 'Divisions from Discord roles stay as they are; a division set here is added in the portal. ' : ''}Leads and supervisors are set in Division Management.${m.isManager ? ' Suspending blocks the portal and signs them out everywhere.' : ''}</p>
+      <p class="hint" style="margin-top:12px">${rm ? 'Primary crews come from Discord roles; change them there or through a transfer. ' : ''}Leads and supervisors are set in Division Management.${m.isManager ? ' Suspending blocks the portal and signs them out everywhere.' : ''}</p>
       <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Save</button></div>
     </form>`);
 }
@@ -2646,9 +2657,50 @@ function transferRow(t, actions) {
   return `<div class="row tr-row"><div class="who">${discordAv(t.memberId, t.opener.avatar, t.opener.name)}<div class="row-main">
       <span class="row-title">${esc(t.opener.name)} <span class="hint">@${esc(t.opener.username)}</span></span>
       <span class="row-sub tr-route">${f ? patch(f.id, 20) + esc(f.name) : 'No division'} <span aria-hidden="true">→</span> ${to ? patch(to.id, 20) + esc(to.name) : '—'}</span>
-      <span class="hint">${esc(TR_STAGE[t.stage] || '')} · ${esc(rel(t.created))}</span></div></div>
+      <span class="hint">${esc(TR_STAGE[t.stage] || '')} · ${esc(rel(t.created))}</span>${actions && t.stage === 'to' && t.canTransfer ? `<span class="hint" style="color:var(--warn)">Approving finishes the move. Check their Discord role after: ${f ? 'remove ' + esc(f.name) + ', ' : ''}give ${to ? esc(to.name) : 'the new division'}.</span>` : ''}</div></div>
     <div class="actions">${actions ? `${t.canTransfer ? `<button class="btn btn-ok btn-sm" type="button" data-act="tr-decide" data-decision="approve" data-id="${esc(t.id)}">Approve</button><button class="btn btn-danger btn-sm" type="button" data-act="tr-decide" data-decision="deny" data-id="${esc(t.id)}">Deny</button>` : ''}` : ''}<button class="btn btn-ghost btn-sm" type="button" data-ticket="${esc(t.id)}">Open</button></div></div>`;
 }
+/* ---------- Auxiliary requests ---------- */
+function myAuxReq(div) { return (D().auxRequests || []).filter(r => r.memberId === me().id && r.division === div).sort((a, b) => Date.parse(b.created) - Date.parse(a.created))[0]; }
+function auxQueue(div) { return (D().auxRequests || []).filter(r => r.status === 'pending' && r.memberId !== me().id && (!div || r.division === div)); }
+function auxQueueForMe() { const ids = manageDivs().map(x => x.id); return auxQueue().filter(r => ids.includes(r.division)); }
+/* The button a member sees on a division they're not crew in. */
+function auxAction(div) {
+  const m = me();
+  if (m.commandTitle || (m.divisions || []).includes(div.id)) return '';
+  if ((m.aux || []).includes(div.id)) return `<div class="aux-cta"><span class="pill active">You’re an auxiliary</span><button class="btn btn-ghost btn-sm" type="button" data-act="aux-leave" data-div="${esc(div.id)}" data-confirm="Leave ${esc(div.name)} auxiliary?">Withdraw</button></div>`;
+  const r = myAuxReq(div.id);
+  if (r && r.status === 'pending') return `<div class="aux-cta"><span class="pill review">Auxiliary request pending</span><button class="btn btn-ghost btn-sm" type="button" data-act="aux-cancel" data-id="${esc(r.id)}" data-confirm="Cancel your request?">Cancel</button></div>`;
+  if (r && r.status === 'denied' && Date.parse(r.retryAt) > Date.now()) return `<div class="aux-cta"><span class="pill failed" title="${esc(r.decisionNote || '')}">Denied</span><span class="hint">${r.decisionNote ? esc(r.decisionNote) + ' · ' : ''}ask again ${esc(rel(r.retryAt))}</span></div>`;
+  const st = (D().divStatus || {})[div.id];
+  if (st && !st.aux) return '<div class="aux-cta"><span class="pill">Auxiliaries closed</span></div>';
+  return `<div class="aux-cta">${r && r.status === 'denied' ? '<span class="hint">Last request denied. You can ask again.</span>' : ''}<button class="btn btn-ghost btn-sm" type="button" data-act="aux-req" data-div="${esc(div.id)}">Request auxiliary</button></div>`;
+}
+function auxRequestDialog(divId) {
+  const dv = divOf(divId), m = me();
+  const ships = D().ships.filter(x => x.ownerId === m.id).sort((a, b) => a.model.localeCompare(b.model));
+  openDialog('Join ' + dv.name + ' as an auxiliary', `
+    <form class="dlg-body" data-form="aux-req" data-div="${esc(divId)}" novalidate>
+      <p>Auxiliaries help out in another division’s ops while keeping their own crew. ${esc(dv.name)}’s lead reviews this.</p>
+      <div class="field"><label for="axRole">How would you help? *</label><input id="axRole" name="role" maxlength="80" placeholder="Gunner, medic, hauling support, escort…" required></div>
+      <div class="field"><label for="axNote">Anything else (optional)</label><textarea id="axNote" name="note" maxlength="500" rows="3" placeholder="When you’re usually on, experience, who you fly with"></textarea></div>
+      <div class="field"><label>Your hangar (sent with the request)</label>
+        ${ships.length ? `<div class="ship-chips">${ships.map(x => `<span class="chip">${esc(x.model)}${x.nickname ? ' · ' + esc(x.nickname) : ''}</span>`).join('')}</div>` : '<p class="hint">No ships in your hangar yet. Add them under Fleet so the lead can see what you fly.</p>'}</div>
+      <div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Send request</button></div>
+    </form>`);
+}
+function auxReqCard(r) {
+  const pd = divOf(r.primary);
+  return `<div class="row aux-req"><div class="who">${discordAv(r.memberId, r.avatar, r.name)}<div class="row-main">
+      <span class="row-title">${esc(r.name)} <span class="hint">@${esc(r.username)}</span></span>
+      <span class="row-sub">${pd ? 'Crew: ' + esc(pd.name) : 'No crew yet'}${r.rsiHandle ? ' · RSI: ' + esc(r.rsiHandle) : ''}${r.memberSince ? ' · member since ' + esc(new Date(r.memberSince).toLocaleDateString()) : ''}</span>
+      <span class="aux-role"><b>Wants to help as:</b> ${esc(r.role || '—')}</span>
+      ${r.note ? `<span class="hint">“${esc(r.note)}”</span>` : ''}
+      <span class="ship-chips">${r.ships.length ? r.ships.map(x => `<span class="chip">${esc(x)}</span>`).join('') : '<span class="hint">No ships listed</span>'}</span>
+      <span class="hint">Asked ${esc(rel(r.created))}</span></div></div>
+    <div class="actions"><button class="btn btn-ok btn-sm" type="button" data-act="aux-decide" data-decision="approve" data-id="${esc(r.id)}">Approve</button><button class="btn btn-danger btn-sm" type="button" data-act="aux-deny" data-id="${esc(r.id)}">Deny</button></div></div>`;
+}
+
 function viewManage() {
   const d = D(), m = me(), divs = manageDivs();
   if (!divs.length) return '<p class="empty">You don’t lead a division yet. Command assigns division leads.</p>';
@@ -2670,6 +2722,10 @@ function viewManage() {
     <h2 class="sub section">Transfer requests <span class="num" style="color:var(--dim)">${waiting.length}</span></h2>
     <div class="panel rows">${waiting.length ? waiting.map(t => transferRow(t, true)).join('') : '<div class="row"><span class="empty" style="padding:4px 0">No transfers waiting on this division.</span></div>'}</div>
     <p class="hint" style="margin-top:6px">Transfers need two sign-offs: the division they’re leaving, then the one they’re joining. The member follows every step on their ticket.</p>
+    <div class="org-note" style="margin-top:8px"><p><b>Discord role:</b> a transfer only sticks once their Discord division role matches. The portal swaps it when the bot can; if the ticket says “Action needed”, the new division’s lead removes the old division role and gives the new one in Discord.</p></div>
+    <h2 class="sub section">Auxiliary requests <span class="num" style="color:var(--dim)">${auxQueue(dv.id).length}</span></h2>
+    <div class="panel rows">${auxQueue(dv.id).length ? auxQueue(dv.id).map(auxReqCard).join('') : '<div class="row"><span class="empty" style="padding:4px 0">No one waiting to join as an auxiliary.</span></div>'}</div>
+    <p class="hint" style="margin-top:6px">Members ask from the Crew roster while auxiliaries are open. Approving adds them as an auxiliary right away; a denial needs a short reason and they can ask again after 3 days.</p>
     <div class="grid-2 grid-split section">
       <div>
         <div class="toolbar" style="margin-bottom:10px"><h2 class="sub" style="margin:0">Roster</h2><input class="roster-search" type="search" data-roster-q="all" value="${esc(S.crewQ || '')}" placeholder="Search this division…" aria-label="Search this division"></div>
@@ -4245,6 +4301,11 @@ document.addEventListener('click', async e => {
     case 'exit-open': exitForm(); break;
     case 'mg-transfer': transferForm(id); break;
     case 'check-open': checkDialog(id); break;
+    case 'aux-req': auxRequestDialog(b.dataset.div); break;
+    case 'aux-cancel': act('aux.cancel', { id }, 'Request cancelled.'); break;
+    case 'aux-leave': act('aux.leave', { division: b.dataset.div }, 'You left that auxiliary group.'); break;
+    case 'aux-decide': act('aux.decide', { id, decision: 'approve' }, 'Approved. They’re an auxiliary now.'); break;
+    case 'aux-deny': openDialog('Deny auxiliary request', `<form class="dlg-body" data-form="aux-deny" data-id="${esc(id)}" novalidate><div class="field"><label for="adNote">Reason *</label><input id="adNote" name="note" maxlength="300" required placeholder="They’ll see this. They can ask again in 3 days."></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-danger" type="submit">Deny</button></div></form>`); break;
     case 'checklog-refresh': S.checkLog = null; render(); break;
     case 'ref-new': case 'ref-new-cmd': {
       const cmd = b.dataset.act === 'ref-new-cmd';
@@ -4420,11 +4481,21 @@ document.addEventListener('submit', async e => {
           if (el('memberTitle') && !el('memberTitle').disabled && v('memberTitle') !== (pm.memberTitle || '')) body.memberTitle = v('memberTitle');
           const sup = el('supervisor');
           const supChange = sup && !sup.disabled && sup.checked !== (pm.supervisor === sup.dataset.supDiv);
+          const auxChanges = [...f.querySelectorAll('input[name=aux]')].filter(x => x.checked !== (pm.aux || []).includes(x.value));
           if (Object.keys(body).length > 1) ok = await act('member.update', body, 'Member updated.');
           else ok = true;
+          for (const x of auxChanges) { if (!ok) break; ok = await act('member.aux', { id: v('id'), division: x.value, on: x.checked }, x.checked ? 'Auxiliary added.' : 'Auxiliary removed.'); }
           if (ok && supChange) ok = await act('div.supervisor', { id: v('id'), division: sup.checked ? sup.dataset.supDiv : '' }, sup.checked ? 'Made supervisor.' : 'Supervisor removed.');
-          else if (ok && Object.keys(body).length === 1) toast('Nothing changed.', 'ok');
+          else if (ok && Object.keys(body).length === 1 && !auxChanges.length) toast('Nothing changed.', 'ok');
         }
+        break;
+      case 'aux-req':
+        if (!v('role').trim()) { toast('Say how you’d help.', 'err'); break; }
+        ok = await act('aux.request', { division: f.dataset.div, role: v('role'), note: v('note') }, 'Request sent. The division lead will review it.');
+        break;
+      case 'aux-deny':
+        if (!v('note').trim()) { toast('Add a short reason.', 'err'); break; }
+        ok = await act('aux.decide', { id: f.dataset.id, decision: 'deny', note: v('note') }, 'Request denied.');
         break;
       case 'profile':
         ok = await act('profile.update', { rsiHandle: v('rsiHandle') }, 'Profile saved.');
