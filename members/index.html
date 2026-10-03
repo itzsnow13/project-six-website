@@ -655,6 +655,15 @@ dialog.wide { width: min(860px, calc(100% - 24px)); }
 .chat-form textarea:focus { outline: none; border-color: var(--accent); }
 .chat-note { padding: 0 12px 8px; font-size: .72rem; color: var(--dim); }
 @media (max-width: 520px) { .crew-chat { right: 12px; bottom: 12px; } }
+.app-badge.tone-info { color: #9fc3e6; border-color: rgba(143,176,208,.6); background: rgba(143,176,208,.1); box-shadow: 0 0 16px -4px rgba(143,176,208,.5); }
+.app-progress.tone-info { --fill: #6f9cc9; --fill2: #a9cbea; }
+.app-box.tone-info { border-color: rgba(143,176,208,.5); box-shadow: 0 0 40px -20px rgba(143,176,208,.7); }
+.app-box.tone-info h2 { color: #9fc3e6; }
+.ctx-card { justify-self: center; width: min(520px, 100%); border: 1px solid var(--line-2); border-left: 3px solid var(--danger); border-radius: 10px; background: var(--surface); padding: 10px 14px; display: grid; gap: 8px; font-size: .88rem; }
+.ctx-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ctx-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 14px; }
+.ctx-grid > div { display: grid; gap: 1px; min-width: 0; overflow-wrap: anywhere; }
+.ctx-note { margin: 0; color: var(--muted); font-style: italic; white-space: pre-wrap; }
 .mgmt-label { padding: 12px 16px 4px; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); border-top: 1px solid var(--line); }
 .pill.stage-received { color: var(--steel); border-color: rgba(147,161,168,.5); }
 .pill.stage-forwarded { color: var(--accent); border-color: rgba(201,181,142,.45); }
@@ -2478,8 +2487,8 @@ const APP_STEPS = [['pending', 'Pending'], ['assigned', 'Lead assigned'], ['revi
 function appStage(st) { return { pending: 0, assigned: 1, review: 2 }[st] ?? 3; }
 function appProgress(a) {
   const st = a.status, at = appStage(st);
-  const final = { accepted: 'Accepted', denied: 'Denied', blacklisted: 'Blacklisted' }[st];
-  const tone = st === 'accepted' ? 'ok' : st === 'denied' || st === 'blacklisted' ? 'bad' : 'live';
+  const final = { accepted: 'Accepted', denied: 'Denied', blacklisted: 'Blacklisted', voided: 'Voided' }[st];
+  const tone = st === 'accepted' ? 'ok' : st === 'denied' || st === 'blacklisted' ? 'bad' : st === 'voided' ? 'info' : 'live';
   const pct = st === 'blacklisted' ? 100 : [12, 40, 70, 100][at];
   return `<div class="app-progress tone-${tone}" style="--to:${pct}%">
     <div class="app-track"><div class="app-fill"></div></div>
@@ -2518,12 +2527,18 @@ function viewApplication() {
       <p>${ap.standing === 'removed' ? `${ap.standingNote ? esc(ap.standingNote) + '. ' : ''}To come back, submit a new application.` : 'The portal opens once you’ve applied. It takes about five minutes: confirm your Discord, fill in the form, verify your RSI profile and send your RSI join request.'}</p>
       <a class="btn btn-solid" href="${esc(enlist)}">Enlist now</a></section>`;
   const st = a.status;
-  const badge = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Voided', 'live'] }[st];
+  const badge = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Denial voided', 'info'] }[st];
   const div = divOf(a.division);
-  if (st === 'voided') return head + `<section class="panel app-empty"><span class="app-badge tone-live" style="justify-self:start">Denial voided</span><h2>Your last denial was cancelled by staff</h2><p>${esc(a.note || '')} It no longer counts against you. Submit a new application whenever you’re ready.</p><a class="btn btn-solid" href="${esc(enlist)}">Apply again</a></section>`;
   const blacklisted = ap.blacklisted || st === 'blacklisted';
   let body = '';
-  if (st === 'accepted') body = `
+  if (st === 'voided') body = `
+    <section class="panel app-box tone-info">
+      <h2>Denial cancelled</h2>
+      <p>Staff reviewed this application and cancelled its denial. It no longer counts toward the blacklist, and you can apply again whenever you’re ready.</p>
+      ${a.voidNote ? `<div class="deny-note"><span class="lbl">Staff note</span><p>${esc(a.voidNote)}</p></div>` : ''}
+      <div class="head-actions"><a class="btn btn-solid" href="${esc(enlist)}">Apply again</a></div>
+    </section>`;
+  else if (st === 'accepted') body = `
     <section class="panel app-box tone-ok">
       <h2>Welcome to Project Six</h2>
       <p>Your application was accepted${a.note ? `: <i>${esc(a.note)}</i>` : '.'} Here’s how to finish joining:</p>
@@ -2644,7 +2659,23 @@ async function openTicket(id) {
   renderThread();
 }
 
+function contextCard(c) {
+  const staff = me().staffLevel >= 3 && S.ticketSel && ticketById(S.ticketSel) && !ticketById(S.ticketSel).mine;
+  if (c.type === 'application') {
+    const div = divOf(c.division);
+    return `<div class="ctx-card bad"><div class="ctx-head"><span class="lbl">Appeal is about</span><b>Application #${esc(c.attempt)}</b><span class="pill prio-high">${esc(c.status === 'blacklisted' ? 'Blacklisted' : 'Denied')}</span></div>
+      <div class="ctx-grid"><div><span class="lbl">Division</span>${esc(div ? div.name : 'Not sure yet')}</div><div><span class="lbl">RSI</span>${esc(c.rsiHandle || '—')}</div>
+        <div><span class="lbl">Decided</span>${esc(c.decidedAt ? fmtDate(c.decidedAt) : '—')}${c.decidedBy ? ' by ' + esc(c.decidedBy) : ''}</div><div><span class="lbl">Denials</span>${esc(c.strikes)} of ${esc(c.max)}</div></div>
+      ${c.note ? `<p class="ctx-note">“${esc(c.note)}”</p>` : ''}
+      ${staff ? `<div class="actions"><button class="btn btn-ghost btn-sm" type="button" data-act="ctx-void" data-id="${esc(c.appId)}">Void this denial</button></div>` : ''}</div>`;
+  }
+  if (c.type === 'standing') return `<div class="ctx-card bad"><div class="ctx-head"><span class="lbl">Appeal is about</span><b>${esc(c.title)}</b></div>
+      <div class="ctx-grid"><div><span class="lbl">When</span>${esc(c.at ? fmtDate(c.at) : '—')}</div><div><span class="lbl">By</span>${esc(c.by || '—')}</div></div>
+      ${c.note ? `<p class="ctx-note">“${esc(c.note)}”</p>` : ''}</div>`;
+  return '';
+}
 function msgHTML(x) {
+  if (x.context) return contextCard(x.context);
   if (x.system) return `<div class="tk-sys"><span>${esc(x.body)}</span><time>${esc(fmtDateTime(x.created))}</time></div>`;
   const mine = x.authorId === me().id;
   return `<div class="tk-msg${mine ? ' me' : ''}${x.internal ? ' internal' : ''}">
@@ -3053,6 +3084,7 @@ document.addEventListener('click', async e => {
     case 'tk-escalate': openDialog('Elevate ticket', `<form class="dlg-body" data-form="tk-escalate" data-id="${esc(id)}" novalidate><p>It moves up one step in the chain of command. You keep access; other staff at your level lose it.</p><div class="field"><label for="teNote">Note (optional)</label><input id="teNote" name="note" maxlength="500" placeholder="Why it needs to go up"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Elevate</button></div></form>`); break;
     case 'tk-clear': if (await act('app.clear', { memberId: b.dataset.member, ticketId: id }, 'Blacklist cleared. They can apply again.')) { await loadThread(id); renderThread(); } break;
     case 'history': historyDialog(id); break;
+    case 'ctx-void': openDialog('Void denial', `<form class="dlg-body" data-form="app-void" data-id="${esc(id)}" data-ticket="${esc(S.ticketSel || '')}" novalidate><p>The denial stops counting toward the blacklist and the applicant can apply again straight away. A note is added to this ticket.</p><div class="field"><label for="avNote">Reason *</label><input id="avNote" name="note" maxlength="500" placeholder="e.g. Denied by mistake"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Void denial</button></div></form>`); break;
     case 'app-void': openDialog('Void denial', `<form class="dlg-body" data-form="app-void" data-id="${esc(id)}" novalidate><p>The applicant sees that staff cancelled the denial, and can apply again straight away.</p><div class="field"><label for="avNote">Reason *</label><input id="avNote" name="note" maxlength="500" placeholder="e.g. Denied by mistake; wrong applicant"></div><div class="dlg-foot"><button class="btn btn-ghost" type="button" data-close>Cancel</button><button class="btn btn-solid" type="submit">Void denial</button></div></form>`); break;
     case 'chat-toggle': S.chatOpen = !S.chatOpen; renderChat(); if (S.chatOpen) { const ta = document.querySelector('.chat-form textarea'); if (ta) ta.focus(); } break;
     case 'standing-open': standingForm(id); break;
@@ -3275,7 +3307,8 @@ document.addEventListener('submit', async e => {
       }
       case 'app-void':
         if (!v('note').trim()) { toast('Add a reason.', 'err'); break; }
-        ok = await act('app.void', { id: f.dataset.id, note: v('note') }, 'Denial voided. They can apply again.');
+        ok = await act('app.void', { id: f.dataset.id, note: v('note'), ticketId: f.dataset.ticket || '' }, 'Denial voided. They can apply again.');
+        if (ok && f.dataset.ticket) { closeDialog(); await loadThread(f.dataset.ticket); renderThread(); }
         break;
       case 'record':
         if (!v('text').trim()) { toast('Add the details.', 'err'); break; }
