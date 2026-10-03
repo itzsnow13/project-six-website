@@ -1749,7 +1749,7 @@ const account = (function () {
       ? `<img src="https://cdn.discordapp.com/avatars/${esc(me.id)}/${esc(me.avatar)}.png?size=64" alt="">`
       : esc(name.charAt(0).toUpperCase());
     actions.innerHTML = `<a class="hdr-btn solid" href="${esc(CONFIG.membersUrl)}"${target}>${icon.dash}<span>Dashboard</span></a>`;
-    tab.innerHTML = `<span class="av">${av}</span><span>Signed in as <b>${esc(name)}</b>${me.status === 'pending' ? ' <span class="pending">· awaiting approval</span>' : ''}</span><button type="button" id="signOutBtn">Sign out</button>`;
+    tab.innerHTML = `<span class="av">${av}</span><span>Signed in as <b>${esc(name)}</b>${me.stateLabel ? ' <span class="pending">· ' + esc(me.stateLabel) + '</span>' : me.status === 'pending' ? ' <span class="pending">· awaiting approval</span>' : ''}</span><button type="button" id="signOutBtn">Sign out</button>`;
     tab.hidden = false;
     document.getElementById('signOutBtn').addEventListener('click', signOut);
   }
