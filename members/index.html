@@ -3580,7 +3580,7 @@ const APP_STEPS = [['pending', 'Pending'], ['assigned', 'Lead assigned'], ['revi
 function appStage(st) { return { pending: 0, assigned: 1, review: 2 }[st] ?? 3; }
 function appProgress(a) {
   const st = a.status, at = appStage(st);
-  const final = { accepted: 'Accepted', denied: 'Denied', blacklisted: 'Blacklisted', voided: 'Voided' }[st];
+  const final = { accepted: 'Accepted', denied: 'Denied', blacklisted: 'Blacklisted', voided: 'Voided', closed: 'Closed' }[st];
   const tone = st === 'accepted' ? 'ok' : st === 'denied' || st === 'blacklisted' ? 'bad' : st === 'voided' ? 'info' : 'live';
   const pct = st === 'blacklisted' ? 100 : [12, 40, 70, 100][at];
   return `<div class="app-progress tone-${tone}" style="--to:${pct}%">
@@ -3629,13 +3629,21 @@ function viewApplication() {
       <div class="head-actions">${appealBtn('banappeal', 'Submit appeal ticket')}</div>
     </section>`;
   }
-  if (!a || (ap.standing === 'removed' && ap.canApply && !['pending', 'assigned', 'review'].includes(a.status))) return head + `<section class="panel app-empty">
-      <span class="app-badge tone-live" style="justify-self:start">No application</span>
-      <h2>${ap.standing === 'removed' ? 'You were removed from the portal' : 'You must submit an application'}</h2>
-      <p>${ap.standing === 'removed' ? `${ap.standingNote ? esc(ap.standingNote) + '. ' : ''}To come back, submit a new application.` : 'The portal opens once you’ve applied. It takes about five minutes: confirm your Discord, fill in the form, verify your RSI profile and send your RSI join request.'}</p>
-      <a class="btn btn-solid" href="${esc(enlist)}">Enlist now</a></section>`;
+  if (!a && ap.standing === 'removed') return head + `<section class="panel app-box tone-info">
+      <span class="app-badge tone-info" style="justify-self:start">${/lifted on appeal/i.test(ap.standingNote) ? 'Appeal accepted' : 'Removed'}</span>
+      <h2>${/lifted on appeal/i.test(ap.standingNote) ? 'Your appeal was accepted' : 'You were removed from the portal'}</h2>
+      <p>${/lifted on appeal/i.test(ap.standingNote) ? 'You’re clear to come back. Earlier applications stay on file; submit a new application and it goes through review like anyone else’s.' : 'Your portal access was closed by Command. You’re not banned: if you want to come back, submit a new application and staff will review it like any other.'}</p>
+      ${ap.standingNote ? `<div class="deny-note"><span class="lbl">Reason on file</span><p>${esc(ap.standingNote)}</p></div>` : ''}
+      <div class="head-actions"><a class="btn btn-solid" href="${esc(enlist)}">Enlist again</a><button class="btn btn-ghost" type="button" data-act="ticket-new" data-cat="question">Contact staff</button></div>
+    </section>`;
+  if (!a) return head + `<section class="panel app-box">
+      <span class="app-badge tone-live" style="justify-self:start">${ap.freshStart ? 'Fresh start' : 'No application'}</span>
+      <h2>${ap.freshStart ? 'Welcome back. Your slate is clear' : 'You must submit an application'}</h2>
+      <p>${ap.freshStart ? 'Staff cleared the way for you to come back. Earlier applications stay on file, but this is a new start: submit a new application and it goes through review like anyone else’s.' : 'The portal opens once you’ve applied. It takes about five minutes: confirm your Discord, fill in the form, verify your RSI profile and send your RSI join request.'}</p>
+      <div class="head-actions"><a class="btn btn-solid" href="${esc(enlist)}">${ap.freshStart ? 'Start a new application' : 'Enlist now'}</a></div>
+    </section>`;
   const st = a.status;
-  const badge = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Denial voided', 'info'] }[st];
+  const badge = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Denial voided', 'info'] , closed: ['Closed', 'info'] }[st];
   const div = divOf(a.division);
   const blacklisted = ap.blacklisted || st === 'blacklisted';
   let body = '';
@@ -3904,7 +3912,7 @@ function appsNeedingMe() {
 function appAv(a, cls) { return discordAv(a.memberId, a.avatar, a.name, cls); }
 function appRow(a) {
   const div = divOf(a.division);
-  const stage = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Voided', 'live'] }[a.status];
+  const stage = { pending: ['Pending', 'live'], assigned: ['Lead assigned', 'live'], review: ['Under review', 'live'], accepted: ['Accepted', 'ok'], denied: ['Denied', 'bad'], blacklisted: ['Blacklisted', 'bad'], voided: ['Voided', 'live'] , closed: ['Closed', 'info'] }[a.status];
   return `<div class="row app-row" data-q="${esc((a.name + ' ' + a.username + ' ' + a.rsiHandle).toLowerCase())}"><div class="who">${appAv(a)}<div class="row-main"><span class="row-title">${esc(a.name)} <span class="hint">@${esc(a.username)}</span></span>
       <span class="row-sub">${div ? esc(div.name) : 'Division not picked'} · RSI ${esc(a.rsiHandle)}${a.rsiVerified ? ' <span class="ok-mark">✓</span>' : ''} · ${esc(rel(a.created))}${a.strikes ? ` · <span style="color:var(--danger)">${a.strikes} denial${a.strikes === 1 ? '' : 's'}</span>` : ''}${a.leadId ? ' · lead: ' + esc(nameOf(a.leadId)) : ''}</span></div></div>
     <div class="actions"><span class="app-badge sm tone-${stage[1]}">${stage[0]}</span><button class="btn btn-ghost btn-sm" type="button" data-act="app-open" data-id="${esc(a.id)}">Open</button></div></div>`;
