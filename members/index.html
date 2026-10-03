@@ -1388,12 +1388,14 @@ const RANKS = {
   admin: { label: 'Division Lead', c: '#4f93e8', d: '#2b5b98' },
   supervisor: { label: 'Supervisor', c: '#8fb0d0', d: '#4c6680' },
   mentor: { label: 'Mentor', c: '#e3b65c', d: '#a27a2e' },
-  veteran: { label: 'Veteran', c: '#a9b4bd', d: '#66717a' }
+  veteran: { label: 'Veteran', c: '#a9b4bd', d: '#66717a' },
+  member: { label: 'Member', c: '#6f757d', d: '#4a4f56' }
 };
 const MEMBER_TITLE_LABEL = { '': 'Member', veteran: 'Veteran', mentor: 'Mentor' };
 /* Headline shown next to a name: staff rank, or a division lead spot in that division's colour. */
 function headline(m) {
-  if (m && !m.title && RANKS[m.memberTitle]) { const r = RANKS[m.memberTitle]; return { key: m.memberTitle, label: r.label, c: r.c, d: r.d }; }
+  // Members (no staff title) get an icon only; hovering it shows Member, Veteran or Mentor.
+  if (m && !m.title && (m.status || 'active') === 'active' && m.tier && m.tier !== 'recruit') { const k = RANKS[m.memberTitle] ? m.memberTitle : 'member', r = RANKS[k]; return { key: k, label: r.label, c: r.c, d: r.d, icoOnly: true }; }
   if (!m || !m.title) return null;
   if (m.title === 'lead') {
     const dv = divOf(m.lead); if (!dv) return null;
@@ -1429,7 +1431,7 @@ function rankIcon(title, size) {
 function primaryDiv(m) { return m ? ((m.divisions || [])[0] || m.division || '') : ''; }
 function nameTag(id, opts) {
   const m = member(id), o = opts || {};
-  const rank = headline(m) || (m && (m.status || 'active') === 'active' && S.data && S.data.rankIcons && S.data.rankIcons.member ? { key: 'member', label: m.rank || 'Member', icoOnly: true } : null), crew = divOf(primaryDiv(m));
+  const rank = headline(m), crew = divOf(primaryDiv(m));
   return `<span class="tag-name"${o.noClick ? '' : ` data-profile="${esc(id)}" role="button" tabindex="0" title="View profile"`}>${rank ? `<span title="${esc(rank.label)}" style="display:inline-flex">${rankIcon(rank)}</span>` : ''}${o.avatar ? avatar(id, true) : ''}${crew ? `<span title="${esc(crew.name)}" style="display:inline-flex">${patchSVG(crew, divIndex(crew.id), 20)}</span>` : ''}<span class="nm">${esc(nameOf(id))}</span>${rank && !o.noTitle && !rank.icoOnly ? `<span class="rank-tag" style="--c:${rank.c}">${esc(rank.label)}</span>` : ''}${m && m.sysadmin && !o.noTitle ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</span>`;
 }
 function who(id) { return nameTag(id); }
@@ -1531,7 +1533,7 @@ function viewDashboard() {
       <div style="display:flex;align-items:center;gap:16px">
         ${div ? patch(homeDiv, 54) : ''}
         <div><div class="eyebrow">${(m.divisions || []).length > 1 ? (m.divisions || []).map(x => esc((divOf(x) || {}).name || '')).join(' · ') : div ? esc(div.name) : 'No division yet'}</div><h1>Welcome back, ${esc(m.displayName || m.username)}</h1>
-        <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${headline(m) ? `${rankIcon(headline(m))}<span class="rank-tag" style="--c:${headline(m).c}">${esc(headline(m).label)}</span>` : ''}<span style="color:var(--muted)">${esc(m.rank || 'Member')}</span>${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}${m.rsiHandle ? `<span style="color:var(--muted)">${esc(m.rsiHandle)}</span>` : ''}</p></div>
+        <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">${headline(m) ? `<span title="${esc(headline(m).label)}" style="display:inline-flex">${rankIcon(headline(m))}</span>${headline(m).icoOnly ? '' : `<span class="rank-tag" style="--c:${headline(m).c}">${esc(headline(m).label)}</span>`}` : ''}<span style="color:var(--muted)">${esc(m.rank || 'Member')}</span>${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}${m.rsiHandle ? `<span style="color:var(--muted)">${esc(m.rsiHandle)}</span>` : ''}</p></div>
       </div>
     </div>
     ${staffNotices()}
@@ -2010,7 +2012,10 @@ function viewLedger() {
 function canManage(p) {
   const m = me();
   if (p.id === m.id && !m.owner) return false;
-  return !!(m.isCommand || m.isManager || (m.lead && (!p.crew || p.crew === m.lead)));
+  if (m.isCommand || m.isManager) return true;
+  // Leads manage their own division and people who aren't in a division yet.
+  const divs = (p.divisions || []).filter(x => divOf(x) && !divOf(x).command);
+  return !!m.lead && (divs.includes(m.lead) || !divs.length) && (!p.crew || p.crew === m.lead);
 }
 const canAuxAny = () => !!(me().lead || me().isManager || me().isCommand);
 const rosterKey = p => [p.username, p.displayName, p.rsiHandle].filter(Boolean).join(' ').toLowerCase();
@@ -2038,7 +2043,7 @@ function viewRoster() {
   const groups = d.divisions.filter(x => !x.command).map(div => ({ div, people: active.filter(x => inDiv(x, div.id)) }));
   const none = active.filter(x => !(x.divisions || [x.division]).some(id => divOf(id)))
     .sort((a, b) => (Date.parse(b.joined) || 0) - (Date.parse(a.joined) || 0));
-  const manageBtn = p => canManage(p) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">${m.lead && !m.isCommand && !m.isManager && !p.crew ? 'Assign' : 'Manage'}</button>` : '';
+  const manageBtn = p => canManage(p) ? `<button class="btn btn-ghost btn-sm" type="button" data-act="member-edit" data-id="${esc(p.id)}">${m.lead && !m.isCommand && !m.isManager && !(p.divisions || []).some(x => divOf(x) && !divOf(x).command) ? 'Assign' : 'Manage'}</button>` : '';
   const cmdTag = p => p.commandTitle ? `<span class="pill cmd-${p.commandTitle}">${p.commandTitle === 'manager' ? 'Command · Manager' : 'Command · Director'}</span>` : '';
   const personRow = (p, isCmd) => `<div class="row" data-q="${esc(rosterKey(p))}"><div class="who">${avatar(p.id)}<div class="row-main"><span class="row-title">${nameTag(p.id)}</span><span class="row-sub">@${esc(p.username)}${p.rsiHandle ? ' · ' + esc(p.rsiHandle) : ''}</span></div></div>
     <div class="actions">${isCmd ? cmdTag(p) : ''}${manageBtn(p)}</div></div>`;
@@ -2139,10 +2144,11 @@ function titleFields(p) {
   const t = p.memberTitle || '';
   const supDiv = boss ? ((p.divisions || []).find(x => divOf(x) && !divOf(x).command) || '') : m.lead;
   const lockedMentor = !boss && t === 'mentor';
+  const staffTitle = p.lead ? 'Division Lead' : p.supervisor ? 'Supervisor' : '';
   return `<div class="form-grid">
-    <div class="field"><label for="mTitle">Title</label><select id="mTitle" name="memberTitle"${lockedMentor ? ' disabled' : ''}>
+    ${staffTitle ? `<div class="field"><label>Title</label><b style="padding:10px 0;display:block">${staffTitle}</b><span class="hint">Leads and supervisors go by that title instead of Member, Veteran or Mentor.</span></div>` : `<div class="field"><label for="mTitle">Title</label><select id="mTitle" name="memberTitle"${lockedMentor ? ' disabled' : ''}>
       ${['', 'veteran', 'mentor'].map(k => `<option value="${k}"${k === t ? ' selected' : ''}${k === 'mentor' && !boss ? ' disabled' : ''}>${MEMBER_TITLE_LABEL[k]}${k === 'mentor' && !boss ? ' (managers and Command)' : ''}</option>`).join('')}</select>
-      <span class="hint">${lockedMentor ? 'Mentor is changed by managers and Command.' : 'Veteran for experienced members. Mentor is for go-to people who give a lot back.'}</span></div>
+      <span class="hint">${lockedMentor ? 'Mentor is changed by managers and Command.' : 'Veteran for experienced members. Mentor is for go-to people who give a lot back.'}</span></div>`}
     ${supDiv && divOf(supDiv) ? `<div class="field"><label class="check" style="margin-top:28px"><input type="checkbox" name="supervisor" data-sup-div="${esc(supDiv)}"${p.supervisor === supDiv ? ' checked' : ''}${p.supervisor && p.supervisor !== supDiv ? ' disabled' : ''}> Supervisor for ${esc(divOf(supDiv).tabTop || divOf(supDiv).name)}</label><span class="hint">${p.supervisor && p.supervisor !== supDiv ? 'Already supervises ' + esc((divOf(p.supervisor) || {}).name || 'another division') + '.' : 'Supervisors handle treasury submissions for the division.'}</span></div>` : ''}
   </div>`;
 }
@@ -2189,7 +2195,7 @@ function profileView(id) {
   openDialog(self ? 'My profile' : 'Member profile', `
     <div class="dlg-body">
       <div class="prof-head">${avatar(id).replace('class="av"', 'class="av av-lg"')}<div style="min-width:0">
-        <h3>${esc(m.displayName || m.username)}${rank ? `<span class="rank-tag" style="--c:${rank.c}">${esc(rank.label)}</span>` : ''}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</h3>
+        <h3>${esc(m.displayName || m.username)}${rank && !rank.icoOnly ? `<span class="rank-tag" style="--c:${rank.c}">${esc(rank.label)}</span>` : ''}${m.sysadmin ? '<span class="rank-tag sys">Systems Admin</span>' : ''}</h3>
         <div class="prof-sub">@${esc(m.username)}${m.rsiHandle ? ` · RSI: <a href="https://robertsspaceindustries.com/citizens/${encodeURIComponent(m.rsiHandle)}" target="_blank" rel="noopener">${esc(m.rsiHandle)}</a>` : ''}</div></div></div>
       <div class="prof-facts">
         <div class="prof-fact"><span class="lbl">Rank</span><b>${rank ? rankIcon(rank, 18) : ''}${esc(m.rank || 'Member')}</b></div>
