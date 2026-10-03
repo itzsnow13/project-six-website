@@ -792,6 +792,17 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
 .enlist-done.bad h3 { color: #ff8a7d; }
 .step-actions .link-btn { margin-top: 0; }
 
+/* Fleet loads from the member hangar; placeholder shimmer until then */
+.fleet.fleet-loading { position: relative; min-height: 320px; }
+.fleet.fleet-loading > .ship { visibility: hidden; }
+.fleet.fleet-loading::after { content: 'Loading the hangar…'; position: absolute; inset: 0; display: grid; place-items: center; color: var(--dim);
+  font-family: var(--f-label); font-weight: 700; letter-spacing: .16em; text-transform: uppercase; font-size: .85rem;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.04) 50%, transparent 70%) 0 0 / 200% 100%; animation: fleetShimmer 1.4s linear infinite; border-radius: var(--radius); }
+@keyframes fleetShimmer { to { background-position: -200% 0; } }
+.fleet-filters.fleet-loading { visibility: hidden; }
+.fleet > .ship { animation: fleetIn .45s ease-out both; }
+@keyframes fleetIn { from { opacity: 0; transform: translateY(6px); } }
+
 /* Responsive */
 @media (max-width: 1280px) {
   .menu-btn { display: grid; place-items: center; }
@@ -958,7 +969,7 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
       <button class="chip" data-filter="cargo">Cargo</button>
     </div>
 
-    <div class="fleet" id="fleetGrid">
+    <div class="fleet fleet-loading" id="fleetGrid" aria-busy="true">
       <article class="ship" data-cat="capital">
         <div class="ship-top"><span class="ship-role">Frigate</span><span class="ship-class ship-class-flag">Flagship</span></div>
         <h3>Idris-M</h3>
@@ -1398,6 +1409,7 @@ a.division { text-decoration: none; color: inherit; cursor: pointer; }
                       </select>
                     </div>
                   </div>
+                  <label class="confirm-line returning-line"><input type="checkbox" id="fReturning" name="returning"> I’ve been a member of Project Six before (returning member)</label>
                   <div class="field">
                     <label for="fAbout">About you (optional)</label>
                     <textarea id="fAbout" name="about" maxlength="1500" placeholder="Ships you fly, how long you've played, what you want to do in the org..."></textarea>
@@ -1959,6 +1971,10 @@ const fleetView = (function fleet() {
   const curated = {};
   grid.querySelectorAll('.ship').forEach(el => { curated[el.querySelector('h3').textContent.trim().toLowerCase()] = el.outerHTML; });
   let current = 'all';
+  // The built-in tiles above are only a fallback; keep them hidden until we know what the hangar holds.
+  function settle() { grid.classList.remove('fleet-loading'); grid.removeAttribute('aria-busy'); filters.classList.remove('fleet-loading'); }
+  filters.classList.add('fleet-loading');
+  setTimeout(settle, 12000);
 
   function applyFilter() {
     grid.querySelectorAll('.ship').forEach(el => { el.hidden = !(current === 'all' || el.dataset.cat === current); });
@@ -1992,7 +2008,7 @@ const fleetView = (function fleet() {
   }
 
   function render(fleet) {
-    if (!fleet || !fleet.list || !fleet.list.length) return;
+    if (!fleet || !fleet.list || !fleet.list.length) { settle(); return; }
     grid.innerHTML = fleet.list.map(tile).join('');
     const cats = ORDER.filter(c => fleet.list.some(g => g.category === c));
     if (current !== 'all' && !cats.includes(current)) current = 'all';
@@ -2000,8 +2016,9 @@ const fleetView = (function fleet() {
     stats.innerHTML = `<span><b>${fleet.ships}</b>ships</span><span><b>${fleet.models}</b>models</span><span><b>${fleet.pilots}</b>pilots</span>`;
     stats.hidden = false;
     applyFilter();
+    settle();
   }
-  return { render };
+  return { render, settle };
 })();
 
 /* ---------- Enlist: Discord → form → RSI profile check → RSI join request ---------- */
@@ -2091,7 +2108,8 @@ const fleetView = (function fleet() {
     const who = `<div class="enl-who">${me.avatar ? `<img src="https://cdn.discordapp.com/avatars/${esc(me.id)}/${esc(me.avatar)}.png?size=64" alt="">` : `<span>${esc((me.username || '?').charAt(0).toUpperCase())}</span>`}<div><b>${name}</b><small>@${esc(me.username)} · in the Project Six server <span class="okc">✓</span></small></div></div>`;
     const portalBtn = label => `<a class="btn btn-solid" href="${esc(portal)}">${label}</a>`;
     const signOut = '<button class="link-btn" type="button" data-switch>Not you? Use a different account</button>';
-    if (me.status === 'active') { s1.innerHTML = who + msg('ok', 'You’re already a member of Project Six.') + `<div class="step-actions">${portalBtn('Open the dashboard')}</div>`; }
+    if (info.blocked) { s1.innerHTML = who.replace('in the Project Six server <span class="okc">✓</span>', '') + msg('bad', `<b>${esc(info.standingLabel)}.</b> ${info.standing === 'left' ? 'You’re blacklisted from applying.' : 'You’re banned from the portal.'} Open the member portal and submit an appeal ticket.`) + `<div class="step-actions">${portalBtn('Submit an appeal')}</div>`; }
+    else if (me.status === 'active') { s1.innerHTML = who + msg('ok', 'You’re already a member of Project Six.') + `<div class="step-actions">${portalBtn('Open the dashboard')}</div>`; }
     else if (info.reason === 'open') { s1.innerHTML = who + msg('info', 'You already have an application in review.') + `<div class="step-actions">${portalBtn('Track my application')}</div>`; }
     else if (info.reason === 'accepted') { s1.innerHTML = who + msg('ok', 'Your application was accepted. Finish onboarding in the member portal.') + `<div class="step-actions">${portalBtn('Open the portal')}</div>`; }
     else if (info.reason === 'wait') { s1.innerHTML = who + msg('bad', `Your last application was denied. You can apply again after <b>${esc(new Date(info.waitUntil).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }))}</b>.`) + `<div class="step-actions">${portalBtn('See the comments')}</div>`; }
@@ -2114,7 +2132,7 @@ const fleetView = (function fleet() {
     handle.classList.toggle('invalid', bad);
     if (bad) { note.textContent = 'Enter your RSI handle (letters, numbers, - and _).'; note.classList.add('warn'); handle.focus(); return; }
     note.textContent = 'Fields marked * must be filled out.'; note.classList.remove('warn');
-    const data = { handle: h, division: form.elements.division.value, timezone: form.elements.tz.value, about: form.elements.about.value.trim() };
+    const data = { handle: h, division: form.elements.division.value, timezone: form.elements.tz.value, about: form.elements.about.value.trim(), returning: form.elements.returning.checked };
     if (state.data && state.data.handle.toLowerCase() !== h.toLowerCase()) undo(2);
     state.data = data;
     state.done[1] = true;
@@ -2380,8 +2398,9 @@ const fleetView = (function fleet() {
       if (!json || !json.ok) throw new Error('bad response');
       data = { events: json.events || [], pastEvents: json.pastEvents || [], newsletters: json.newsletters || [] };
       renderAll();
-      if (json.fleet) fleetView.render(json.fleet);
+      fleetView.render(json.fleet);
     } catch (_) {
+      fleetView.settle();
       renderError();
     } finally {
       clearTimeout(timer);
