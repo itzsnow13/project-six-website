@@ -3058,10 +3058,36 @@ function siteForm(kind, item) {
       </form>`);
     dlg.classList.add('wide');
     nlSetup(dlg.querySelector('.nl-form'));
+    restoreNlDraft(dlg.querySelector('.nl-form'));
   }
 }
 
 /* ---------- Newsletter editor ---------- */
+/* Same safety net as work orders: an unsaved newsletter is kept for a minute after the editor closes,
+   so a stray click outside it doesn't lose the writing. Reopen it within the minute to pick up where you left off. */
+const NL_DRAFT_MS = 60000;
+function nlDraftKey(f) { return f.elements.id.value || 'new'; }
+function saveNlDraft(f) {
+  if (!f || f.dataset.done || !f._nl) return;
+  const vals = {};
+  ['title', 'author', 'status', 'summary', 'cover'].forEach(n => { if (f.elements[n]) vals[n] = f.elements[n].value; });
+  const body = nlHtml(f);
+  if (!vals.title.trim() && !body.replace(/<[^>]*>/g, '').trim() && !/<(img|iframe|video)\b/i.test(body)) return;   // nothing written yet
+  S.nlDrafts = S.nlDrafts || {};
+  S.nlDrafts[nlDraftKey(f)] = { at: Date.now(), vals, body };
+}
+function restoreNlDraft(f) {
+  if (!f || !S.nlDrafts) return;
+  const key = nlDraftKey(f), dr = S.nlDrafts[key];
+  if (!dr) return;
+  delete S.nlDrafts[key];
+  if (Date.now() - dr.at > NL_DRAFT_MS) return;
+  Object.keys(dr.vals).forEach(n => { if (f.elements[n]) f.elements[n].value = dr.vals[n]; });
+  const ed = f.querySelector('.nl-editor');
+  ed.innerHTML = dr.body;
+  ed.querySelectorAll('figure.nl-embed').forEach(x => { x.contentEditable = 'false'; });
+  toast('Picked up where you left off.', 'ok');
+}
 function nlSetup(f) {
   const ed = f.querySelector('.nl-editor');
   ed.querySelectorAll('figure.nl-embed').forEach(x => { x.contentEditable = 'false'; });
@@ -4292,6 +4318,7 @@ setInterval(() => { if (S.chatOpen && S.chatWo && !document.hidden && !S.busy &&
 const dlg = $('dlg');
 function openDialog(title, body) {
   if (dlg.open) saveWoDraft(dlg.querySelector('form[data-form="wo"]'));   // replacing an open work order form keeps its draft
+  if (dlg.open) saveNlDraft(dlg.querySelector('.nl-form'));
   dlg.classList.remove('wide');
   $('dlgInner').innerHTML = `<div class="dlg-head"><h2>${esc(title)}</h2><button class="x" type="button" data-close aria-label="Close">&times;</button></div>${body}`;
   if (!dlg.open) dlg.showModal();
@@ -4301,6 +4328,7 @@ function openDialog(title, body) {
 function closeDialog() { if (dlg.open) dlg.close(); }
 dlg.addEventListener('close', () => {
   saveWoDraft(dlg.querySelector('form[data-form="wo"]'));
+  saveNlDraft(dlg.querySelector('.nl-form'));
   if (dlg.open) return;   // already reopened with something else
   dlg.classList.remove('wide');
   if (S.tab !== 'tickets' || D().pending) S.ticketSel = null;
@@ -4678,6 +4706,7 @@ document.addEventListener('submit', async e => {
         if (!v('title').trim() || empty) { toast('Add a title and some body text.', 'err'); break; }
         if (v('cover').trim() && !NL.https(v('cover'))) { toast('The cover image needs an https:// link.', 'err'); break; }
         ok = await act('site.save', { kind: 'newsletters', item: { id: v('id'), title: v('title'), author: v('author'), status: v('status'), summary: v('summary'), cover: v('cover').trim(), body, format: 'html' } }, v('status') === 'published' ? 'Newsletter published.' : 'Draft saved.');
+        if (ok) { f.dataset.done = '1'; if (S.nlDrafts) delete S.nlDrafts[nlDraftKey(f)]; }
         break;
       }
       case 'lead':
